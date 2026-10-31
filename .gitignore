@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Nested accidental clone
+openpark/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+
+# Database
+*.db
+*.sqlite3
+
+# Environment variables
+.env
