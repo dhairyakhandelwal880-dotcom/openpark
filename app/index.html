@@ -598,8 +598,11 @@
   </div>
 
   <script>
-    const API_BASE = "http://localhost:8000";
-    const WS_BASE = "ws://localhost:8000";
+    const isLocalBackend = window.location.port === "8000" || window.location.port === "";
+    const API_BASE = isLocalBackend ? window.location.origin : "http://localhost:8000";
+    const WS_BASE = isLocalBackend
+      ? (window.location.protocol === "https:" ? "wss://" : "ws://") + window.location.host
+      : "ws://localhost:8000";
 
     // Bengaluru Coordinates
     const DEFAULT_CENTER = [77.5946, 12.9716]; // [lon, lat]
