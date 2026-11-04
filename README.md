@@ -7,9 +7,10 @@
 [![PostGIS](https://img.shields.io/badge/PostGIS-3.4-589632.svg)](https://postgis.net/)
 [![Redis](https://img.shields.io/badge/Redis-7-dc382d.svg)](https://redis.io/)
 [![MapLibre GL](https://img.shields.io/badge/MapLibre%20GL%20JS-v4-396afc.svg)](https://maplibre.org/maplibre-gl-js/docs/API/)
+[![Mappls REST API](https://img.shields.io/badge/Mappls%20REST%20API-MapmyIndia-orange.svg)](https://github.com/mappls-api/mapmyindia-rest-api)
 [![Traccar GPS](https://img.shields.io/badge/Traccar%20GPS-Standard%20Protocols-00a884.svg)](https://www.traccar.org/)
 
-**OpenPark** is an open-source, production-grade real-time smart parking & live GPS telemetry platform designed for high-density metro areas (seeded with real municipal datasets from Bengaluru). It guides drivers to vacant parking spots using vector maps, provides real-time turn-by-turn routing with voice prompts, enables butter-smooth 60 FPS physics vehicle simulation, captures live device GPS tracking, integrates standard **Traccar GPS** telemetry protocols, displays multi-zone IIoT sensor diagnostics, and empowers parking lot operators with a responsive mobile touch dashboard.
+**OpenPark** is an open-source, production-grade real-time smart parking & live GPS telemetry platform designed for high-density metro areas (seeded with real municipal datasets from Bengaluru). It guides drivers to vacant parking spots using vector maps, provides real-time turn-by-turn routing with voice prompts powered by **[Mappls (MapmyIndia) REST APIs](https://github.com/mappls-api/mapmyindia-rest-api)**, enables butter-smooth 60 FPS physics vehicle simulation, captures live device GPS tracking, integrates standard **Traccar GPS** telemetry protocols, displays multi-zone IIoT sensor diagnostics, and empowers parking lot operators with a responsive mobile touch dashboard.
 
 ---
 
@@ -44,12 +45,17 @@
   - Real-time breadcrumb trail line toggle.
 - **Traccar Client Pairing**: Easily pairs with the free **Traccar Client** app (iOS / Android) or standard OBD-II hardware GPS trackers.
 
-### 5. 🔬 Multi-Zone IIoT Sensor Telemetry
+### 5. 📍 Mappls (MapmyIndia) REST API Integration
+- **Hyperlocal Place Search & AutoSuggest**: Integrates `GET /api/mappls/autosuggest` powered by the [Mappls REST API](https://github.com/mappls-api/mapmyindia-rest-api).
+- **Advanced Driving Routing**: Seamlessly generates road geometries via `GET /api/mappls/route` with turn-by-turn maneuvers and speed curves.
+- **Graceful Resilience**: Seamlessly falls back to local OSRM and open municipal datasets if no Mappls key is configured.
+
+### 6. 🔬 Multi-Zone IIoT Sensor Telemetry
 - **Zone Occupancy Breakdown**: Sub-zone vacancy counters for Zone A, Zone B, Zone C, and Zone D.
 - **Smart City Indicators**: Live EV charging spot counters, dynamic congestion pricing multipliers (e.g. `1.2x Peak Rate`), and live traffic indicators.
 - **Real Municipal Datasets**: Pre-seeded with real OpenCity Bengaluru public parking lots and IIoT sensor management distributions.
 
-### 6. 📱 Operator Touch Dashboard (`dashboard/index.html`)
+### 7. 📱 Operator Touch Dashboard (`dashboard/index.html`)
 - Dedicated attendant interface with large mobile touch controls (`+1`, `-1`, `FULL`, `CLEAR`).
 - Instant capacity editor and WebSocket real-time broadcast to all connected drivers.
 
@@ -80,7 +86,7 @@
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
 | **Map Rendering** | [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/API/) | 100% Free & open-source vector map engine, multi-basemap styling |
-| **Routing Engine** | [OSRM](http://project-osrm.org/) | Offline/online driving directions, turn-by-turn road geometry |
+| **Routing & Search** | [Mappls REST API](https://github.com/mappls-api/mapmyindia-rest-api) / [OSRM](http://project-osrm.org/) | Hyperlocal Indian places search, driving directions, turn-by-turn road geometry |
 | **Backend API** | [FastAPI](https://fastapi.tiangolo.com/) (Python) | High-throughput asynchronous REST endpoints & WebSockets |
 | **GPS Telemetry** | [Traccar Standards](https://www.traccar.org/) | Ingestion of OsmAnd / Traccar HTTP GPS packets |
 | **Spatial Database** | [PostgreSQL 16](https://www.postgresql.org/) + [PostGIS 3.4](https://postgis.net/) | Fast spatial indexing, `ST_DWithin`, spherical distance queries |
@@ -99,10 +105,11 @@ openpark/
 │   ├── main.py           # Core REST API & WebSockets (/ws/lots, /ws/vehicle, /api/traccar)
 │   ├── schema.sql        # PostGIS schema (parking_lots, availability, reports)
 │   ├── traccar_service.py# Traccar GPS protocol ingestion, odometer & telemetry service
+│   ├── mappls_service.py # Mappls (MapmyIndia) REST API search & routing service
 │   ├── iiot_service.py   # Multi-zone IIoT sensor telemetry & EV spot engine
 │   ├── seed_osm.py       # OpenStreetMap Overpass & Bengaluru seed loader
 │   ├── seed_opencity.py  # OpenCity Bengaluru municipal parking lots loader
-│   ├── test_api.py       # Automated test suite (10/10 tests passing)
+│   ├── test_api.py       # Automated test suite (11/11 tests passing)
 │   └── requirements.txt  # Python backend dependencies
 ├── dashboard/            # Parking operator & attendant touch interface
 │   └── index.html        # Mobile-friendly +/- free spot counter & lot editor
@@ -200,12 +207,13 @@ Run the complete backend test suite:
 ```bash
 ./backend/venv/bin/pytest backend/test_api.py -v
 ```
-All 10 tests will execute against live ASGI instances:
+All 11 tests will execute against live ASGI instances:
 - Status threshold logic (`available`, `filling_up`, `full`)
 - Proximity geospatial calculations
 - Crowdsource report ingestion
 - IIoT multi-zone telemetry endpoint
 - MapLibre vector style configuration endpoints
+- Mappls (MapmyIndia) REST API search & driving directions endpoints
 - Traccar OsmAnd GPS ingestion protocol endpoints
 
 ---
