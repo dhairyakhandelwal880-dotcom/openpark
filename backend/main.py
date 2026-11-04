@@ -1,0 +1,775 @@
+"""
+OpenPark - Real-Time Smart Parking Backend API
+----------------------------------------------
+Implements Steps 5, 6, 13, and 14 from the OpenPark Build Guide:
+- Spatial nearby search with PostGIS
+- Availability status logic and confidence calculation
+- Crowdsourced reports with rate limiting
+- Real-time WebSocket pub/sub for lot status updates
+- Vehicle tracking and proactive 1.5 km arrival / reroute notifications
+"""
+
+import os
+import json
+import asyncio
+from contextlib import asynccontextmanager
+from datetime import datetime, timezone, timedelta
+from typing import Dict, List, Optional, Set
+import math
+
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import redis.asyncio as aioredis
+from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect, status, Query
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+
+API_KEY = os.getenv("OPENPARK_API_KEY", "dev-key")
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://openpark:openpark@localhost:5432/openpark"
+)
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+
+
+def get_db():
+    return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+
+
+# --------------------------------------------------------------------------
+# Step 6 & 13: Availability & Confidence Logic
+# --------------------------------------------------------------------------
+
+SOURCE_WEIGHT = {
+    "sensor": 0.95,
+    "operator": 0.85,
+    "crowd": 0.60,
+    "predicted": 0.40,
+}
+
+
+def lot_status(free: Optional[int], capacity: Optional[int], updated_at: Optional[datetime]) -> str:
+    """Computes simple, honest availability status label."""
+    if free is None or updated_at is None:
+        return "unknown"
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+    age_min = (datetime.now(timezone.utc) - updated_at).total_seconds() / 60.0
+    if age_min > 30:
+        return "unknown"  # data too old to trust
+    if free == 0:
+        return "full"
+    ratio = free / capacity if capacity and capacity > 0 else None
+    if free < 5 or (ratio is not None and ratio < 0.15):
+        return "filling_up"
+    return "available"
+
+
+def get_confidence(source: Optional[str], updated_at: Optional[datetime]):
+    """Computes confidence score (0 to 1) and label (High, Medium, Low)."""
+    if not source or not updated_at:
+        return 0.0, "Low"
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+    age_min = (datetime.now(timezone.utc) - updated_at).total_seconds() / 60.0
+    freshness = 2.718 ** (-age_min / 20.0)  # halves roughly every 14 minutes
+    score = round(SOURCE_WEIGHT.get(source, 0.5) * freshness, 2)
+    if score >= 0.7:
+        level = "High"
+    elif score >= 0.4:
+        level = "Medium"
+    else:
+        level = "Low"
+    return score, level
+
+
+def human_time_ago(updated_at: Optional[datetime]) -> str:
+    if not updated_at:
+        return "Never"
+    if updated_at.tzinfo is None:
+        updated_at = updated_at.replace(tzinfo=timezone.utc)
+    seconds = int((datetime.now(timezone.utc) - updated_at).total_seconds())
+    if seconds < 30:
+        return "Just now"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes} min ago"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} hr ago"
+    return f"{hours // 24} days ago"
+
+
+# --------------------------------------------------------------------------
+# WebSocket Connection Manager & Redis Bridge
+# --------------------------------------------------------------------------
+
+class ConnectionManager:
+    def __init__(self):
+        # lot_id -> set of WebSockets
+        self.lot_subscribers: Dict[int, Set[WebSocket]] = {}
+        # active vehicle trackers
+        self.vehicle_sockets: Set[WebSocket] = set()
+
+    async def connect_lot(self, lot_id: int, websocket: WebSocket):
+        await websocket.accept()
+        if lot_id not in self.lot_subscribers:
+            self.lot_subscribers[lot_id] = set()
+        self.lot_subscribers[lot_id].add(websocket)
+
+    def disconnect_lot(self, lot_id: int, websocket: WebSocket):
+        if lot_id in self.lot_subscribers:
+            self.lot_subscribers[lot_id].discard(websocket)
+            if not self.lot_subscribers[lot_id]:
+                del self.lot_subscribers[lot_id]
+
+    async def broadcast_lot(self, lot_id: int, data: dict):
+        if lot_id in self.lot_subscribers:
+            dead_sockets = set()
+            for ws in self.lot_subscribers[lot_id]:
+                try:
+                    await ws.send_json(data)
+                except Exception:
+                    dead_sockets.add(ws)
+            for ws in dead_sockets:
+                self.lot_subscribers[lot_id].discard(ws)
+
+    async def connect_vehicle(self, websocket: WebSocket):
+        await websocket.accept()
+        self.vehicle_sockets.add(websocket)
+
+    def disconnect_vehicle(self, websocket: WebSocket):
+        self.vehicle_sockets.discard(websocket)
+
+
+manager = ConnectionManager()
+redis_client: Optional[aioredis.Redis] = None
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global redis_client
+    try:
+        redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+        await redis_client.ping()
+        print("Connected to Redis successfully.")
+    except Exception as e:
+        print(f"Redis connection warning: {e}. Falling back to in-memory pub/sub.")
+        redis_client = None
+    yield
+    if redis_client:
+        await redis_client.close()
+
+
+app = FastAPI(
+    title="OpenPark API",
+    description="Open-source real-time parking platform for metro cities",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# --------------------------------------------------------------------------
+# Pydantic Schemas
+# --------------------------------------------------------------------------
+
+class AvailabilityPayload(BaseModel):
+    free_spots: int = Field(..., ge=0, description="Count of free parking spots")
+    source: str = Field(default="sensor", description="sensor | operator | crowd | predicted")
+
+
+class ReportPayload(BaseModel):
+    kind: str = Field(..., description="got_spot | lot_full | has_space")
+    reporter_id: Optional[str] = Field(default="anonymous", description="Unique client or device identifier")
+
+
+class LotEditPayload(BaseModel):
+    name: Optional[str] = None
+    capacity: Optional[int] = None
+    price_note: Optional[str] = None
+    city: Optional[str] = None
+
+
+# --------------------------------------------------------------------------
+# REST Endpoints
+# --------------------------------------------------------------------------
+
+@app.get("/health")
+def health():
+    return {
+        "status": "healthy",
+        "service": "OpenPark API",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+
+@app.get("/lots")
+def list_lots(city: Optional[str] = None):
+    """Returns all parking lots for operators and selectors."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            if city:
+                cur.execute(
+                    """
+                    SELECT l.id, l.name, l.city, l.capacity, l.price_note, l.source,
+                           ST_Y(l.geom::geometry) AS lat, ST_X(l.geom::geometry) AS lon,
+                           a.free_spots, a.source as availability_source, a.updated_at
+                    FROM parking_lots l
+                    LEFT JOIN LATERAL (
+                        SELECT * FROM availability WHERE lot_id = l.id
+                        ORDER BY updated_at DESC LIMIT 1
+                    ) a ON true
+                    WHERE l.city = %s
+                    ORDER BY l.id ASC
+                    """,
+                    (city,)
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT l.id, l.name, l.city, l.capacity, l.price_note, l.source,
+                           ST_Y(l.geom::geometry) AS lat, ST_X(l.geom::geometry) AS lon,
+                           a.free_spots, a.source as availability_source, a.updated_at
+                    FROM parking_lots l
+                    LEFT JOIN LATERAL (
+                        SELECT * FROM availability WHERE lot_id = l.id
+                        ORDER BY updated_at DESC LIMIT 1
+                    ) a ON true
+                    ORDER BY l.id ASC
+                    """
+                )
+            rows = cur.fetchall()
+
+    result = []
+    for row in rows:
+        st = lot_status(row["free_spots"], row["capacity"], row["updated_at"])
+        score, level = get_confidence(row["availability_source"], row["updated_at"])
+        result.append({
+            "id": row["id"],
+            "name": row["name"],
+            "city": row["city"],
+            "capacity": row["capacity"],
+            "price_note": row["price_note"],
+            "lat": row["lat"],
+            "lon": row["lon"],
+            "free_spots": row["free_spots"],
+            "status": st,
+            "confidence_score": score,
+            "confidence": level,
+            "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None,
+            "updated_human": human_time_ago(row["updated_at"]),
+        })
+    return result
+
+
+@app.get("/lots/nearby")
+def get_nearby_lots(
+    lat: float = Query(..., description="Latitude of user/map center"),
+    lon: float = Query(..., description="Longitude of user/map center"),
+    radius: float = Query(5000.0, description="Search radius in meters (default 5000m)"),
+):
+    """
+    Core PostGIS query to retrieve lots within radius, ordered by distance,
+    with latest availability status and confidence score.
+    """
+    query = """
+    SELECT l.id, l.osm_ref, l.name, l.capacity, l.price_note, l.city,
+           ST_Y(l.geom::geometry) AS lat, ST_X(l.geom::geometry) AS lon,
+           ST_Distance(l.geom, ST_MakePoint(%s, %s)::geography) AS distance_meters,
+           a.free_spots, a.source, a.updated_at
+    FROM parking_lots l
+    LEFT JOIN LATERAL (
+        SELECT * FROM availability WHERE lot_id = l.id
+        ORDER BY updated_at DESC LIMIT 1
+    ) a ON true
+    WHERE ST_DWithin(l.geom, ST_MakePoint(%s, %s)::geography, %s)
+    ORDER BY distance_meters ASC
+    LIMIT 50;
+    """
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(query, (lon, lat, lon, lat, radius))
+            rows = cur.fetchall()
+
+    results = []
+    for r in rows:
+        st = lot_status(r["free_spots"], r["capacity"], r["updated_at"])
+        conf_score, conf_level = get_confidence(r["source"], r["updated_at"])
+        results.append({
+            "id": r["id"],
+            "osm_ref": r["osm_ref"],
+            "name": r["name"] or f"Parking Lot #{r['id']}",
+            "city": r["city"],
+            "capacity": r["capacity"] or 50,
+            "price_note": r["price_note"] or "Standard parking rates",
+            "lat": r["lat"],
+            "lon": r["lon"],
+            "distance_meters": round(r["distance_meters"], 1),
+            "free_spots": r["free_spots"],
+            "source": r["source"] or "unknown",
+            "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+            "updated_human": human_time_ago(r["updated_at"]),
+            "status": st,
+            "confidence_score": conf_score,
+            "confidence": conf_level,
+        })
+    return results
+
+
+@app.get("/lots/{lot_id}")
+def get_lot_detail(lot_id: int):
+    """Returns full details of a specific parking lot, latest status, and recent reports."""
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT l.id, l.osm_ref, l.name, l.city, l.capacity, l.price_note, l.source,
+                       ST_Y(l.geom::geometry) AS lat, ST_X(l.geom::geometry) AS lon,
+                       a.free_spots, a.source as availability_source, a.updated_at
+                FROM parking_lots l
+                LEFT JOIN LATERAL (
+                    SELECT * FROM availability WHERE lot_id = l.id
+                    ORDER BY updated_at DESC LIMIT 1
+                ) a ON true
+                WHERE l.id = %s
+                """,
+                (lot_id,)
+            )
+            lot = cur.fetchone()
+            if not lot:
+                raise HTTPException(status_code=404, detail="Parking lot not found")
+
+            # Fetch last 5 reports
+            cur.execute(
+                """
+                SELECT kind, created_at FROM reports
+                WHERE lot_id = %s
+                ORDER BY created_at DESC LIMIT 5
+                """,
+                (lot_id,)
+            )
+            reports = cur.fetchall()
+
+    st = lot_status(lot["free_spots"], lot["capacity"], lot["updated_at"])
+    conf_score, conf_level = get_confidence(lot["availability_source"], lot["updated_at"])
+
+    return {
+        "id": lot["id"],
+        "osm_ref": lot["osm_ref"],
+        "name": lot["name"] or f"Parking #{lot['id']}",
+        "city": lot["city"],
+        "capacity": lot["capacity"] or 50,
+        "price_note": lot["price_note"] or "Standard parking rates",
+        "lat": lot["lat"],
+        "lon": lot["lon"],
+        "free_spots": lot["free_spots"],
+        "source": lot["availability_source"] or "unknown",
+        "updated_at": lot["updated_at"].isoformat() if lot["updated_at"] else None,
+        "updated_human": human_time_ago(lot["updated_at"]),
+        "status": st,
+        "confidence_score": conf_score,
+        "confidence": conf_level,
+        "recent_reports": [
+            {"kind": r["kind"], "time": human_time_ago(r["created_at"])} for r in reports
+        ]
+    }
+
+
+@app.put("/lots/{lot_id}")
+def update_lot_details(
+    lot_id: int,
+    payload: LotEditPayload,
+    x_api_key: Optional[str] = Header(None)
+):
+    """Allows operator to update lot name, capacity, and pricing note."""
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid API Key")
+
+    fields = []
+    values = []
+    if payload.name is not None:
+        fields.append("name = %s")
+        values.append(payload.name)
+    if payload.capacity is not None:
+        fields.append("capacity = %s")
+        values.append(payload.capacity)
+    if payload.price_note is not None:
+        fields.append("price_note = %s")
+        values.append(payload.price_note)
+    if payload.city is not None:
+        fields.append("city = %s")
+        values.append(payload.city)
+
+    if not fields:
+        return {"status": "no change"}
+
+    values.append(lot_id)
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"UPDATE parking_lots SET {', '.join(fields)} WHERE id = %s RETURNING id",
+                tuple(values)
+            )
+            if not cur.fetchone():
+                raise HTTPException(status_code=404, detail="Lot not found")
+            conn.commit()
+
+    return {"status": "updated", "lot_id": lot_id}
+
+
+@app.post("/lots/{lot_id}/availability", status_code=status.HTTP_200_OK)
+async def update_availability(
+    lot_id: int,
+    payload: AvailabilityPayload,
+    x_api_key: Optional[str] = Header(None)
+):
+    """
+    Operator or sensor sends free spot count.
+    Requires valid x-api-key header.
+    Inserts availability and notifies connected WebSockets immediately.
+    """
+    if x_api_key != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid x-api-key header"
+        )
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            # Check lot exists
+            cur.execute("SELECT id, name, capacity FROM parking_lots WHERE id = %s", (lot_id,))
+            lot = cur.fetchone()
+            if not lot:
+                raise HTTPException(status_code=404, detail="Parking lot not found")
+
+            cur.execute(
+                """
+                INSERT INTO availability (lot_id, free_spots, source, updated_at)
+                VALUES (%s, %s, %s, NOW())
+                RETURNING id, updated_at
+                """,
+                (lot_id, payload.free_spots, payload.source)
+            )
+            row = cur.fetchone()
+            conn.commit()
+
+    now = row["updated_at"]
+    st = lot_status(payload.free_spots, lot["capacity"], now)
+    conf_score, conf_level = get_confidence(payload.source, now)
+
+    event_data = {
+        "type": "availability_update",
+        "lot_id": lot_id,
+        "name": lot["name"],
+        "free_spots": payload.free_spots,
+        "capacity": lot["capacity"],
+        "status": st,
+        "source": payload.source,
+        "updated_at": now.isoformat(),
+        "updated_human": human_time_ago(now),
+        "confidence_score": conf_score,
+        "confidence": conf_level,
+    }
+
+    # Broadcast to local subscribers
+    await manager.broadcast_lot(lot_id, event_data)
+
+    # Publish to Redis channel if available
+    if redis_client:
+        try:
+            await redis_client.publish(f"lot:{lot_id}", json.dumps(event_data))
+        except Exception as e:
+            print(f"Redis publish error: {e}")
+
+    return {
+        "status": "success",
+        "lot_id": lot_id,
+        "free_spots": payload.free_spots,
+        "status_label": st,
+        "confidence": conf_level
+    }
+
+
+# Rate limiting dictionary: (reporter_id, lot_id) -> timestamp
+REPORTS_RATE_LIMIT: Dict[tuple, datetime] = {}
+
+
+@app.post("/lots/{lot_id}/reports", status_code=status.HTTP_201_CREATED)
+async def submit_crowdsourced_report(lot_id: int, payload: ReportPayload):
+    """
+    Step 13: Drivers submit crowdsourced report:
+    - got_spot, lot_full, or has_space
+    - Rate limited to 1 report per user per lot per hour
+    - Adjusts availability estimate if sensor/operator data is absent
+    """
+    if payload.kind not in ("got_spot", "lot_full", "has_space"):
+        raise HTTPException(status_code=400, detail="Invalid report kind. Must be got_spot, lot_full, or has_space")
+
+    key = (payload.reporter_id, lot_id)
+    now = datetime.now(timezone.utc)
+    if key in REPORTS_RATE_LIMIT:
+        last_reported = REPORTS_RATE_LIMIT[key]
+        if (now - last_reported) < timedelta(hours=1):
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded: 1 report per lot per hour per user."
+            )
+
+    REPORTS_RATE_LIMIT[key] = now
+
+    with get_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, name, capacity FROM parking_lots WHERE id = %s", (lot_id,))
+            lot = cur.fetchone()
+            if not lot:
+                raise HTTPException(status_code=404, detail="Parking lot not found")
+
+            cur.execute(
+                """
+                INSERT INTO reports (lot_id, kind, reporter_id, created_at)
+                VALUES (%s, %s, %s, NOW())
+                """,
+                (lot_id, payload.kind, payload.reporter_id)
+            )
+
+            # Check latest availability source and age
+            cur.execute(
+                """
+                SELECT free_spots, source, updated_at FROM availability
+                WHERE lot_id = %s
+                ORDER BY updated_at DESC LIMIT 1
+                """,
+                (lot_id,)
+            )
+            latest = cur.fetchone()
+
+            capacity = lot["capacity"] or 50
+            # If no recent sensor or operator update in the last 15 minutes, crowd report updates availability
+            update_avail = False
+            new_free = 0
+            if not latest or (latest["source"] == "crowd") or (now - latest["updated_at"].replace(tzinfo=timezone.utc)).total_seconds() > 900:
+                update_avail = True
+                curr_free = latest["free_spots"] if latest else int(capacity * 0.3)
+                if payload.kind == "lot_full":
+                    new_free = 0
+                elif payload.kind == "has_space":
+                    new_free = max(5, int(capacity * 0.35))
+                elif payload.kind == "got_spot":
+                    new_free = max(0, curr_free - 1 if curr_free is not None else int(capacity * 0.2))
+
+                cur.execute(
+                    """
+                    INSERT INTO availability (lot_id, free_spots, source, updated_at)
+                    VALUES (%s, %s, 'crowd', NOW())
+                    """,
+                    (lot_id, new_free)
+                )
+
+            conn.commit()
+
+    if update_avail:
+        st = lot_status(new_free, lot["capacity"], now)
+        conf_score, conf_level = get_confidence("crowd", now)
+        event_data = {
+            "type": "availability_update",
+            "lot_id": lot_id,
+            "name": lot["name"],
+            "free_spots": new_free,
+            "capacity": lot["capacity"],
+            "status": st,
+            "source": "crowd",
+            "updated_at": now.isoformat(),
+            "updated_human": "Just now",
+            "confidence_score": conf_score,
+            "confidence": conf_level,
+        }
+        await manager.broadcast_lot(lot_id, event_data)
+
+    return {"status": "received", "kind": payload.kind, "lot_id": lot_id}
+
+
+# --------------------------------------------------------------------------
+# WebSockets: Real-Time Lot Updates & Vehicle Tracking
+# --------------------------------------------------------------------------
+
+@app.websocket("/ws/lots/{lot_id}")
+async def websocket_lot_updates(websocket: WebSocket, lot_id: int):
+    """
+    Step 11: Real-time status subscription for a chosen parking lot.
+    The app receives live changes without refreshing the page.
+    """
+    await manager.connect_lot(lot_id, websocket)
+    try:
+        # Send initial status right away
+        detail = get_lot_detail(lot_id)
+        await websocket.send_json({
+            "type": "initial_state",
+            "lot": detail
+        })
+        while True:
+            # Keep socket alive and accept ping/pong or queries
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect_lot(lot_id, websocket)
+    except Exception:
+        manager.disconnect_lot(lot_id, websocket)
+
+
+# Active trip alert states: trip_id -> bool (has alert been sent)
+TRIP_ALERTED: Dict[str, bool] = {}
+
+
+def haversine_distance_meters(lat1, lon1, lat2, lon2):
+    R = 6371000  # meters
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi / 2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+@app.websocket("/ws/vehicle")
+async def websocket_vehicle_tracking(websocket: WebSocket):
+    """
+    Steps 9 & 14:
+    - Receives driver live position: {lat, lon, speed, t, destination_lot_id, trip_id}
+    - Does NOT persist location history (privacy protection)
+    - Triggers arrival notification when vehicle is within 1.5 km of destination (alert sent once per trip)
+    - Triggers proactive reroute notification if destination lot becomes Full
+    """
+    await manager.connect_vehicle(websocket)
+    current_trip_id = None
+
+    try:
+        while True:
+            message = await websocket.receive_json()
+            lat = message.get("lat")
+            lon = message.get("lon")
+            dest_lot_id = message.get("destination_lot_id")
+            trip_id = message.get("trip_id") or "default_trip"
+            current_trip_id = trip_id
+
+            if lat is None or lon is None:
+                continue
+
+            # If user has a selected destination lot, evaluate arrival & availability
+            if dest_lot_id:
+                try:
+                    with get_db() as conn:
+                        with conn.cursor() as cur:
+                            # Check destination lot
+                            cur.execute(
+                                """
+                                SELECT l.id, l.name, l.capacity,
+                                       ST_Y(l.geom::geometry) AS dest_lat,
+                                       ST_X(l.geom::geometry) AS dest_lon,
+                                       ST_Distance(l.geom, ST_MakePoint(%s, %s)::geography) AS distance_meters,
+                                       a.free_spots, a.source, a.updated_at
+                                FROM parking_lots l
+                                LEFT JOIN LATERAL (
+                                    SELECT * FROM availability WHERE lot_id = l.id
+                                    ORDER BY updated_at DESC LIMIT 1
+                                ) a ON true
+                                WHERE l.id = %s
+                                """,
+                                (lon, lat, dest_lot_id)
+                            )
+                            dest_lot = cur.fetchone()
+
+                            if dest_lot:
+                                dist = dest_lot["distance_meters"]
+                                dest_status = lot_status(dest_lot["free_spots"], dest_lot["capacity"], dest_lot["updated_at"])
+
+                                # 1. Check if destination became full -> trigger reroute alert!
+                                if dest_status == "full":
+                                    # Find next-nearest available lot
+                                    cur.execute(
+                                        """
+                                        SELECT l.id, l.name, l.capacity, l.price_note,
+                                               ST_Y(l.geom::geometry) AS lat, ST_X(l.geom::geometry) AS lon,
+                                               ST_Distance(l.geom, ST_MakePoint(%s, %s)::geography) AS distance_meters,
+                                               a.free_spots, a.source, a.updated_at
+                                        FROM parking_lots l
+                                        LEFT JOIN LATERAL (
+                                            SELECT * FROM availability WHERE lot_id = l.id
+                                            ORDER BY updated_at DESC LIMIT 1
+                                        ) a ON true
+                                        WHERE l.id != %s
+                                        AND ST_DWithin(l.geom, ST_MakePoint(%s, %s)::geography, 3000)
+                                        ORDER BY distance_meters ASC
+                                        LIMIT 5
+                                        """,
+                                        (lon, lat, dest_lot_id, lon, lat)
+                                    )
+                                    alternatives = cur.fetchall()
+                                    alt_lot = None
+                                    for alt in alternatives:
+                                        ast = lot_status(alt["free_spots"], alt["capacity"], alt["updated_at"])
+                                        if ast in ("available", "filling_up") and alt["free_spots"] > 0:
+                                            alt_lot = alt
+                                            break
+
+                                    if alt_lot:
+                                        await websocket.send_json({
+                                            "type": "lot_full_reroute",
+                                            "message": f"Heads up! {dest_lot['name']} is now FULL. Would you like to switch to {alt_lot['name']} ({alt_lot['free_spots']} spots free)?",
+                                            "original_lot_id": dest_lot_id,
+                                            "alternative_lot": {
+                                                "id": alt_lot["id"],
+                                                "name": alt_lot["name"],
+                                                "free_spots": alt_lot["free_spots"],
+                                                "lat": alt_lot["lat"],
+                                                "lon": alt_lot["lon"],
+                                                "distance_meters": round(alt_lot["distance_meters"])
+                                            }
+                                        })
+
+                                # 2. Step 14 Arrival Notification: within 1.5 km (1500m) and alert not yet sent
+                                if dist <= 1500 and not TRIP_ALERTED.get(trip_id, False):
+                                    TRIP_ALERTED[trip_id] = True
+                                    # Rank best option
+                                    conf_score, conf_level = get_confidence(dest_lot["source"], dest_lot["updated_at"])
+                                    spots = dest_lot["free_spots"]
+                                    if spots is not None and spots > 0:
+                                        arrival_msg = f"Arriving in 1.5 km! {dest_lot['name']} has {spots} spots available."
+                                    else:
+                                        arrival_msg = f"Arriving near {dest_lot['name']}. Parking status: {dest_status}."
+
+                                    await websocket.send_json({
+                                        "type": "arrival_alert",
+                                        "trip_id": trip_id,
+                                        "distance_meters": round(dist),
+                                        "message": arrival_msg,
+                                        "lot": {
+                                            "id": dest_lot["id"],
+                                            "name": dest_lot["name"],
+                                            "status": dest_status,
+                                            "free_spots": spots,
+                                            "lat": dest_lot["dest_lat"],
+                                            "lon": dest_lot["dest_lon"]
+                                        }
+                                    })
+                except Exception as db_err:
+                    print(f"Vehicle location check error: {db_err}")
+
+            # Send ack with distance
+            await websocket.send_json({
+                "type": "vehicle_ack",
+                "t": message.get("t")
+            })
+
+    except WebSocketDisconnect:
+        manager.disconnect_vehicle(websocket)
+    except Exception:
+        manager.disconnect_vehicle(websocket)
