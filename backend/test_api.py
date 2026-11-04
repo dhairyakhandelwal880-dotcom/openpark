@@ -114,18 +114,19 @@ def test_lot_telemetry_endpoint():
     assert "ev_charging" in tel
 
 
-def test_mapbox_config_endpoints():
-    res = client.get("/config/mapbox")
+def test_maplibre_config_endpoints():
+    res = client.get("/config/map")
     assert res.status_code == 200
     data = res.json()
-    assert "mapbox_access_token" in data
-    assert "has_token" in data
+    assert data["engine"] == "MapLibre GL JS"
+    assert data["requires_token"] is False
+    assert "carto-dark" in data["supported_styles"]
 
-    # Test updating token
-    post_res = client.post("/config/mapbox", json={"mapbox_access_token": "pk.test_sample_token_123"})
+    # Test updating style configuration
+    post_res = client.post("/config/map", json={"default_style": "carto-voyager"})
     assert post_res.status_code == 200
-    assert post_res.json()["mapbox_access_token"] == "pk.test_sample_token_123"
-    assert post_res.json()["has_token"] is True
+    assert post_res.json()["default_style"] == "carto-voyager"
+    assert post_res.json()["requires_token"] is False
 
 
 def test_traccar_endpoints():

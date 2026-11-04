@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
 
-  <!-- MapLibre GL JS (Vector 3D Mapbox-compatible engine) -->
+  <!-- MapLibre GL JS (Free & Open-Source Vector Map Engine: https://maplibre.org/maplibre-gl-js/docs/API/) -->
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 
@@ -789,7 +789,7 @@
     }
 
     /* ----------------------------------------------------
-       5. MODAL DIALOGS (MAPBOX CONFIG & REPORT STATUS)
+       5. MODAL DIALOGS (MAPLIBRE STYLES & REPORT STATUS)
        ---------------------------------------------------- */
     .modal-overlay {
       position: absolute;
@@ -1005,8 +1005,8 @@
         <button id="btn-telemetry-toggle" class="btn-glass" title="Toggle Traccar Telemetry HUD">
           <span>📡</span> <span class="btn-text">Traccar</span>
         </button>
-        <button id="btn-mapbox-cfg" class="btn-glass" title="Configure Mapbox Token & Styles">
-          <span>🗺️</span> <span class="btn-text">Mapbox</span>
+        <button id="btn-map-styles" class="btn-glass" title="Select MapLibre Vector Styles">
+          <span>🗺️</span> <span class="btn-text">Basemap</span>
         </button>
         <button id="btn-simulate-nav" class="btn-glass" title="Start 60 FPS Road Driving Simulation">
           <span>🚗</span> <span class="btn-text">Simulate</span>
@@ -1203,31 +1203,29 @@
     </div>
   </section>
 
-  <!-- 5. Mapbox Token & 3D Style Switcher Modal -->
-  <div class="modal-overlay" id="modal-mapbox">
+  <!-- 5. MapLibre Basemap & Vector Style Switcher Modal -->
+  <div class="modal-overlay" id="modal-map-styles">
     <div class="modal-card glass-dense">
       <div class="modal-header">
-        <div class="modal-title">Mapbox & Vector Map Settings</div>
-        <button class="modal-close" id="modal-mapbox-close">&times;</button>
+        <div class="modal-title">MapLibre Vector Basemap Settings</div>
+        <button class="modal-close" id="modal-map-styles-close">&times;</button>
       </div>
       <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-        OpenPark defaults to high-performance vector basemaps with 3D extruded building envelopes. Enter a custom Mapbox public token to unlock satellite navigation or proprietary Mapbox styles.
+        OpenPark runs 100% on <a href="https://maplibre.org/maplibre-gl-js/docs/API/" target="_blank" style="color:var(--color-cyan); text-decoration:underline;">MapLibre GL JS</a>. High-definition vector cartography with zero proprietary tokens, zero tracking, and zero billing dependencies.
       </p>
-      <label style="font-size:11px; text-transform:uppercase; color:var(--text-subtle); font-weight:600;">Mapbox Public Access Token</label>
-      <input type="text" id="mapbox-token-input" class="input-field" placeholder="pk.eyJ1I..." />
 
-      <label style="font-size:11px; text-transform:uppercase; color:var(--text-subtle); font-weight:600; display:block; margin-top:14px;">Select Vector Visual Style</label>
+      <label style="font-size:11px; text-transform:uppercase; color:var(--text-subtle); font-weight:600; display:block; margin-top:10px;">Select Vector Visual Style</label>
       <select id="map-style-select" class="input-field" style="cursor:pointer;">
-        <option value="carto-dark">Carto Dark Matter (3D Cybernetic - Default)</option>
-        <option value="carto-voyager">Carto Voyager (Daylight High-Contrast)</option>
-        <option value="osm-standard">OpenStreetMap Standard Vector</option>
-        <option value="mapbox-dark">Mapbox 3D Dark Navigation (Requires Token)</option>
-        <option value="mapbox-satellite">Mapbox Photorealistic Satellite (Requires Token)</option>
+        <option value="carto-dark">Carto Dark Matter (High-Contrast Night Vector - Default)</option>
+        <option value="carto-voyager">Carto Voyager (Detailed Daylight Navigation Vector)</option>
+        <option value="carto-positron">Carto Positron (Clean Minimalist Daylight Vector)</option>
+        <option value="maplibre-demo">MapLibre Demo Vector (Global Open Vector Tiles)</option>
+        <option value="osm-standard">OpenStreetMap Standard (Classic Global Cartography)</option>
       </select>
 
       <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
-        <button class="btn-glass" id="btn-save-mapbox" style="background:var(--color-cobalt); border-color:var(--color-cyan); color:white; padding:8px 16px;">
-          Save & Apply
+        <button class="btn-glass" id="btn-save-map-style" style="background:var(--color-cobalt); border-color:var(--color-cyan); color:white; padding:8px 16px;">
+          Apply Basemap
         </button>
       </div>
     </div>
@@ -1316,63 +1314,41 @@
         breadcrumbsTrail: [],
         markersMap: new Map(),
         vehicleMarker: null,
-        mapboxToken: localStorage.getItem('openpark_mapbox_token') || '',
         activeStyle: localStorage.getItem('openpark_map_style') || 'carto-dark'
       };
 
-      // 2. VECTOR MAP STYLES CONFIGURATION
+      // Clean up legacy tokens
+      try { localStorage.removeItem('openpark_mapbox_token'); } catch (e) {}
+
+      // 2. MAPLIBRE GL JS VECTOR BASEMAP CONFIGURATIONS
+      // Powered exclusively by MapLibre GL JS (https://maplibre.org/maplibre-gl-js/docs/API/)
       const MAP_STYLES = {
-        'carto-dark': {
-          version: 8,
-          sources: {
-            'carto-dark': {
-              type: 'raster',
-              tiles: [
-                'https://a.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
-                'https://b.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png',
-                'https://c.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}@2x.png'
-              ],
-              tileSize: 256
-            }
-          },
-          layers: [{ id: 'carto-dark-layer', type: 'raster', source: 'carto-dark', minzoom: 0, maxzoom: 20 }]
-        },
-        'carto-voyager': {
-          version: 8,
-          sources: {
-            'carto-voyager': {
-              type: 'raster',
-              tiles: ['https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'],
-              tileSize: 256
-            }
-          },
-          layers: [{ id: 'voyager-layer', type: 'raster', source: 'carto-voyager', minzoom: 0, maxzoom: 20 }]
-        },
+        'carto-dark': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        'carto-voyager': 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+        'carto-positron': 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        'maplibre-demo': 'https://demotiles.maplibre.org/style.json',
         'osm-standard': {
           version: 8,
           sources: {
             'osm-tiles': {
               type: 'raster',
-              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-              tileSize: 256
+              tiles: [
+                'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+              ],
+              tileSize: 256,
+              attribution: '© OpenStreetMap contributors'
             }
           },
           layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }]
         }
       };
 
-      // 3. INITIALIZE VECTOR MAP ENGINE
+      // 3. INITIALIZE MAPLIBRE GL JS VECTOR MAP ENGINE
       let map;
       function initMap() {
-        let styleObj = MAP_STYLES[APP_STATE.activeStyle] || MAP_STYLES['carto-dark'];
-
-        if (APP_STATE.activeStyle.startsWith('mapbox-')) {
-          if (APP_STATE.mapboxToken) {
-            styleObj = APP_STATE.activeStyle === 'mapbox-satellite'
-              ? `https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12?access_token=${APP_STATE.mapboxToken}`
-              : `https://api.mapbox.com/styles/v1/mapbox/dark-v11?access_token=${APP_STATE.mapboxToken}`;
-          }
-        }
+        const styleObj = MAP_STYLES[APP_STATE.activeStyle] || MAP_STYLES['carto-dark'];
 
         map = new maplibregl.Map({
           container: 'map',
@@ -2307,27 +2283,23 @@
           }
         });
 
-        // Mapbox Config Modal
-        const mapboxModal = document.getElementById('modal-mapbox');
-        document.getElementById('btn-mapbox-cfg').addEventListener('click', () => {
-          document.getElementById('mapbox-token-input').value = APP_STATE.mapboxToken;
+        // MapLibre Vector Styles Modal
+        const mapStylesModal = document.getElementById('modal-map-styles');
+        document.getElementById('btn-map-styles').addEventListener('click', () => {
           document.getElementById('map-style-select').value = APP_STATE.activeStyle;
-          mapboxModal.classList.add('open');
+          mapStylesModal.classList.add('open');
         });
 
-        document.getElementById('modal-mapbox-close').addEventListener('click', () => {
-          mapboxModal.classList.remove('open');
+        document.getElementById('modal-map-styles-close').addEventListener('click', () => {
+          mapStylesModal.classList.remove('open');
         });
 
-        document.getElementById('btn-save-mapbox').addEventListener('click', () => {
-          const token = document.getElementById('mapbox-token-input').value.trim();
+        document.getElementById('btn-save-map-style').addEventListener('click', () => {
           const style = document.getElementById('map-style-select').value;
-          APP_STATE.mapboxToken = token;
           APP_STATE.activeStyle = style;
-          localStorage.setItem('openpark_mapbox_token', token);
           localStorage.setItem('openpark_map_style', style);
-          mapboxModal.classList.remove('open');
-          // Re-initialize map with chosen style
+          mapStylesModal.classList.remove('open');
+          // Re-initialize map with chosen MapLibre vector style
           map.remove();
           initMap();
         });

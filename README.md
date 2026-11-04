@@ -6,7 +6,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
 [![PostGIS](https://img.shields.io/badge/PostGIS-3.4-589632.svg)](https://postgis.net/)
 [![Redis](https://img.shields.io/badge/Redis-7-dc382d.svg)](https://redis.io/)
-[![Mapbox GL](https://img.shields.io/badge/Mapbox%20GL%20JS-v3-4264fb.svg)](https://www.mapbox.com/)
+[![MapLibre GL](https://img.shields.io/badge/MapLibre%20GL%20JS-v4-396afc.svg)](https://maplibre.org/maplibre-gl-js/docs/API/)
 [![Traccar GPS](https://img.shields.io/badge/Traccar%20GPS-Standard%20Protocols-00a884.svg)](https://www.traccar.org/)
 
 **OpenPark** is an open-source, production-grade real-time smart parking & live GPS telemetry platform designed for high-density metro areas (seeded with real municipal datasets from Bengaluru). It guides drivers to vacant parking spots using vector maps, provides real-time turn-by-turn routing with voice prompts, enables butter-smooth 60 FPS physics vehicle simulation, captures live device GPS tracking, integrates standard **Traccar GPS** telemetry protocols, displays multi-zone IIoT sensor diagnostics, and empowers parking lot operators with a responsive mobile touch dashboard.
@@ -15,14 +15,13 @@
 
 ## 🌟 Key Features
 
-### 1. 🗺️ Vector Mapping & 3D Extruded Buildings (Mapbox GL JS v3)
-- **High-Definition Vector Tiles**: Runs Mapbox GL JS v3 with custom map styles: *Streets v12*, *Navigation Day*, *Navigation Night*, and *Satellite Streets*.
-- **3D Buildings Extrusion**: Dynamically renders real 3D building heights based on zoom level and light angle.
-- **Zero-Token Fallback**: Automatically degrades gracefully to MapLibre GL + OpenStreetMap vector tiles if no Mapbox key is provided.
+### 1. 🗺️ High-Performance Vector Mapping ([MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/API/))
+- **100% Free & Open-Source**: Runs exclusively on MapLibre GL JS v4 with zero proprietary tokens, zero billing requirements, and zero vendor lock-in.
+- **Curated Vector Basemaps**: Pre-configured with Carto Dark Matter, Carto Voyager, Carto Positron, MapLibre Demo vector tiles, and OpenStreetMap.
 - **Precision Tip Anchoring**: Every parking pin tip is locked mathematically to its exact coordinate `(17, 44)` with zero displacement during zoom and pan operations.
 
 ### 2. 🏎️ 60 FPS Butter-Smooth Vehicle Animation
-- **Continuous Spline Traversal**: Replaced discrete jumps with fluid 60 FPS `requestAnimationFrame` spline advancement along OSRM & Mapbox road polylines.
+- **Continuous Spline Traversal**: Replaced discrete jumps with fluid 60 FPS `requestAnimationFrame` spline advancement along OSRM road polylines.
 - **Realistic Driving Physics & Inertia**:
   - Automatically accelerates up to 46 km/h on straight roads.
   - Anticipates upcoming road curvature, decelerating to ~20 km/h before sharp turns and bends.
@@ -67,7 +66,7 @@
                                         ▼
 ┌────────────────────────┐      ┌───────────────┐      ┌─────────────────────────┐
 │  Driver Web App (PWA)  │◄────►│  FastAPI Core │◄────►│   Operator Dashboard    │
-│  (Mapbox v3 / 60 FPS)  │ WS   │  (Python 3.9+)│  WS  │  (Real-Time Touch Ctrls)│
+│  (MapLibre / 60 FPS)   │ WS   │  (Python 3.9+)│  WS  │  (Real-Time Touch Ctrls)│
 └────────────────────────┘      └───────┬───────┘      └─────────────────────────┘
                                         │
                          ┌──────────────┴──────────────┐
@@ -80,7 +79,7 @@
 
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
-| **Map Rendering** | [Mapbox GL JS v3](https://www.mapbox.com/) / [MapLibre GL](https://maplibre.org/) | Vector vector tiles, 3D extruded buildings, styling |
+| **Map Rendering** | [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/API/) | 100% Free & open-source vector map engine, multi-basemap styling |
 | **Routing Engine** | [OSRM](http://project-osrm.org/) | Offline/online driving directions, turn-by-turn road geometry |
 | **Backend API** | [FastAPI](https://fastapi.tiangolo.com/) (Python) | High-throughput asynchronous REST endpoints & WebSockets |
 | **GPS Telemetry** | [Traccar Standards](https://www.traccar.org/) | Ingestion of OsmAnd / Traccar HTTP GPS packets |
@@ -95,7 +94,7 @@
 ```text
 openpark/
 ├── app/                  # Driver web app (PWA)
-│   └── index.html        # Mapbox v3 map, 60 FPS animation, live GPS, Traccar HUD
+│   └── index.html        # MapLibre GL JS vector map, 60 FPS animation, live GPS, Traccar HUD
 ├── backend/              # FastAPI server
 │   ├── main.py           # Core REST API & WebSockets (/ws/lots, /ws/vehicle, /api/traccar)
 │   ├── schema.sql        # PostGIS schema (parking_lots, availability, reports)
@@ -206,7 +205,7 @@ All 10 tests will execute against live ASGI instances:
 - Proximity geospatial calculations
 - Crowdsource report ingestion
 - IIoT multi-zone telemetry endpoint
-- Mapbox configuration endpoints
+- MapLibre vector style configuration endpoints
 - Traccar OsmAnd GPS ingestion protocol endpoints
 
 ---
@@ -219,4 +218,4 @@ All 10 tests will execute against live ASGI instances:
 
 ## 📄 License
 This project is open-source under the [Apache-2.0 License](LICENSE).
-Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Vector tiles © [Mapbox](https://www.mapbox.com).
+Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Vector basemaps powered by [MapLibre](https://maplibre.org/) and Carto.
