@@ -428,7 +428,9 @@
   </div>
 
   <script>
-    const API_BASE = "http://localhost:8000";
+    const API_BASE = (window.location.port === "8000" || window.location.port === "")
+      ? window.location.origin
+      : "http://localhost:8000";
     let apiKey = localStorage.getItem("openpark_api_key") || "dev-key";
     let allLots = [];
     let currentLot = null;

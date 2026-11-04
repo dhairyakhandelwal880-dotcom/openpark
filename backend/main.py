@@ -22,6 +22,8 @@ from psycopg2.extras import RealDictCursor
 import redis.asyncio as aioredis
 from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect, status, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
 API_KEY = os.getenv("OPENPARK_API_KEY", "dev-key")
@@ -175,6 +177,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+APP_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "app"))
+DASHBOARD_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "dashboard"))
+
+if os.path.isdir(APP_DIR):
+    app.mount("/app", StaticFiles(directory=APP_DIR, html=True), name="app")
+
+if os.path.isdir(DASHBOARD_DIR):
+    app.mount("/dashboard", StaticFiles(directory=DASHBOARD_DIR, html=True), name="dashboard")
+
+
+@app.get("/", include_in_schema=False)
+def root_redirect():
+    return RedirectResponse(url="/app/")
+
 
 
 # --------------------------------------------------------------------------
