@@ -23,18 +23,14 @@
       --font-mono: 'JetBrains Mono', monospace;
 
       --color-emerald: #10b981;
-      --glow-emerald: rgba(16, 185, 129, 0.4);
       --color-amber: #f59e0b;
-      --glow-amber: rgba(245, 158, 11, 0.4);
       --color-crimson: #ef4444;
-      --glow-crimson: rgba(239, 68, 68, 0.4);
       --color-cobalt: #2563eb;
       --color-cyan: #38bdf8;
-      --glow-cyan: rgba(56, 189, 248, 0.45);
 
       --bg-carbon: #0b1120;
-      --glass-surface: rgba(15, 23, 42, 0.72);
-      --glass-surface-dense: rgba(15, 23, 42, 0.88);
+      --glass-surface: #0f172a;
+      --glass-surface-dense: #0f172a;
       --glass-border: rgba(255, 255, 255, 0.12);
       --glass-border-hover: rgba(255, 255, 255, 0.22);
       --glass-highlight: rgba(255, 255, 255, 0.05);
@@ -43,12 +39,11 @@
       --text-muted: #94a3b8;
       --text-subtle: #64748b;
 
-      --shadow-elevation: 0 24px 48px -12px rgba(0, 0, 0, 0.65), 0 8px 24px -4px rgba(0, 0, 0, 0.4);
-      --shadow-ambient: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-      --blur-strength: 18px;
+      --shadow-elevation: 0 12px 28px rgba(0, 0, 0, 0.45);
+      --shadow-ambient: 0 4px 16px rgba(0, 0, 0, 0.3);
       --radius-sm: 8px;
       --radius-md: 14px;
-      --radius-lg: 22px;
+      --radius-lg: 20px;
       --radius-pill: 9999px;
     }
 
@@ -79,20 +74,16 @@
     }
 
     /* ----------------------------------------------------
-       GLASSMORPHISM ATOMS
+       CLEAN HIGH-CONTRAST PANELS (NO FOG/BLUR CLOUD EFFECT)
        ---------------------------------------------------- */
     .glass-panel {
       background: var(--glass-surface);
-      backdrop-filter: blur(var(--blur-strength));
-      -webkit-backdrop-filter: blur(var(--blur-strength));
       border: 1px solid var(--glass-border);
       box-shadow: var(--shadow-elevation);
     }
 
     .glass-dense {
       background: var(--glass-surface-dense);
-      backdrop-filter: blur(28px);
-      -webkit-backdrop-filter: blur(28px);
       border: 1px solid var(--glass-border);
       box-shadow: var(--shadow-elevation);
     }
@@ -104,9 +95,7 @@
       padding: 7px 13px;
       border-radius: var(--radius-pill);
       border: 1px solid var(--glass-border);
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
+      background: #1e293b;
       color: var(--text-main);
       font-size: 12px;
       font-weight: 500;
@@ -116,7 +105,7 @@
     }
 
     .btn-glass:hover {
-      background: rgba(255, 255, 255, 0.12);
+      background: #334155;
       border-color: var(--glass-border-hover);
       transform: translateY(-1px);
     }
@@ -126,17 +115,15 @@
     }
 
     .btn-glass.active-gps {
-      background: rgba(16, 185, 129, 0.15);
+      background: #064e3b;
       border-color: var(--color-emerald);
       color: #34d399;
-      box-shadow: 0 0 16px var(--glow-emerald);
     }
 
     .btn-glass.active-sim {
-      background: rgba(56, 189, 248, 0.15);
+      background: #0c4a6e;
       border-color: var(--color-cyan);
       color: #7dd3fc;
-      box-shadow: 0 0 16px var(--glow-cyan);
     }
 
     /* ----------------------------------------------------
@@ -185,7 +172,7 @@
       color: white;
       font-size: 12px;
       font-weight: 900;
-      box-shadow: 0 0 12px var(--glow-cyan);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 
     .brand-subtext {
@@ -222,16 +209,15 @@
       border-radius: var(--radius-pill);
       font-size: 11.5px;
       font-weight: 500;
-      background: rgba(15, 23, 42, 0.6);
+      background: #1e293b;
       border: 1px solid var(--glass-border);
       color: var(--text-muted);
       cursor: pointer;
       transition: all 0.2s ease;
-      backdrop-filter: blur(12px);
     }
 
     .filter-chip.active {
-      background: rgba(255, 255, 255, 0.14);
+      background: #334155;
       color: var(--text-main);
       border-color: rgba(255, 255, 255, 0.3);
     }
@@ -351,17 +337,15 @@
     }
 
     #arrival-banner {
-      background: rgba(16, 185, 129, 0.25);
+      background: #064e3b;
       border: 1px solid var(--color-emerald);
-      box-shadow: 0 10px 30px var(--glow-emerald);
-      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
     }
 
     #reroute-banner {
-      background: rgba(239, 68, 68, 0.25);
+      background: #7f1d1d;
       border: 1px solid var(--color-crimson);
-      box-shadow: 0 10px 30px var(--glow-crimson);
-      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
     }
 
     /* ----------------------------------------------------
@@ -810,8 +794,7 @@
     .modal-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(10px);
+      background: rgba(0, 0, 0, 0.7);
       z-index: 500;
       display: flex;
       align-items: center;
@@ -867,7 +850,7 @@
     }
     .input-field:focus {
       border-color: var(--color-cyan);
-      box-shadow: 0 0 10px var(--glow-cyan);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
     }
 
     .report-options-grid {
@@ -908,7 +891,6 @@
       justify-content: center;
       transform: translate3d(0,0,0);
       transition: transform 0.2s ease-out;
-      filter: drop-shadow(0 6px 12px rgba(0,0,0,0.6));
     }
 
     .lot-marker:hover {
@@ -961,7 +943,7 @@
       height: 32px;
       margin-top: -16px;
       margin-left: -16px;
-      filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.7));
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
       transition: transform 0.1s linear;
     }
 
@@ -1084,7 +1066,7 @@
   <section id="telemetry-hud" class="glass-panel" aria-label="Traccar Telemetry HUD">
     <div class="hud-header">
       <div class="hud-title">
-        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--color-emerald); box-shadow:0 0 8px var(--glow-emerald);"></span>
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--color-emerald); box-shadow:0 0 0 1px rgba(0,0,0,0.5);"></span>
         Traccar GPS Telemetry
       </div>
       <button class="hud-toggle-btn" id="hud-minimize-btn" title="Minimize/Maximize HUD">▾</button>
@@ -1405,7 +1387,6 @@
         map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
 
         map.on('load', () => {
-          inject3DBuildingsLayer();
           initBreadcrumbsLayer();
           initVehicleMarker();
           fetchNearbyLots(APP_STATE.center[1], APP_STATE.center[0]);
@@ -1420,64 +1401,7 @@
         });
       }
 
-      // Add 3D Extruded Buildings Layer
-      function inject3DBuildingsLayer() {
-        // Mock GeoJSON 3D building polygons centered in Bengaluru core if vector tiles lack extrusions
-        const buildingFeatures = [];
-        const baseLon = APP_STATE.center[0];
-        const baseLat = APP_STATE.center[1];
-
-        for (let i = -6; i <= 6; i++) {
-          for (let j = -6; j <= 6; j++) {
-            if ((i + j) % 2 === 0) continue;
-            const wLon = baseLon + i * 0.0035;
-            const wLat = baseLat + j * 0.0035;
-            const size = 0.0012;
-            const height = 25 + Math.abs(i * 14 + j * 18) % 110;
-
-            buildingFeatures.push({
-              type: 'Feature',
-              properties: {
-                height: height,
-                base_height: 0,
-                color: (i * j) % 3 === 0 ? '#1e293b' : '#0f172a'
-              },
-              geometry: {
-                type: 'Polygon',
-                coordinates: [[
-                  [wLon - size, wLat - size],
-                  [wLon + size, wLat - size],
-                  [wLon + size, wLat + size],
-                  [wLon - size, wLat + size],
-                  [wLon - size, wLat - size]
-                ]]
-              }
-            });
-          }
-        }
-
-        if (!map.getSource('synthetic-3d-buildings')) {
-          map.addSource('synthetic-3d-buildings', {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: buildingFeatures }
-          });
-
-          map.addLayer({
-            id: '3d-buildings-extrusion',
-            source: 'synthetic-3d-buildings',
-            type: 'fill-extrusion',
-            minzoom: 13,
-            paint: {
-              'fill-extrusion-color': ['get', 'color'],
-              'fill-extrusion-height': ['get', 'height'],
-              'fill-extrusion-base': ['get', 'base_height'],
-              'fill-extrusion-opacity': 0.75
-            }
-          });
-        }
-      }
-
-      // Live Breadcrumb Line Source & Layer
+      // Live Breadcrumb Line Source & Layer (Clean & Sharp)
       function initBreadcrumbsLayer() {
         if (!map.getSource('vehicle-breadcrumbs')) {
           map.addSource('vehicle-breadcrumbs', {
@@ -1499,23 +1423,9 @@
             paint: {
               'line-color': '#38bdf8',
               'line-width': 4,
-              'line-opacity': 0.85
+              'line-opacity': 0.95
             }
           });
-
-          // Glowing casing under breadcrumb
-          map.addLayer({
-            id: 'vehicle-breadcrumbs-glow',
-            type: 'line',
-            source: 'vehicle-breadcrumbs',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': '#0284c7',
-              'line-width': 9,
-              'line-opacity': 0.45,
-              'line-blur': 4
-            }
-          }, 'vehicle-breadcrumbs-line');
         }
       }
 
@@ -1531,16 +1441,13 @@
         const ratio = total > 0 ? (vacancy / total) : 0;
 
         let primaryColor = '#10b981'; // Emerald
-        let glowColor = 'rgba(16, 185, 129, 0.4)';
         let statusClass = 'available';
 
         if (ratio < 0.10 || vacancy <= 5) {
           primaryColor = '#ef4444'; // Crimson
-          glowColor = 'rgba(239, 68, 68, 0.4)';
           statusClass = 'full';
         } else if (ratio < 0.30) {
           primaryColor = '#f59e0b'; // Amber
-          glowColor = 'rgba(245, 158, 11, 0.4)';
           statusClass = 'filling';
         }
 
@@ -1548,25 +1455,21 @@
         el.dataset.lotId = lot.id;
         el.dataset.ev = (lot.ev_chargers > 0) ? 'true' : 'false';
 
-        // Precise SVG Pin with anchor at (17, 44)
+        // Precise SVG Pin with anchor at (17, 44) - crisp edges with no cloudy blur
         el.innerHTML = `
           <svg class="marker-svg" viewBox="0 0 34 44" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="grad-${lot.id}" x1="17" y1="0" x2="17" y2="44" gradientUnits="userSpaceOnUse">
                 <stop stop-color="${primaryColor}"/>
-                <stop offset="0.8" stop-color="${primaryColor}" stop-opacity="0.85"/>
+                <stop offset="0.8" stop-color="${primaryColor}" stop-opacity="0.9"/>
                 <stop offset="1" stop-color="#0b1120"/>
               </linearGradient>
-              <filter id="shadow-${lot.id}" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="4" stdDeviation="3" flood-color="${glowColor}"/>
-              </filter>
             </defs>
             <!-- Pin teardrop body with tip exactly at x=17, y=44 -->
             <path d="M17 44C17 44 32 27.5 32 16.5C32 7.3873 25.2843 0 17 0C8.71573 0 2 7.3873 2 16.5C2 27.5 17 44 17 44Z" 
                   fill="url(#grad-${lot.id})" 
-                  stroke="rgba(255,255,255,0.4)" 
-                  stroke-width="1.2"
-                  filter="url(#shadow-${lot.id})" />
+                  stroke="rgba(255,255,255,0.5)" 
+                  stroke-width="1.2"/>
             <!-- Inner dark pill circle -->
             <circle cx="17" cy="16" r="11.5" fill="#0f172a" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
             <!-- Vacancy Count text inside -->
@@ -2307,7 +2210,6 @@
           const vis = e.target.checked ? 'visible' : 'none';
           if (map.getLayer('vehicle-breadcrumbs-line')) {
             map.setLayoutProperty('vehicle-breadcrumbs-line', 'visibility', vis);
-            map.setLayoutProperty('vehicle-breadcrumbs-glow', 'visibility', vis);
           }
         });
 
