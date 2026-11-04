@@ -449,7 +449,7 @@
       display: flex;
     }
 
-    /* Autocomplete dropdown */
+    /* Google Maps Style Autocomplete Dropdown */
     .autocomplete-list {
       position: absolute;
       top: calc(100% + 6px);
@@ -457,12 +457,14 @@
       right: 0;
       border-radius: var(--radius-card);
       overflow: hidden;
-      z-index: 30;
-      max-height: 260px;
+      z-index: 40;
+      max-height: 320px;
       overflow-y: auto;
       display: none;
-      background: #0f172a;
+      background: #0b1329;
       border: 1px solid var(--color-border-subtle);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(20px);
     }
     .autocomplete-list.open {
       display: block;
@@ -470,36 +472,75 @@
     .autocomplete-item {
       padding: 10px 14px;
       display: flex;
-      align-items: flex-start;
-      gap: 10px;
+      align-items: center;
+      gap: 12px;
       cursor: pointer;
-      border-bottom: 1px solid var(--color-border-subtle);
-      background: var(--text-contrast-layer);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: rgba(15, 23, 42, 0.7);
       transition: background-color var(--transition-standard);
     }
     .autocomplete-item:last-child {
       border-bottom: none;
     }
     .autocomplete-item:hover, .autocomplete-item.active-item {
-      background: var(--color-hover);
+      background: rgba(56, 189, 248, 0.15);
+      border-left: 3px solid var(--accent-subtle);
+      padding-left: 11px;
+    }
+    .autocomplete-badge-box {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
     }
     .autocomplete-item-text {
       flex: 1;
       min-width: 0;
     }
+    .autocomplete-item-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
     .autocomplete-item-title {
       font-size: var(--font-size-body);
-      font-weight: 500;
+      font-weight: 600;
+      color: var(--color-text-primary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .autocomplete-item-title .highlight {
+      color: var(--accent-subtle);
+      font-weight: 700;
+      text-decoration: underline;
+    }
+    .autocomplete-dist-badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--accent-subtle);
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 2px 6px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
     .autocomplete-item-sub {
-      font-size: var(--font-size-sec);
+      font-size: 12px;
       color: var(--color-text-secondary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-top: 2px;
     }
 
     /* Filter Chips */
@@ -995,43 +1036,127 @@
       z-index: 100 !important;
     }
 
-    /* Vehicle dot marker with heading cone */
+    /* Google Maps 3D Navigation Puck & Arrowhead Pointer */
     .vehicle-marker-root {
       position: relative;
-      width: 48px;
-      height: 48px;
+      width: 54px;
+      height: 54px;
       pointer-events: none;
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-    .vehicle-cone {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 48px;
-      height: 48px;
-      background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.45) 0%, rgba(37, 99, 235, 0) 70%);
-      clip-path: polygon(50% 50%, 20% 0%, 80% 0%);
-      transform-origin: 50% 50%;
+      z-index: 90;
     }
     .vehicle-accuracy-ring {
       position: absolute;
-      width: 40px;
-      height: 40px;
-      border: 1px solid rgba(56, 189, 248, 0.4);
-      background: rgba(37, 99, 235, 0.12);
+      width: 48px;
+      height: 48px;
+      border: 1.5px solid rgba(56, 189, 248, 0.55);
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.22) 0%, rgba(37, 99, 235, 0.05) 70%, transparent 100%);
       border-radius: 50%;
+      animation: nav-pulse 2.2s infinite ease-out;
     }
-    .vehicle-core-dot {
-      width: 16px;
-      height: 16px;
-      background: var(--accent-subtle);
-      border: 2.5px solid #ffffff;
-      border-radius: 50%;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    @keyframes nav-pulse {
+      0% { transform: scale(0.85); opacity: 0.95; }
+      50% { transform: scale(1.4); opacity: 0.3; }
+      100% { transform: scale(0.85); opacity: 0.95; }
+    }
+    .vehicle-heading-rotator {
       position: relative;
-      z-index: 2;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform-origin: center center;
+      transition: transform 60ms linear;
+    }
+    .vehicle-chevron-svg {
+      width: 38px;
+      height: 38px;
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.5));
+    }
+    .vehicle-speed-pill {
+      position: absolute;
+      bottom: -15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #38bdf8;
+      font-size: 10px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      padding: 1px 7px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+    }
+
+    /* Google Maps Destination Search Pin */
+    .destination-pin {
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transform-origin: bottom center;
+      animation: pin-drop 350ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 95;
+    }
+    @keyframes pin-drop {
+      0% { transform: translateY(-30px) scale(0.6); opacity: 0; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    .destination-pin-badge {
+      background: #dc2626;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.45);
+      border: 1.5px solid #ffffff;
+      white-space: nowrap;
+      margin-bottom: 2px;
+      max-width: 160px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .destination-pin-svg {
+      width: 30px;
+      height: 38px;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+    }
+
+    /* Floating Re-center Button (Google Maps Style during navigation) */
+    .recenter-floating-btn {
+      position: absolute;
+      bottom: 28px;
+      right: 16px;
+      z-index: 25;
+      padding: 10px 16px;
+      border-radius: var(--radius-pill);
+      background: #0f172a;
+      border: 1.5px solid var(--accent-subtle);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+      transition: all var(--transition-standard);
+    }
+    .recenter-floating-btn.visible {
+      display: flex;
+    }
+    .recenter-floating-btn:hover {
+      background: #1e293b;
+      transform: translateY(-2px);
     }
   </style>
 </head>
@@ -1096,14 +1221,16 @@
 
       <!-- Search Box (Integrated with Mappls AutoSuggest REST API) -->
       <div class="search-wrapper">
-        <svg class="svg-icon search-icon-left" viewBox="0 0 24 24">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
+        <button id="btn-search-trigger" class="search-icon-left" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;" aria-label="Search">
+          <svg class="svg-icon" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </button>
         <input 
           type="text" 
           id="search-input" 
           class="search-input" 
-          placeholder="Search places or parking (Mappls API)" 
+          placeholder="Search places or parking (e.g. Koramangala, UB City)" 
           autocomplete="off" 
           spellcheck="false"
           aria-label="Search places or parking"
@@ -1249,7 +1376,45 @@
         </div>
       </div>
 
-      <!-- 4. Settings & Mappls API Configuration View -->
+      <!-- 4. Place View (Google Maps Search Result Detail) -->
+      <div id="view-place" style="display: none; flex-direction: column; gap: 12px;">
+        <button class="detail-nav-back" id="btn-back-from-place">
+          <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to all parking
+        </button>
+
+        <div class="contrast-card" style="padding: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--accent-subtle);" id="pv-category">COMMERCIAL &bull; MALL</div>
+            <span class="brand-badge" id="pv-badge">🏢</span>
+          </div>
+          <h2 class="detail-hero-title" id="pv-name" style="margin-top: 4px;">Garuda Mall</h2>
+          <div class="detail-address" id="pv-address">Magrath Road, Ashok Nagar, Bengaluru</div>
+          <div style="display: flex; gap: 14px; margin-top: 12px; font-weight: 600;">
+            <div><span id="pv-dist" style="font-size: 20px; color: var(--accent-subtle);">1.4</span> <span style="font-size: 13px; font-weight: 400;">km away</span></div>
+            <div><span id="pv-eta" style="font-size: 20px;">4</span> <span style="font-size: 13px; font-weight: 400;">min drive</span></div>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn-pill-primary" id="btn-pv-navigate">
+            <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            Start Directions to Place
+          </button>
+          <button class="btn-pill-secondary" id="btn-pv-park-nearest">
+            <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>
+            Navigate to Nearest Parking
+          </button>
+        </div>
+
+        <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--color-text-tertiary); margin-top: 6px; letter-spacing: 0.04em;">
+          Parking Options Near This Place
+        </div>
+        <div id="pv-nearby-lots" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+
+      <!-- 5. Settings & Mappls API Configuration View -->
       <div id="view-more">
         <div class="setting-group">
           <div class="setting-group-title">Mappls (MapmyIndia) REST API</div>
@@ -1401,6 +1566,12 @@
     </div>
   </div>
 
+  <!-- Floating Navigation Re-center Button (Google Maps Style) -->
+  <button id="btn-recenter-nav" class="recenter-floating-btn" aria-label="Re-center map on vehicle">
+    <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+    <span>Re-center</span>
+  </button>
+
   <!-- Toast Notification Pill -->
   <div id="toast" role="status">Report submitted. Thank you!</div>
 
@@ -1422,6 +1593,25 @@
         WS_RECONNECT_MS: 3000
       };
 
+      // Accurate Haversine Distance in meters
+      function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const phi1 = lat1 * Math.PI / 180;
+        const phi2 = lat2 * Math.PI / 180;
+        const dphi = (lat2 - lat1) * Math.PI / 180;
+        const dlam = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dphi / 2) ** 2 + Math.cos(phi1) * Math.cos(phi2) * Math.sin(dlam / 2) ** 2;
+        return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(Math.max(0, 1 - a)));
+      }
+
+      // Shortest angle difference in degrees [-180, 180] for smooth rotation lerp
+      function shortestAngleDiff(current, target) {
+        let diff = (target - current) % 360;
+        if (diff < -180) diff += 360;
+        if (diff > 180) diff -= 360;
+        return diff;
+      }
+
       // --------------------------------------------------------------------------
       // 5.2 Application State
       // --------------------------------------------------------------------------
@@ -1434,12 +1624,15 @@
           altitude: 920,
           accuracy: 5
         },
+        targetLocation: null,
         isTrackingLocation: false,
+        isCameraFollowing: true,
         is3D: false,
         activeFilter: 'all',
         activeTab: 'explore',
         lots: [],
         selectedLot: null,
+        selectedPlace: null,
         activeTrip: null,
         breadcrumbs: [],
         tripOdometerKm: 0,
@@ -1453,6 +1646,7 @@
         },
         watchId: null,
         animationFrameId: null,
+        gpsSmoothingId: null,
         activeSockets: {}
       };
 
@@ -1650,16 +1844,21 @@
               try {
                 const data = JSON.parse(e.data);
                 if (data.latitude && data.longitude) {
-                  STATE.userLocation = {
+                  const targetFix = {
                     lng: data.longitude,
                     lat: data.latitude,
-                    heading: data.bearing || 0,
+                    heading: data.bearing || STATE.userLocation.heading || 0,
                     speed: data.speed || 0,
                     altitude: data.altitude || 920,
                     accuracy: data.accuracy || 5
                   };
-                  MapEngine.updateVehicle(STATE.userLocation);
-                  TelemetryController.update(STATE.userLocation);
+                  if (typeof ParkingApp !== 'undefined' && ParkingApp.smoothGlideTo) {
+                    ParkingApp.smoothGlideTo(targetFix);
+                  } else {
+                    STATE.userLocation = targetFix;
+                    MapEngine.updateVehicle(STATE.userLocation);
+                    TelemetryController.update(STATE.userLocation);
+                  }
                 }
               } catch {}
             };
@@ -1716,6 +1915,7 @@
         markers: new Map(),
         vehicleMarker: null,
         vehicleEl: null,
+        destinationMarker: null,
 
         init() {
           const styleUrl = MAP_STYLES[STATE.config.activeStyle] || MAP_STYLES['carto-dark'];
@@ -1742,6 +1942,16 @@
             const bearing = this.map.getBearing();
             document.getElementById('compass-icon').style.transform = `rotate(${-bearing}deg)`;
           });
+
+          // User map interaction breaks camera follow during navigation
+          const onUserPan = () => {
+            if (STATE.activeTrip && STATE.isCameraFollowing) {
+              STATE.isCameraFollowing = false;
+              document.getElementById('btn-recenter-nav').classList.add('visible');
+            }
+          };
+          this.map.on('dragstart', onUserPan);
+          this.map.on('touchstart', onUserPan);
         },
 
         setupRouteSource() {
@@ -1795,9 +2005,22 @@
           this.vehicleEl = document.createElement('div');
           this.vehicleEl.className = 'vehicle-marker-root';
           this.vehicleEl.innerHTML = `
-            <div class="vehicle-cone" id="v-cone"></div>
             <div class="vehicle-accuracy-ring"></div>
-            <div class="vehicle-core-dot"></div>
+            <div class="vehicle-heading-rotator" id="v-rotator">
+              <svg viewBox="0 0 48 48" class="vehicle-chevron-svg">
+                <defs>
+                  <linearGradient id="navPuckGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#38bdf8"/>
+                    <stop offset="100%" stop-color="#1d4ed8"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="24" cy="24" r="22" fill="rgba(37, 99, 235, 0.15)"/>
+                <path d="M24 4 L42 40 L24 31 L6 40 Z" fill="#ffffff"/>
+                <path d="M24 7 L39 37 L24 29 L9 37 Z" fill="url(#navPuckGrad)"/>
+                <circle cx="24" cy="23" r="3.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <div class="vehicle-speed-pill" id="v-speed-pill">Stopped</div>
           `;
 
           this.vehicleMarker = new maplibregl.Marker({
@@ -1811,10 +2034,49 @@
         updateVehicle(pos) {
           if (this.vehicleMarker) {
             this.vehicleMarker.setLngLat([pos.lng, pos.lat]);
-            const cone = this.vehicleEl.querySelector('#v-cone');
-            if (cone) {
-              cone.style.transform = `rotate(${pos.heading || 0}deg)`;
+            const rotator = this.vehicleEl.querySelector('#v-rotator');
+            if (rotator) {
+              rotator.style.transform = `rotate(${pos.heading || 0}deg)`;
             }
+            const speedPill = this.vehicleEl.querySelector('#v-speed-pill');
+            if (speedPill) {
+              const spd = Math.round(pos.speed || 0);
+              speedPill.innerText = spd > 1 ? `${spd} km/h` : 'Stopped';
+            }
+          }
+        },
+
+        setDestinationMarker(place) {
+          if (this.destinationMarker) {
+            this.destinationMarker.remove();
+            this.destinationMarker = null;
+          }
+          if (!place) return;
+
+          const el = document.createElement('div');
+          el.className = 'destination-pin';
+          el.innerHTML = `
+            <div class="destination-pin-badge">${place.name}</div>
+            <svg viewBox="0 0 32 40" class="destination-pin-svg">
+              <path d="M16 0 C7.16 0 0 7.16 0 16 C0 26 16 40 16 40 C16 40 32 26 32 16 C32 7.16 24.84 0 16 0 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+              <circle cx="16" cy="15" r="6" fill="#ffffff"/>
+              <circle cx="16" cy="15" r="3" fill="#ef4444"/>
+            </svg>
+          `;
+
+          this.destinationMarker = new maplibregl.Marker({
+            element: el,
+            anchor: 'bottom',
+            offset: [0, 0]
+          })
+            .setLngLat([place.lon, place.lat])
+            .addTo(this.map);
+        },
+
+        clearDestinationMarker() {
+          if (this.destinationMarker) {
+            this.destinationMarker.remove();
+            this.destinationMarker = null;
           }
         },
 
@@ -2030,6 +2292,30 @@
           document.getElementById('btn-end-trip').onclick = () => {
             NavigationEngine.endTrip();
           };
+
+          // Re-center floating button during navigation
+          const btnRecenter = document.getElementById('btn-recenter-nav');
+          if (btnRecenter) {
+            btnRecenter.onclick = () => {
+              STATE.isCameraFollowing = true;
+              btnRecenter.classList.remove('visible');
+              MapEngine.map.easeTo({
+                center: [STATE.userLocation.lng, STATE.userLocation.lat],
+                bearing: STATE.userLocation.heading,
+                pitch: 48,
+                duration: 600
+              });
+            };
+          }
+
+          // Back from Place View
+          const btnBackPlace = document.getElementById('btn-back-from-place');
+          if (btnBackPlace) {
+            btnBackPlace.onclick = () => {
+              MapEngine.clearDestinationMarker();
+              ParkingApp.showListView();
+            };
+          }
         },
 
         switchTab(tabId) {
@@ -2040,11 +2326,14 @@
           // Hide all views
           document.getElementById('view-explore').style.display = 'none';
           document.getElementById('view-detail').style.display = 'none';
+          document.getElementById('view-place').style.display = 'none';
           document.getElementById('view-trip').style.display = 'none';
           document.getElementById('view-more').style.display = 'none';
 
           if (tabId === 'explore') {
-            if (STATE.selectedLot) {
+            if (STATE.selectedPlace) {
+              document.getElementById('view-place').style.display = 'flex';
+            } else if (STATE.selectedLot) {
               document.getElementById('view-detail').style.display = 'flex';
             } else {
               document.getElementById('view-explore').style.display = 'flex';
@@ -2054,6 +2343,17 @@
           } else if (tabId === 'more') {
             document.getElementById('view-more').style.display = 'flex';
           }
+        },
+
+        showPlaceView() {
+          STATE.activeTab = 'explore';
+          document.querySelectorAll('.segment-tab').forEach(t => t.classList.remove('active'));
+          document.getElementById('tab-explore').classList.add('active');
+          document.getElementById('view-explore').style.display = 'none';
+          document.getElementById('view-detail').style.display = 'none';
+          document.getElementById('view-trip').style.display = 'none';
+          document.getElementById('view-more').style.display = 'none';
+          document.getElementById('view-place').style.display = 'flex';
         },
 
         renderLotList(lots) {
@@ -2187,14 +2487,17 @@
         debounceTimer: null,
         selectedIndex: -1,
         results: [],
+        lastQuery: '',
 
         init() {
           const input = document.getElementById('search-input');
           const clearBtn = document.getElementById('search-clear');
           const list = document.getElementById('search-autocomplete-box');
+          const triggerBtn = document.getElementById('btn-search-trigger');
 
           input.addEventListener('input', (e) => {
             const query = e.target.value.trim();
+            this.lastQuery = query;
             clearBtn.classList.toggle('visible', query.length > 0);
 
             clearTimeout(this.debounceTimer);
@@ -2205,43 +2508,79 @@
 
             this.debounceTimer = setTimeout(() => {
               this.fetchSuggestions(query);
-            }, 250);
+            }, 200);
           });
+
+          if (triggerBtn) {
+            triggerBtn.onclick = () => {
+              const query = input.value.trim();
+              if (query.length >= 2) {
+                this.fetchSuggestions(query, true);
+              }
+            };
+          }
 
           clearBtn.onclick = () => {
             input.value = '';
             clearBtn.classList.remove('visible');
             list.classList.remove('open');
+            MapEngine.clearDestinationMarker();
             input.focus();
           };
 
-          // Keyboard navigation
+          // Keyboard navigation & Enter submit
           input.addEventListener('keydown', (e) => {
-            if (!list.classList.contains('open')) return;
-
             if (e.key === 'ArrowDown') {
-              e.preventDefault();
-              this.selectedIndex = Math.min(this.selectedIndex + 1, this.results.length - 1);
-              this.updateActiveItem();
+              if (list.classList.contains('open')) {
+                e.preventDefault();
+                this.selectedIndex = Math.min(this.selectedIndex + 1, this.results.length - 1);
+                this.updateActiveItem();
+              }
             } else if (e.key === 'ArrowUp') {
-              e.preventDefault();
-              this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
-              this.updateActiveItem();
+              if (list.classList.contains('open')) {
+                e.preventDefault();
+                this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
+                this.updateActiveItem();
+              }
             } else if (e.key === 'Enter') {
               e.preventDefault();
               if (this.selectedIndex >= 0 && this.results[this.selectedIndex]) {
                 this.selectResult(this.results[this.selectedIndex]);
+              } else if (this.results.length > 0) {
+                this.selectResult(this.results[0]);
+              } else if (input.value.trim().length >= 2) {
+                this.fetchSuggestions(input.value.trim(), true);
               }
             } else if (e.key === 'Escape') {
               list.classList.remove('open');
             }
           });
+
+          // Close dropdown on outside click
+          document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-wrapper')) {
+              list.classList.remove('open');
+            }
+          });
         },
 
-        async fetchSuggestions(query) {
-          const center = MapEngine.map.getCenter();
+        highlightMatch(text, query) {
+          if (!query || !text) return text || '';
+          const q = query.trim().toLowerCase();
+          const t = text.toLowerCase();
+          const idx = t.indexOf(q);
+          if (idx === -1) return text;
+          return `${text.slice(0, idx)}<span class="highlight">${text.slice(idx, idx + q.length)}</span>${text.slice(idx + q.length)}`;
+        },
+
+        async fetchSuggestions(query, selectFirstOnFetch = false) {
+          const center = MapEngine.map ? MapEngine.map.getCenter() : { lat: CONFIG.DEFAULT_COORDS[1], lng: CONFIG.DEFAULT_COORDS[0] };
           this.results = await API.searchMappls(query, center.lat, center.lng);
           this.renderAutocomplete();
+
+          if (selectFirstOnFetch && this.results.length > 0) {
+            this.selectResult(this.results[0]);
+          }
         },
 
         renderAutocomplete() {
@@ -2259,11 +2598,25 @@
             row.className = 'autocomplete-item';
             row.setAttribute('role', 'option');
 
+            const badge = item.badge || '📍';
+            const highlightedTitle = this.highlightMatch(item.name, this.lastQuery);
+            const distBadge = item.distance_km !== undefined && item.distance_km !== null
+              ? `<span class="autocomplete-dist-badge">${item.distance_km} km</span>`
+              : '';
+            const spotsInfo = item.free_spots !== undefined && item.free_spots !== null
+              ? ` &bull; <strong style="color:var(--status-available);">${item.free_spots} spots free</strong>`
+              : '';
+
             row.innerHTML = `
-              <svg class="svg-icon" style="color:var(--accent-subtle); margin-top: 2px;" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <div class="autocomplete-badge-box">${badge}</div>
               <div class="autocomplete-item-text">
-                <div class="autocomplete-item-title">${item.name}</div>
-                <div class="autocomplete-item-sub">${item.address || 'Bengaluru Metro Area'}</div>
+                <div class="autocomplete-item-row">
+                  <span class="autocomplete-item-title">${highlightedTitle}</span>
+                  ${distBadge}
+                </div>
+                <div class="autocomplete-item-sub">
+                  ${item.address || 'Bengaluru Core'}${spotsInfo}
+                </div>
               </div>
             `;
 
@@ -2278,15 +2631,108 @@
           const items = document.querySelectorAll('.autocomplete-item');
           items.forEach((it, idx) => {
             it.classList.toggle('active-item', idx === this.selectedIndex);
+            if (idx === this.selectedIndex) {
+              it.scrollIntoView({ block: 'nearest' });
+            }
           });
         },
 
         selectResult(item) {
           document.getElementById('search-autocomplete-box').classList.remove('open');
-          MapEngine.map.flyTo({ center: [item.lon, item.lat], zoom: 15.5, duration: 800 });
+          const input = document.getElementById('search-input');
+          if (input) input.value = item.name;
 
-          ParkingApp.loadNearbyLots(item.lat, item.lon);
-          ParkingApp.showToast(`Showing parking near ${item.name}`);
+          STATE.selectedPlace = item;
+          STATE.selectedLot = null;
+
+          // Drop high-visibility destination pin
+          MapEngine.setDestinationMarker(item);
+
+          // Fly map smoothly to place coordinates
+          MapEngine.map.flyTo({
+            center: [item.lon, item.lat],
+            zoom: 15.5,
+            pitch: 35,
+            duration: 900
+          });
+
+          // Calculate driving distance & ETA from current vehicle position
+          const distMeters = calculateDistanceMeters(STATE.userLocation.lat, STATE.userLocation.lng, item.lat, item.lon);
+          const distKm = (distMeters / 1000).toFixed(1);
+          const etaMins = Math.max(1, Math.round((distMeters / 1000 / 30) * 60)); // ~30 km/h city speed
+
+          // Populate Google Maps Place View
+          document.getElementById('pv-name').innerText = item.name;
+          document.getElementById('pv-category').innerText = item.category ? item.category.toUpperCase() : 'BENGALURU DESTINATION';
+          document.getElementById('pv-badge').innerText = item.badge || '📍';
+          document.getElementById('pv-address').innerText = item.address || 'Bengaluru, Karnataka';
+          document.getElementById('pv-dist').innerText = distKm;
+          document.getElementById('pv-eta').innerText = etaMins;
+
+          // Wire place action buttons
+          document.getElementById('btn-pv-navigate').onclick = () => {
+            const destObj = {
+              id: item.lot_id || `place-${Date.now()}`,
+              name: item.name,
+              address: item.address,
+              lat: item.lat,
+              lon: item.lon,
+              capacity: item.capacity || 100,
+              free_spots: item.free_spots !== undefined && item.free_spots !== null ? item.free_spots : 45,
+              price_car: item.price || '₹40',
+              price_bike: '₹15'
+            };
+            NavigationEngine.startTrip(destObj);
+          };
+
+          document.getElementById('btn-pv-park-nearest').onclick = () => {
+            if (STATE.lots.length > 0) {
+              const bestLot = STATE.lots.find(l => l.status === 'Available') || STATE.lots[0];
+              ParkingApp.selectLot(bestLot.id);
+              NavigationEngine.startTrip(bestLot);
+            } else {
+              ParkingApp.showToast("Finding nearest parking lot...");
+            }
+          };
+
+          // Fetch parking lots near this destination and render top options
+          ParkingApp.loadNearbyLots(item.lat, item.lon).then(() => {
+            const nearbyContainer = document.getElementById('pv-nearby-lots');
+            if (nearbyContainer) {
+              nearbyContainer.innerHTML = '';
+              const topLots = STATE.lots.slice(0, 4);
+              if (topLots.length === 0) {
+                nearbyContainer.innerHTML = '<div style="font-size:12px;color:var(--color-text-secondary);padding:6px 0;">No parking recorded within 3 km.</div>';
+              } else {
+                topLots.forEach(lot => {
+                  const row = document.createElement('div');
+                  row.className = 'contrast-card';
+                  row.style.padding = '10px 12px';
+                  row.style.cursor = 'pointer';
+
+                  let stColor = 'var(--status-available)';
+                  if (lot.status === 'Filling up') stColor = 'var(--status-filling)';
+                  if (lot.status === 'Full') stColor = 'var(--status-full)';
+
+                  row.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <div style="font-weight:600; font-size:13px;">${lot.name}</div>
+                      <div style="font-size:12px; font-weight:700; color:${stColor};">${lot.free_spots} free</div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--color-text-secondary); margin-top:3px;">
+                      <span>${lot.price_car}/hr</span>
+                      <span>${lot.distance_km} km away</span>
+                    </div>
+                  `;
+                  row.onclick = () => ParkingApp.selectLot(lot.id);
+                  nearbyContainer.appendChild(row);
+                });
+              }
+            }
+          });
+
+          UIController.showPlaceView();
+          ParkingApp.showToast(`Selected ${item.name}`);
         }
       };
 
@@ -2399,32 +2845,127 @@
 
         startSimulation() {
           cancelAnimationFrame(STATE.animationFrameId);
-          let index = 0;
-          let prevTime = performance.now();
+          if (!this.routePoints || this.routePoints.length < 2) return;
+
+          STATE.isCameraFollowing = true;
+          const recenterBtn = document.getElementById('btn-recenter-nav');
+          if (recenterBtn) recenterBtn.classList.remove('visible');
+
+          // Precompute route segment distances and bearings
+          const segments = [];
+          let totalRouteMeters = 0;
+
+          for (let i = 0; i < this.routePoints.length - 1; i++) {
+            const p1 = this.routePoints[i];
+            const p2 = this.routePoints[i + 1];
+            const dist = calculateDistanceMeters(p1[1], p1[0], p2[1], p2[0]);
+            
+            // Geographic bearing from p1 to p2
+            const dLon = (p2[0] - p1[0]) * Math.cos(p1[1] * Math.PI / 180);
+            const dLat = p2[1] - p1[1];
+            const bearing = (Math.atan2(dLon, dLat) * 180 / Math.PI + 360) % 360;
+
+            segments.push({
+              p1,
+              p2,
+              distMeters: Math.max(0.2, dist),
+              bearing
+            });
+            totalRouteMeters += dist;
+          }
+
+          let currentDistMeters = 0;
+          let currentSegmentIdx = 0;
+          let lastTime = performance.now();
+          let currentSpeedKmh = 36.0;
+          let currentHeading = segments[0] ? segments[0].bearing : 0;
+
+          // Initial placement
+          const startPt = this.routePoints[0];
+          STATE.userLocation.lng = startPt[0];
+          STATE.userLocation.lat = startPt[1];
+          STATE.userLocation.heading = currentHeading;
+          STATE.userLocation.speed = currentSpeedKmh;
+          MapEngine.updateVehicle(STATE.userLocation);
+          TelemetryController.update(STATE.userLocation);
+
+          if (STATE.isCameraFollowing && MapEngine.map) {
+            MapEngine.map.easeTo({
+              center: [startPt[0], startPt[1]],
+              bearing: currentHeading,
+              pitch: 48,
+              zoom: 16.5,
+              duration: 800
+            });
+          }
 
           const animate = (currentTime) => {
-            if (!STATE.activeTrip || index >= this.routePoints.length) {
+            if (!STATE.activeTrip) return;
+
+            const dt = Math.min((currentTime - lastTime) / 1000, 0.1); // clamp dt to max 100ms
+            lastTime = currentTime;
+
+            if (currentSegmentIdx >= segments.length) {
+              const lastPt = this.routePoints[this.routePoints.length - 1];
+              STATE.userLocation.lng = lastPt[0];
+              STATE.userLocation.lat = lastPt[1];
+              STATE.userLocation.speed = 0;
+              MapEngine.updateVehicle(STATE.userLocation);
+              TelemetryController.update(STATE.userLocation);
               this.handleArrival();
               return;
             }
 
-            const current = this.routePoints[index];
-            const next = this.routePoints[Math.min(index + 1, this.routePoints.length - 1)];
-            
-            // Calculate bearing
-            const dy = next[1] - current[1];
-            const dx = next[0] - current[0];
-            const heading = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+            const seg = segments[currentSegmentIdx];
 
-            // Physics speed simulation with turn slowdown
-            const turnAngle = Math.abs(heading - (STATE.userLocation.heading || 0));
-            const baseSpeed = turnAngle > 20 ? 22 : 42;
+            // Turn detection & deceleration
+            let nextBearing = seg.bearing;
+            if (currentSegmentIdx + 1 < segments.length) {
+              nextBearing = segments[currentSegmentIdx + 1].bearing;
+            }
+            const turnAngle = Math.abs(shortestAngleDiff(currentHeading, nextBearing));
+            const targetSpeedKmh = turnAngle > 22 ? 18.0 : 44.0;
+            currentSpeedKmh += (targetSpeedKmh - currentSpeedKmh) * Math.min(1.0, dt * 3.0);
+
+            const speedMps = (currentSpeedKmh * 1000) / 3600;
+            currentDistMeters += speedMps * dt;
+
+            // Advance through segments based on cumulative distance
+            let distAcc = currentDistMeters;
+            let sIdx = 0;
+            while (sIdx < segments.length && distAcc > segments[sIdx].distMeters) {
+              distAcc -= segments[sIdx].distMeters;
+              sIdx++;
+            }
+            currentSegmentIdx = sIdx;
+
+            if (currentSegmentIdx >= segments.length) {
+              const lastPt = this.routePoints[this.routePoints.length - 1];
+              STATE.userLocation.lng = lastPt[0];
+              STATE.userLocation.lat = lastPt[1];
+              STATE.userLocation.speed = 0;
+              MapEngine.updateVehicle(STATE.userLocation);
+              TelemetryController.update(STATE.userLocation);
+              this.handleArrival();
+              return;
+            }
+
+            const activeSeg = segments[currentSegmentIdx];
+            const ratio = Math.max(0.0, Math.min(1.0, distAcc / activeSeg.distMeters));
+
+            // Smooth position along segment line
+            const curLng = activeSeg.p1[0] + (activeSeg.p2[0] - activeSeg.p1[0]) * ratio;
+            const curLat = activeSeg.p1[1] + (activeSeg.p2[1] - activeSeg.p1[1]) * ratio;
+
+            // Smooth shortest-arc heading rotation (prevents 360° spin jumps)
+            const angleDiff = shortestAngleDiff(currentHeading, activeSeg.bearing);
+            currentHeading = (currentHeading + angleDiff * Math.min(1.0, dt * 7.0) + 360) % 360;
 
             STATE.userLocation = {
-              lng: current[0],
-              lat: current[1],
-              heading: heading,
-              speed: baseSpeed + Math.floor(Math.sin(index / 8) * 4),
+              lng: curLng,
+              lat: curLat,
+              heading: currentHeading,
+              speed: currentSpeedKmh,
               altitude: 920,
               accuracy: 4
             };
@@ -2432,35 +2973,48 @@
             MapEngine.updateVehicle(STATE.userLocation);
             TelemetryController.update(STATE.userLocation);
 
-            // Stream GPS to Traccar
-            if (index % 10 === 0) {
-              API.sendTraccarPing(STATE.userLocation);
-            }
-
-            // Breadcrumbs
-            if (STATE.config.showBreadcrumbs && index % 3 === 0) {
-              STATE.breadcrumbs.push(current);
-              MapEngine.map.getSource('breadcrumbs').setData({
-                type: 'Feature',
-                geometry: { type: 'LineString', coordinates: STATE.breadcrumbs }
+            // Dynamic Google Maps 3D Camera Follow
+            if (STATE.isCameraFollowing && MapEngine.map) {
+              MapEngine.map.easeTo({
+                center: [curLng, curLat],
+                bearing: currentHeading,
+                pitch: 48,
+                duration: 0
               });
             }
 
-            // Step progression
-            const progressRatio = index / this.routePoints.length;
+            // Periodic Traccar GPS telemetry ping
+            if (Math.random() < dt * 0.6) {
+              API.sendTraccarPing(STATE.userLocation);
+            }
+
+            // Breadcrumb path trail
+            if (STATE.config.showBreadcrumbs && Math.random() < dt * 2.5) {
+              STATE.breadcrumbs.push([curLng, curLat]);
+              if (STATE.breadcrumbs.length > 500) STATE.breadcrumbs.shift();
+              const bSource = MapEngine.map.getSource('breadcrumbs');
+              if (bSource) {
+                bSource.setData({
+                  type: 'Feature',
+                  geometry: { type: 'LineString', coordinates: STATE.breadcrumbs }
+                });
+              }
+            }
+
+            // Turn-by-turn guidance progress
+            const totalProgress = totalRouteMeters > 0 ? (currentDistMeters / totalRouteMeters) : 0;
             if (this.routeSteps.length >= 3) {
-              if (progressRatio > 0.3 && this.currentStepIndex === 0) {
+              if (totalProgress > 0.35 && this.currentStepIndex === 0) {
                 this.currentStepIndex = 1;
                 this.updateTurnBanner(this.routeSteps[1]);
                 this.renderStepList();
-              } else if (progressRatio > 0.7 && this.currentStepIndex === 1) {
+              } else if (totalProgress > 0.75 && this.currentStepIndex === 1) {
                 this.currentStepIndex = 2;
                 this.updateTurnBanner(this.routeSteps[2]);
                 this.renderStepList();
               }
             }
 
-            index++;
             STATE.animationFrameId = requestAnimationFrame(animate);
           };
 
@@ -2469,7 +3023,10 @@
 
         handleArrival() {
           document.getElementById('nav-turn-banner').style.display = 'none';
-          ParkingApp.showToast("Arrived at your parking destination!");
+          const recenterBtn = document.getElementById('btn-recenter-nav');
+          if (recenterBtn) recenterBtn.classList.remove('visible');
+
+          ParkingApp.showToast("Arrived at your destination!");
           
           if (STATE.config.voiceAlerts && 'speechSynthesis' in window) {
             const utterance = new SpeechSynthesisUtterance("Approaching destination. Parking entrance on your right.");
@@ -2500,6 +3057,10 @@
         endTrip() {
           STATE.activeTrip = null;
           cancelAnimationFrame(STATE.animationFrameId);
+          STATE.isCameraFollowing = true;
+          const recenterBtn = document.getElementById('btn-recenter-nav');
+          if (recenterBtn) recenterBtn.classList.remove('visible');
+
           MapEngine.map.getSource('route').setData({ type: 'FeatureCollection', features: [] });
           document.getElementById('nav-turn-banner').style.display = 'none';
           document.getElementById('nav-alert-banner').style.display = 'none';
@@ -2579,9 +3140,68 @@
 
         showListView() {
           STATE.selectedLot = null;
+          STATE.selectedPlace = null;
           MapEngine.highlightMarker(null);
           document.getElementById('view-detail').style.display = 'none';
+          document.getElementById('view-place').style.display = 'none';
           document.getElementById('view-explore').style.display = 'flex';
+        },
+
+        smoothGlideTo(target) {
+          STATE.targetLocation = target;
+          if (STATE.gpsSmoothingId) return;
+
+          let lastGpsTime = performance.now();
+          const glide = (now) => {
+            if (!STATE.targetLocation) {
+              STATE.gpsSmoothingId = null;
+              return;
+            }
+            const dt = Math.min((now - lastGpsTime) / 1000, 0.1);
+            lastGpsTime = now;
+
+            const cur = STATE.userLocation;
+            const tgt = STATE.targetLocation;
+
+            const dLng = tgt.lng - cur.lng;
+            const dLat = tgt.lat - cur.lat;
+            const distMeters = calculateDistanceMeters(cur.lat, cur.lng, tgt.lat, tgt.lng);
+
+            if (distMeters < 0.25) {
+              STATE.userLocation.lng = tgt.lng;
+              STATE.userLocation.lat = tgt.lat;
+              STATE.userLocation.heading = tgt.heading;
+              STATE.userLocation.speed = tgt.speed;
+              MapEngine.updateVehicle(STATE.userLocation);
+              TelemetryController.update(STATE.userLocation);
+              STATE.gpsSmoothingId = null;
+              return;
+            }
+
+            const alpha = Math.min(1.0, dt * 5.0);
+            cur.lng += dLng * alpha;
+            cur.lat += dLat * alpha;
+            cur.speed += (tgt.speed - cur.speed) * alpha;
+
+            const hDiff = shortestAngleDiff(cur.heading, tgt.heading);
+            cur.heading = (cur.heading + hDiff * alpha + 360) % 360;
+
+            MapEngine.updateVehicle(cur);
+            TelemetryController.update(cur);
+
+            if (STATE.isCameraFollowing && STATE.activeTrip && MapEngine.map) {
+              MapEngine.map.easeTo({
+                center: [cur.lng, cur.lat],
+                bearing: cur.heading,
+                pitch: 48,
+                duration: 0
+              });
+            }
+
+            STATE.gpsSmoothingId = requestAnimationFrame(glide);
+          };
+
+          STATE.gpsSmoothingId = requestAnimationFrame(glide);
         },
 
         toggleLiveLocation() {
@@ -2598,17 +3218,17 @@
                 (pos) => {
                   STATE.isTrackingLocation = true;
                   const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
-                  STATE.userLocation = {
+                  const targetFix = {
                     lng: longitude,
                     lat: latitude,
-                    heading: heading || 0,
+                    heading: heading || STATE.userLocation.heading || 0,
                     speed: (speed || 0) * 3.6,
                     altitude: altitude || 920,
                     accuracy: accuracy || 5
                   };
-                  MapEngine.updateVehicle(STATE.userLocation);
-                  TelemetryController.update(STATE.userLocation);
-                  API.sendTraccarPing(STATE.userLocation);
+
+                  ParkingApp.smoothGlideTo(targetFix);
+                  API.sendTraccarPing(targetFix);
                 },
                 (err) => {
                   locBtn.classList.remove('active-blue', 'active-pulse');
