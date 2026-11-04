@@ -189,67 +189,92 @@
       cursor: pointer;
     }
 
-    /* Markers */
+    /* Markers - Clean hardware-accelerated positioning with NO transform transitions */
     .parking-marker {
       cursor: pointer;
+      position: relative;
+      user-select: none;
+      /* Crucial: Never put transition: transform on MapLibre root marker elements */
+    }
+
+    .marker-inner-wrapper {
       display: flex;
       flex-direction: column;
       align-items: center;
-      transition: transform 0.2s ease;
+      transform-origin: bottom center;
+      transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
-    .parking-marker:hover {
-      transform: scale(1.12);
-      z-index: 10;
-    }
-
-    .marker-pin {
-      width: 38px;
-      height: 38px;
-      border-radius: 50% 50% 50% 0;
-      transform: rotate(-45deg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-      border: 2px solid #ffffff;
-    }
-
-    .marker-inner {
-      transform: rotate(45deg);
-      color: white;
-      font-size: 13px;
-      font-weight: 800;
-      text-align: center;
-      line-height: 1;
+    .parking-marker:hover .marker-inner-wrapper {
+      transform: scale(1.15);
+      z-index: 50;
     }
 
     .marker-badge {
-      background: rgba(15, 23, 42, 0.9);
-      color: white;
-      font-size: 11px;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 10px;
       font-weight: 700;
-      padding: 2px 6px;
-      border-radius: 10px;
-      margin-top: 4px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      margin-bottom: 3px;
       white-space: nowrap;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      letter-spacing: 0.2px;
     }
 
-    /* Status Colors */
+    /* SVG Pin Graphic with tip at the absolute bottom */
+    .marker-pin {
+      width: 36px;
+      height: 44px;
+      position: relative;
+      filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.35));
+    }
+
+    .marker-pin svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .marker-pin-label {
+      position: absolute;
+      top: 7px;
+      left: 0;
+      width: 36px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    /* Status Fill & Text Colors */
+    .fill-available { fill: #16a34a; }
+    .fill-filling_up { fill: #d97706; }
+    .fill-full { fill: #dc2626; }
+    .fill-unknown { fill: #64748b; }
+
     .status-available { background-color: #16a34a; }
     .status-filling_up { background-color: #d97706; }
     .status-full { background-color: #dc2626; }
     .status-unknown { background-color: #64748b; }
 
     /* Vehicle Marker */
+    .vehicle-marker-wrapper {
+      user-select: none;
+    }
+
     .vehicle-marker {
-      width: 24px;
-      height: 24px;
+      width: 22px;
+      height: 22px;
       background: #1a73e8;
       border: 3px solid #ffffff;
       border-radius: 50%;
-      box-shadow: 0 0 0 6px rgba(26, 115, 232, 0.25), 0 3px 8px rgba(0,0,0,0.3);
+      box-shadow: 0 0 0 5px rgba(26, 115, 232, 0.25), 0 3px 8px rgba(0,0,0,0.35);
       position: relative;
     }
 
@@ -608,7 +633,7 @@
     const DEFAULT_CENTER = [77.5946, 12.9716]; // [lon, lat]
     let userLocation = { lat: 12.9716, lon: 77.5850 }; // default driver location west of city center
     let currentLot = null;
-    let markers = [];
+    const markersById = new Map();
     let vehicleMarker = null;
     let vehicleWs = null;
     let lotWs = null;
@@ -750,12 +775,17 @@
       userLocation = { lat, lon };
       if (!vehicleMarker) {
         const el = document.createElement("div");
-        el.className = "vehicle-marker";
-        const pulse = document.createElement("div");
-        pulse.className = "vehicle-pulse";
-        el.appendChild(pulse);
+        el.className = "vehicle-marker-wrapper";
+        el.innerHTML = `
+          <div class="vehicle-marker">
+            <div class="vehicle-pulse"></div>
+          </div>
+        `;
 
-        vehicleMarker = new maplibregl.Marker({ element: el })
+        vehicleMarker = new maplibregl.Marker({
+          element: el,
+          anchor: "center"
+        })
           .setLngLat([lon, lat])
           .addTo(map);
       } else {
@@ -797,39 +827,70 @@
     }
 
     function renderMarkers(lots) {
-      // Clear existing markers
-      markers.forEach(m => m.remove());
-      markers = [];
+      const currentIds = new Set();
 
       lots.forEach(lot => {
-        const el = document.createElement("div");
-        el.className = "parking-marker";
-        
-        const pin = document.createElement("div");
-        pin.className = `marker-pin status-${lot.status}`;
-        
-        const inner = document.createElement("div");
-        inner.className = "marker-inner";
-        inner.innerText = lot.free_spots !== null ? lot.free_spots : "P";
-        pin.appendChild(inner);
+        currentIds.add(lot.id);
+        const spotsText = lot.free_spots !== null ? lot.free_spots : "P";
+        const badgeText = formatStatusLabel(lot.status);
 
-        const badge = document.createElement("div");
-        badge.className = "marker-badge";
-        badge.innerText = formatStatusLabel(lot.status);
+        if (markersById.has(lot.id)) {
+          // Update in-place: perfectly smooth, no recreation flicker
+          const item = markersById.get(lot.id);
+          item.lot = lot;
 
-        el.appendChild(pin);
-        el.appendChild(badge);
+          const path = item.el.querySelector(".pin-path");
+          if (path) {
+            path.setAttribute("class", `pin-path fill-${lot.status}`);
+          }
+          const label = item.el.querySelector(".marker-pin-label");
+          if (label) label.innerText = spotsText;
+          const badge = item.el.querySelector(".marker-badge");
+          if (badge) badge.innerText = badgeText;
 
-        el.addEventListener("click", () => {
-          selectLot(lot);
-        });
+          item.marker.setLngLat([lot.lon, lot.lat]);
+        } else {
+          // Create marker with SVG pin bottom tip aligned directly onto coordinate
+          const el = document.createElement("div");
+          el.className = "parking-marker";
+          el.innerHTML = `
+            <div class="marker-inner-wrapper">
+              <div class="marker-badge">${badgeText}</div>
+              <div class="marker-pin">
+                <svg viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path class="pin-path fill-${lot.status}" d="M18 44C18 44 34 28 34 18C34 9.163 26.837 2 18 2C9.163 2 2 9.163 2 18C2 28 18 44 18 44Z" stroke="#ffffff" stroke-width="2.5" stroke-linejoin="round"/>
+                  <circle cx="18" cy="18" r="11" fill="#ffffff" fill-opacity="0.25"/>
+                </svg>
+                <div class="marker-pin-label">${spotsText}</div>
+              </div>
+            </div>
+          `;
 
-        const marker = new maplibregl.Marker({ element: el })
-          .setLngLat([lot.lon, lot.lat])
-          .addTo(map);
+          el.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const currentItem = markersById.get(lot.id);
+            selectLot(currentItem ? currentItem.lot : lot);
+          });
 
-        markers.push(marker);
+          // Anchor strictly at bottom so pin tip touches coordinate at all zoom levels
+          const marker = new maplibregl.Marker({
+            element: el,
+            anchor: "bottom"
+          })
+            .setLngLat([lot.lon, lot.lat])
+            .addTo(map);
+
+          markersById.set(lot.id, { marker, el, lot });
+        }
       });
+
+      // Remove lots no longer returned in nearby query
+      for (const [id, item] of markersById.entries()) {
+        if (!currentIds.has(id)) {
+          item.marker.remove();
+          markersById.delete(id);
+        }
+      }
     }
 
     function formatStatusLabel(status) {
