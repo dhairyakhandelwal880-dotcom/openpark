@@ -8,6 +8,7 @@ import os
 import json
 import math
 import re
+import difflib
 import httpx
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -74,7 +75,70 @@ BENGALURU_PLACES_CATALOG = [
     {"name": "Vidhana Soudha & High Court", "category": "Landmark", "badge": "🏛️", "address": "Ambedkar Beedhi, Sampangi Rama Nagara, Bengaluru", "lat": 12.9797, "lon": 77.5907, "aliases": ["vidhana soudha", "assembly", "high court of karnataka"]},
     {"name": "Bangalore Palace", "category": "Landmark", "badge": "🏰", "address": "Vasanth Nagar, Bengaluru", "lat": 12.9988, "lon": 77.5921, "aliases": ["bangalore palace", "palace grounds"]},
     {"name": "ISKCON Temple Bangalore", "category": "Landmark", "badge": "🛕", "address": "Hare Krishna Hill, Chord Rd, Rajajinagar, Bengaluru", "lat": 13.0098, "lon": 77.5511, "aliases": ["iskcon", "iskcon temple", "hare krishna hill"]},
-    {"name": "M. Chinnaswamy Cricket Stadium", "category": "Stadium", "badge": "🏏", "address": "MG Rd, Cubbon Park, Bengaluru", "lat": 12.9788, "lon": 77.5996, "aliases": ["chinnaswamy", "cricket stadium", "rcb", "ipl stadium"]}
+    {"name": "M. Chinnaswamy Cricket Stadium", "category": "Stadium", "badge": "🏏", "address": "MG Rd, Cubbon Park, Bengaluru", "lat": 12.9788, "lon": 77.5996, "aliases": ["chinnaswamy", "cricket stadium", "rcb", "ipl stadium"]},
+
+    # Major Hospitals & Healthcare Hubs
+    {"name": "Manipal Hospital Old Airport Road", "category": "Hospital", "badge": "🏥", "address": "98 HAL Old Airport Rd, Kodihalli, Bengaluru", "lat": 12.9593, "lon": 77.6488, "aliases": ["manipal hospital", "manipal", "old airport road manipal", "hal hospital"]},
+    {"name": "Apollo Hospital Bannerghatta Road", "category": "Hospital", "badge": "🏥", "address": "154/11 Bannerghatta Main Rd, Krishnaraju Layout, Bengaluru", "lat": 12.8931, "lon": 77.5982, "aliases": ["apollo", "apollo hospital", "bannerghatta apollo", "apollo bannerghatta"]},
+    {"name": "Fortis Hospital Bannerghatta Road", "category": "Hospital", "badge": "🏥", "address": "154/9 Bannerghatta Main Rd, Opp IIMB, Bengaluru", "lat": 12.8943, "lon": 77.5976, "aliases": ["fortis", "fortis hospital", "fortis bannerghatta"]},
+    {"name": "Aster CMI Hospital Hebbal", "category": "Hospital", "badge": "🏥", "address": "New Airport Rd, Hebbal, Bengaluru", "lat": 13.0560, "lon": 77.5916, "aliases": ["aster", "aster cmi", "aster hospital hebbal"]},
+    {"name": "St. John's Medical College & Hospital", "category": "Hospital", "badge": "🏥", "address": "Sarjapur - Marathahalli Rd, John Nagar, Koramangala, Bengaluru", "lat": 12.9304, "lon": 77.6198, "aliases": ["st johns", "st johns hospital", "koramangala hospital"]},
+    {"name": "NIMHANS Hospital & Research Institute", "category": "Hospital", "badge": "🏥", "address": "Hosur Rd, Lakkasandra, Bengaluru", "lat": 12.9392, "lon": 77.5956, "aliases": ["nimhans", "nimhans hospital", "mental health"]},
+    {"name": "Sakra World Hospital", "category": "Hospital", "badge": "🏥", "address": "Devarabeesanahalli, Bellandur, Bengaluru", "lat": 12.9298, "lon": 77.6892, "aliases": ["sakra", "sakra hospital", "bellandur hospital"]},
+    {"name": "Victoria Hospital", "category": "Hospital", "badge": "🏥", "address": "Fort, Near City Market, Kalasipalya, Bengaluru", "lat": 12.9628, "lon": 77.5746, "aliases": ["victoria hospital", "bmc", "city market hospital"]},
+
+    # Major Tech Parks & Business Campuses
+    {"name": "Embassy TechVillage", "category": "Tech Park", "badge": "💻", "address": "Outer Ring Rd, Devarabisanahalli, Bellandur, Bengaluru", "lat": 12.9268, "lon": 77.6934, "aliases": ["etv", "embassy tech village", "flipkart campus", "cisco"]},
+    {"name": "Bagmane Tech Park CV Raman Nagar", "category": "Tech Park", "badge": "💻", "address": "66/1 Bagmane Laurel, CV Raman Nagar, Bengaluru", "lat": 12.9818, "lon": 77.6598, "aliases": ["bagmane", "bagmane tech park", "cv raman nagar", "boeing"]},
+    {"name": "Bagmane Constellation Business Park", "category": "Tech Park", "badge": "💻", "address": "Outer Ring Rd, Doddanekkundi, Marathahalli, Bengaluru", "lat": 12.9752, "lon": 77.6974, "aliases": ["bagmane constellation", "amazon blr", "marathahalli tech park"]},
+    {"name": "Prestige Tech Park", "category": "Tech Park", "badge": "💻", "address": "Marathahalli - Sarjapur Outer Ring Rd, Kadabeesanahalli, Bengaluru", "lat": 12.9377, "lon": 77.6923, "aliases": ["prestige tech park", "ptp", "oracle kadubeesanahalli"]},
+    {"name": "Cessna Business Park", "category": "Tech Park", "badge": "💻", "address": "Kadubeesanahalli, Outer Ring Rd, Bengaluru", "lat": 12.9348, "lon": 77.6905, "aliases": ["cessna", "cessna business park", "cisco cessna"]},
+    {"name": "RMZ Ecoworld", "category": "Tech Park", "badge": "💻", "address": "Outer Ring Rd, Devarabeesanahalli, Bellandur, Bengaluru", "lat": 12.9213, "lon": 77.6845, "aliases": ["ecoworld", "rmz ecoworld", "adp ecoworld", "kpmg"]},
+    {"name": "RMZ Infinity", "category": "Tech Park", "badge": "💻", "address": "Old Madras Rd, Bennigana Halli, Bengaluru", "lat": 12.9934, "lon": 77.6601, "aliases": ["rmz infinity", "google infinity", "benniganahalli"]},
+    {"name": "Global Village Tech Park", "category": "Tech Park", "badge": "💻", "address": "Mylasandra, RR Nagar / Kengeri, Bengaluru", "lat": 12.9168, "lon": 77.5028, "aliases": ["global village", "mindtree", "rr nagar tech park"]},
+    {"name": "Brigade Tech Gardens", "category": "Tech Park", "badge": "💻", "address": "Brookefield, Kundalahalli, Bengaluru", "lat": 12.9723, "lon": 77.7188, "aliases": ["btg", "brigade tech gardens", "brookefield tech park"]},
+
+    # Major Namma Metro Stations & Interchanges
+    {"name": "Nadaprabhu Kempegowda Metro Station (Majestic Interchange)", "category": "Metro", "badge": "🚇", "address": "Majestic, Bengaluru", "lat": 12.9756, "lon": 77.5728, "aliases": ["majestic metro", "kempegowda metro", "metro interchange", "purple green interchange"]},
+    {"name": "Indiranagar Metro Station", "category": "Metro", "badge": "🚇", "address": "CMH Rd, Indiranagar, Bengaluru", "lat": 12.9783, "lon": 77.6385, "aliases": ["indiranagar metro", "cmh road metro"]},
+    {"name": "MG Road Metro Station", "category": "Metro", "badge": "🚇", "address": "MG Rd, Haridevpur, Shanthala Nagar, Bengaluru", "lat": 12.9756, "lon": 77.6067, "aliases": ["mg road metro", "boulevard metro"]},
+    {"name": "Trinity Metro Station", "category": "Metro", "badge": "🚇", "address": "Trinity Circle, MG Rd, Bengaluru", "lat": 12.9729, "lon": 77.6171, "aliases": ["trinity metro", "taj vivanta trinity"]},
+    {"name": "Baiyappanahalli Metro Station", "category": "Metro", "badge": "🚇", "address": "Old Madras Rd, Baiyappanahalli, Bengaluru", "lat": 12.9908, "lon": 77.6525, "aliases": ["baiyappanahalli metro", "swami vivekananda road metro"]},
+    {"name": "Whitefield (Kadugodi) Metro Station", "category": "Metro", "badge": "🚇", "address": "Kadugodi, Whitefield, Bengaluru", "lat": 12.9961, "lon": 77.7607, "aliases": ["whitefield metro", "kadugodi metro"]},
+    {"name": "Jayanagar Metro Station", "category": "Metro", "badge": "🚇", "address": "Rashtriya Vidyalaya Rd, 4th Block, Jayanagar, Bengaluru", "lat": 12.9299, "lon": 77.5801, "aliases": ["jayanagar metro", "rv road metro"]},
+    {"name": "Banashankari Metro Station", "category": "Metro", "badge": "🚇", "address": "Kanakapura Rd, Banashankari, Bengaluru", "lat": 12.9155, "lon": 77.5736, "aliases": ["banashankari metro", "bsk metro"]},
+    {"name": "JP Nagar Metro Station", "category": "Metro", "badge": "🚇", "address": "Kanakapura Rd, Sarakki, JP Nagar, Bengaluru", "lat": 12.9073, "lon": 77.5728, "aliases": ["jp nagar metro", "sarakki metro"]},
+    {"name": "Yeshwanthpur Metro Station", "category": "Metro", "badge": "🚇", "address": "Tumkur Rd, Yeshwanthpur, Bengaluru", "lat": 13.0232, "lon": 77.5503, "aliases": ["yeshwanthpur metro", "goverment soap factory metro"]},
+    {"name": "Cubbon Park Metro Station", "category": "Metro", "badge": "🚇", "address": "Kasturba Rd, Shivaji Nagar, Bengaluru", "lat": 12.9806, "lon": 77.5973, "aliases": ["cubbon park metro", "chinnaswamy metro"]},
+    {"name": "Vidhana Soudha Metro Station", "category": "Metro", "badge": "🚇", "address": "Ambedkar Veedhi, Bengaluru", "lat": 12.9793, "lon": 77.5919, "aliases": ["vidhana soudha metro", "high court metro"]},
+
+    # Iconic Dining & Food Hubs
+    {"name": "Toit Brewpub Indiranagar", "category": "Dining", "badge": "🍻", "address": "298 100 Feet Rd, Near KFC, Indiranagar, Bengaluru", "lat": 12.9793, "lon": 77.6406, "aliases": ["toit", "toit pub", "toit indiranagar", "craft beer"]},
+    {"name": "The Rameshwaram Cafe Indiranagar", "category": "Dining", "badge": "☕", "address": "12th Main Rd, HAL 2nd Stage, Indiranagar, Bengaluru", "lat": 12.9708, "lon": 77.6394, "aliases": ["rameshwaram cafe", "rameshwaram", "ghee podi idli", "rameshwaram indiranagar"]},
+    {"name": "The Rameshwaram Cafe JP Nagar", "category": "Dining", "badge": "☕", "address": "52 24th Main Rd, 2nd Phase, JP Nagar, Bengaluru", "lat": 12.9114, "lon": 77.5872, "aliases": ["rameshwaram jp nagar", "rameshwaram south"]},
+    {"name": "Vidyarthi Bhavan Gandhi Bazaar", "category": "Dining", "badge": "☕", "address": "32 Gandhi Bazaar Main Rd, Basavanagudi, Bengaluru", "lat": 12.9452, "lon": 77.5729, "aliases": ["vidyarthi bhavan", "masala dosa", "gandhi bazaar", "vb dosa"]},
+    {"name": "CTR Shri Sagar Malleshwaram", "category": "Dining", "badge": "☕", "address": "7th Cross Rd, Margosa Rd, Malleshwaram, Bengaluru", "lat": 12.9984, "lon": 77.5701, "aliases": ["ctr", "shri sagar", "benne masala dosa", "ctr malleshwaram"]},
+    {"name": "MTR Mavalli Tiffin Room", "category": "Dining", "badge": "☕", "address": "14 Lalbagh Rd, Mavalli, Bengaluru", "lat": 12.9554, "lon": 77.5857, "aliases": ["mtr", "mavalli tiffin room", "lalbagh mtr", "ravadosa"]},
+    {"name": "Truffles Koramangala", "category": "Dining", "badge": "🍔", "address": "93/A Ground Floor, 4th B Cross, 5th Block, Koramangala, Bengaluru", "lat": 12.9341, "lon": 77.6186, "aliases": ["truffles", "truffles burger", "truffles koramangala"]},
+    {"name": "Corner House Ice Cream Residency Road", "category": "Dessert", "badge": "🍨", "address": "Residency Rd, Shanthala Nagar, Ashok Nagar, Bengaluru", "lat": 12.9712, "lon": 77.6042, "aliases": ["corner house", "dbc", "death by chocolate", "corner house residency road"]},
+    {"name": "Empire Restaurant Church Street", "category": "Dining", "badge": "🍗", "address": "36 Church St, Shanthala Nagar, Ashok Nagar, Bengaluru", "lat": 12.9749, "lon": 77.6048, "aliases": ["empire", "empire hotel", "empire church street"]},
+    {"name": "Meghana Foods Koramangala", "category": "Dining", "badge": "🍛", "address": "124 1st Cross Rd, 5th Block, Koramangala, Bengaluru", "lat": 12.9358, "lon": 77.6201, "aliases": ["meghana", "meghana foods", "meghana biryani", "andhra biryani"]},
+
+    # Top Universities & Research Institutes
+    {"name": "Indian Institute of Science (IISc)", "category": "University", "badge": "🎓", "address": "CV Raman Rd, Malleshwaram, Bengaluru", "lat": 13.0219, "lon": 77.5671, "aliases": ["iisc", "iisc bangalore", "tata institute", "science institute"]},
+    {"name": "IIM Bangalore (IIMB)", "category": "University", "badge": "🎓", "address": "Bannerghatta Main Rd, Bilekahalli, Bengaluru", "lat": 12.8954, "lon": 77.6001, "aliases": ["iim", "iimb", "iim bangalore", "management institute"]},
+    {"name": "Christ University DRC Hosur Road", "category": "University", "badge": "🎓", "address": "Hosur Rd, Bhavani Nagar, S.G. Palya, Bengaluru", "lat": 12.9343, "lon": 77.6062, "aliases": ["christ", "christ university", "sg palya"]},
+    {"name": "RV College of Engineering (RVCE)", "category": "University", "badge": "🎓", "address": "Mysore Rd, RV Vidyaniketan, Bengaluru", "lat": 12.9237, "lon": 77.4987, "aliases": ["rv", "rvce", "rv college"]},
+    {"name": "BMS College of Engineering", "category": "University", "badge": "🎓", "address": "Bull Temple Rd, Basavanagudi, Bengaluru", "lat": 12.9416, "lon": 77.5661, "aliases": ["bms", "bmsce", "bull temple college"]},
+    {"name": "PES University Ring Road Campus", "category": "University", "badge": "🎓", "address": "100 Feet Ring Rd, BSK 3rd Stage, Bengaluru", "lat": 12.9344, "lon": 77.5345, "aliases": ["pes", "pesit", "pes university"]},
+
+    # Key Connecting Roads & Circles
+    {"name": "Basavanagudi & DVG Road", "category": "Neighborhood", "badge": "📍", "address": "DVG Rd, Basavanagudi, Bengaluru", "lat": 12.9427, "lon": 77.5739, "aliases": ["basavanagudi", "dvg road", "bull temple"]},
+    {"name": "Domlur & Embassy GolfLinks (EGL)", "category": "Commercial", "badge": "🏢", "address": "Intermediate Ring Rd, Domlur, Bengaluru", "lat": 12.9567, "lon": 77.6432, "aliases": ["domlur", "egl", "embassy golflinks", "domlur flyover"]},
+    {"name": "Ulsoor Lake & MG Road Extension", "category": "Landmark", "badge": "🌊", "address": "Ulsoor, Central Bengaluru", "lat": 12.9829, "lon": 77.6206, "aliases": ["ulsoor", "ulsoor lake", "halasuru"]},
+    {"name": "Frazer Town (Pulikeshi Nagar) Mosque Road", "category": "Commercial", "badge": "🏢", "address": "Mosque Rd, Frazer Town, Bengaluru", "lat": 12.9984, "lon": 77.6143, "aliases": ["frazer town", "pulikeshi nagar", "mosque road"]},
+    {"name": "Kalyan Nagar HRBR Layout", "category": "Neighborhood", "badge": "📍", "address": "Kalyan Nagar, North-East Bengaluru", "lat": 13.0189, "lon": 77.6457, "aliases": ["kalyan nagar", "hrbr layout", "kammanahalli", "kammanahalli empire"]},
+    {"name": "Electronic City Toll Plaza (Elevated Expressway)", "category": "Transit", "badge": "🛣️", "address": "Hosur Rd, Electronic City, Bengaluru", "lat": 12.8524, "lon": 77.6601, "aliases": ["toll plaza", "elevated highway", "electronic city toll"]}
 ]
 
 
@@ -240,20 +304,30 @@ async def autosuggest(query: str, lat: float = 12.9716, lon: float = 77.5946) ->
         score = 0
         # Exact prefix or substring in name
         if name_lower.startswith(q_lower):
-            score += 100
+            score += 120
         elif q_lower in name_lower:
-            score += 60
+            score += 80
         elif any(alias.startswith(q_lower) for alias in aliases):
-            score += 50
+            score += 70
         elif any(q_lower in alias for alias in aliases):
-            score += 40
+            score += 55
         else:
             # Token matching
             token_matches = sum(1 for t in q_tokens if t in combined_text)
             if token_matches == len(q_tokens) and len(q_tokens) > 0:
-                score += 30 + token_matches * 5
+                score += 45 + token_matches * 10
             elif token_matches > 0:
                 score += token_matches * 10
+
+            # Fuzzy match on query vs tokens or full name for typo tolerance
+            if len(q_lower) >= 3:
+                candidates_to_check = [name_lower] + aliases + name_lower.split()
+                best_ratio = max(
+                    (difflib.SequenceMatcher(None, q_lower, c[:len(q_lower) + 3]).ratio() for c in candidates_to_check if len(c) >= 3),
+                    default=0.0
+                )
+                if best_ratio >= 0.72:
+                    score += int(best_ratio * 40)
 
         if score > 0:
             dist = calculate_distance_km(lat, lon, item["lat"], item["lon"])
