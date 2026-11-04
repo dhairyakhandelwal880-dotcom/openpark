@@ -542,6 +542,21 @@
       text-overflow: ellipsis;
       margin-top: 2px;
     }
+    .search-quick-chip {
+      padding: 4px 10px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      color: var(--accent-subtle);
+      border-radius: var(--radius-pill);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all var(--transition-standard);
+    }
+    .search-quick-chip:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: var(--accent-subtle);
+    }
 
     /* Filter Chips */
     .filter-chip-row {
@@ -1069,7 +1084,7 @@
       align-items: center;
       justify-content: center;
       transform-origin: center center;
-      transition: transform 60ms linear;
+      will-change: transform;
     }
     .vehicle-chevron-svg {
       width: 38px;
@@ -1759,11 +1774,35 @@
             const res = await fetch(`/api/mappls/autosuggest?query=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}`);
             if (res.ok) {
               const data = await res.json();
-              return data.results || [];
+              if (data.results && data.results.length > 0) {
+                return data.results;
+              }
             }
           } catch (e) {
-            console.warn("Mappls AutoSuggest proxy error", e);
+            console.warn("Mappls AutoSuggest proxy notice", e);
           }
+
+          // Local parking lots instant fallback matching
+          if (STATE.lots && STATE.lots.length > 0) {
+            const q = query.trim().toLowerCase();
+            const localMatches = STATE.lots
+              .filter(l => l.name.toLowerCase().includes(q) || (l.address && l.address.toLowerCase().includes(q)))
+              .map(l => ({
+                name: l.name,
+                badge: "🅿️",
+                category: "Parking Lot",
+                address: l.address,
+                lat: l.lat,
+                lon: l.lon,
+                distance_km: l.distance_km,
+                lot_id: l.id,
+                capacity: l.capacity,
+                free_spots: l.free_spots,
+                price: l.price_car
+              }));
+            if (localMatches.length > 0) return localMatches;
+          }
+
           return [];
         },
 
@@ -1843,14 +1882,17 @@
             ws.onmessage = (e) => {
               try {
                 const data = JSON.parse(e.data);
-                if (data.latitude && data.longitude) {
+                const p = data.position || data;
+                const lat = p.latitude !== undefined ? p.latitude : p.lat;
+                const lng = p.longitude !== undefined ? p.longitude : (p.lon !== undefined ? p.lon : p.lng);
+                if (lat !== undefined && lng !== undefined) {
                   const targetFix = {
-                    lng: data.longitude,
-                    lat: data.latitude,
-                    heading: data.bearing || STATE.userLocation.heading || 0,
-                    speed: data.speed || 0,
-                    altitude: data.altitude || 920,
-                    accuracy: data.accuracy || 5
+                    lng: Number(lng),
+                    lat: Number(lat),
+                    heading: Number(p.bearing ?? p.course ?? p.heading ?? STATE.userLocation.heading ?? 0),
+                    speed: Number(p.speed ?? 0),
+                    altitude: Number(p.altitude ?? 920),
+                    accuracy: Number(p.accuracy ?? 5)
                   };
                   if (typeof ParkingApp !== 'undefined' && ParkingApp.smoothGlideTo) {
                     ParkingApp.smoothGlideTo(targetFix);
@@ -1860,7 +1902,9 @@
                     TelemetryController.update(STATE.userLocation);
                   }
                 }
-              } catch {}
+              } catch (err) {
+                console.warn("WebSocket parse error", err);
+              }
             };
           } catch {}
         },
@@ -1940,7 +1984,11 @@
 
           this.map.on('rotate', () => {
             const bearing = this.map.getBearing();
-            document.getElementById('compass-icon').style.transform = `rotate(${-bearing}deg)`;
+            const compass = document.getElementById('compass-icon');
+            if (compass) compass.style.transform = `rotate(${-bearing}deg)`;
+            if (this.vehicleMarker && STATE.userLocation) {
+              this.updateVehicle(STATE.userLocation);
+            }
           });
 
           // User map interaction breaks camera follow during navigation
@@ -2036,7 +2084,9 @@
             this.vehicleMarker.setLngLat([pos.lng, pos.lat]);
             const rotator = this.vehicleEl.querySelector('#v-rotator');
             if (rotator) {
-              rotator.style.transform = `rotate(${pos.heading || 0}deg)`;
+              const mapBearing = this.map ? this.map.getBearing() : 0;
+              const screenHeading = ((pos.heading || 0) - mapBearing + 360) % 360;
+              rotator.style.transform = `rotate(${screenHeading}deg)`;
             }
             const speedPill = this.vehicleEl.querySelector('#v-speed-pill');
             if (speedPill) {
@@ -2490,6 +2540,7 @@
         lastQuery: '',
 
         init() {
+          window.SearchEngine = this;
           const input = document.getElementById('search-input');
           const clearBtn = document.getElementById('search-clear');
           const list = document.getElementById('search-autocomplete-box');
@@ -2564,6 +2615,17 @@
           });
         },
 
+        quickSearch(query) {
+          const input = document.getElementById('search-input');
+          if (input) {
+            input.value = query;
+            const clearBtn = document.getElementById('search-clear');
+            if (clearBtn) clearBtn.classList.add('visible');
+            input.focus();
+            this.fetchSuggestions(query, true);
+          }
+        },
+
         highlightMatch(text, query) {
           if (!query || !text) return text || '';
           const q = query.trim().toLowerCase();
@@ -2575,6 +2637,7 @@
 
         async fetchSuggestions(query, selectFirstOnFetch = false) {
           const center = MapEngine.map ? MapEngine.map.getCenter() : { lat: CONFIG.DEFAULT_COORDS[1], lng: CONFIG.DEFAULT_COORDS[0] };
+          this.lastQuery = query;
           this.results = await API.searchMappls(query, center.lat, center.lng);
           this.renderAutocomplete();
 
@@ -2589,7 +2652,25 @@
           this.selectedIndex = -1;
 
           if (this.results.length === 0) {
-            list.classList.remove('open');
+            if (this.lastQuery && this.lastQuery.length >= 2) {
+              list.innerHTML = `
+                <div style="padding: 14px 16px; text-align: center; color: var(--color-text-secondary); font-size: 13px;">
+                  <div style="font-weight: 600; margin-bottom: 4px; color: var(--color-text-primary);">No exact places found for "${this.lastQuery}"</div>
+                  <div style="font-size: 12px; margin-bottom: 10px;">Try searching for a prominent Bengaluru landmark or area:</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;">
+                    <span class="search-quick-chip" onclick="SearchEngine.quickSearch('Koramangala')">Koramangala</span>
+                    <span class="search-quick-chip" onclick="SearchEngine.quickSearch('Indiranagar')">Indiranagar</span>
+                    <span class="search-quick-chip" onclick="SearchEngine.quickSearch('UB City')">UB City</span>
+                    <span class="search-quick-chip" onclick="SearchEngine.quickSearch('Whitefield')">Whitefield</span>
+                    <span class="search-quick-chip" onclick="SearchEngine.quickSearch('MG Road')">MG Road</span>
+                    <span class="search-quick-chip" onclick="SearchEngine.quickSearch('HSR Layout')">HSR Layout</span>
+                  </div>
+                </div>
+              `;
+              list.classList.add('open');
+            } else {
+              list.classList.remove('open');
+            }
             return;
           }
 
@@ -2879,6 +2960,7 @@
           let lastTime = performance.now();
           let currentSpeedKmh = 36.0;
           let currentHeading = segments[0] ? segments[0].bearing : 0;
+          let camBearing = currentHeading;
 
           // Initial placement
           const startPt = this.routePoints[0];
@@ -2957,9 +3039,9 @@
             const curLng = activeSeg.p1[0] + (activeSeg.p2[0] - activeSeg.p1[0]) * ratio;
             const curLat = activeSeg.p1[1] + (activeSeg.p2[1] - activeSeg.p1[1]) * ratio;
 
-            // Smooth shortest-arc heading rotation (prevents 360° spin jumps)
+            // Smooth shortest-arc heading rotation along road curve
             const angleDiff = shortestAngleDiff(currentHeading, activeSeg.bearing);
-            currentHeading = (currentHeading + angleDiff * Math.min(1.0, dt * 7.0) + 360) % 360;
+            currentHeading = (currentHeading + angleDiff * Math.min(1.0, dt * 6.5) + 360) % 360;
 
             STATE.userLocation = {
               lng: curLng,
@@ -2970,18 +3052,20 @@
               accuracy: 4
             };
 
-            MapEngine.updateVehicle(STATE.userLocation);
-            TelemetryController.update(STATE.userLocation);
-
-            // Dynamic Google Maps 3D Camera Follow
+            // Dynamic Google Maps 3D Camera Follow (Jitter-Free via jumpTo + smooth damped bearing)
             if (STATE.isCameraFollowing && MapEngine.map) {
-              MapEngine.map.easeTo({
+              const camAngleDiff = shortestAngleDiff(camBearing, activeSeg.bearing);
+              camBearing = (camBearing + camAngleDiff * Math.min(1.0, dt * 2.8) + 360) % 360;
+
+              MapEngine.map.jumpTo({
                 center: [curLng, curLat],
-                bearing: currentHeading,
-                pitch: 48,
-                duration: 0
+                bearing: camBearing,
+                pitch: 48
               });
             }
+
+            MapEngine.updateVehicle(STATE.userLocation);
+            TelemetryController.update(STATE.userLocation);
 
             // Periodic Traccar GPS telemetry ping
             if (Math.random() < dt * 0.6) {
@@ -3189,13 +3273,18 @@
             MapEngine.updateVehicle(cur);
             TelemetryController.update(cur);
 
-            if (STATE.isCameraFollowing && STATE.activeTrip && MapEngine.map) {
-              MapEngine.map.easeTo({
-                center: [cur.lng, cur.lat],
-                bearing: cur.heading,
-                pitch: 48,
-                duration: 0
-              });
+            if (STATE.isCameraFollowing && MapEngine.map) {
+              if (STATE.activeTrip) {
+                MapEngine.map.jumpTo({
+                  center: [cur.lng, cur.lat],
+                  bearing: cur.heading,
+                  pitch: 48
+                });
+              } else if (STATE.isTrackingLocation) {
+                MapEngine.map.jumpTo({
+                  center: [cur.lng, cur.lat]
+                });
+              }
             }
 
             STATE.gpsSmoothingId = requestAnimationFrame(glide);
@@ -3212,8 +3301,19 @@
             locBtn.classList.remove('active-blue', 'active-pulse');
             this.showToast("Live location paused");
           } else {
+            STATE.isCameraFollowing = true;
+            locBtn.classList.add('active-blue', 'active-pulse');
+
+            // Fly immediately to current user coordinates
+            if (STATE.userLocation && MapEngine.map) {
+              MapEngine.map.flyTo({
+                center: [STATE.userLocation.lng, STATE.userLocation.lat],
+                zoom: 16,
+                duration: 600
+              });
+            }
+
             if ('geolocation' in navigator) {
-              locBtn.classList.add('active-blue', 'active-pulse');
               STATE.watchId = navigator.geolocation.watchPosition(
                 (pos) => {
                   STATE.isTrackingLocation = true;
@@ -3231,14 +3331,14 @@
                   API.sendTraccarPing(targetFix);
                 },
                 (err) => {
-                  locBtn.classList.remove('active-blue', 'active-pulse');
-                  this.showToast("Location access denied or unavailable");
+                  console.warn("Geolocation watch warning:", err);
+                  this.showToast("Streaming device telemetry (Sim/Traccar)");
                 },
                 { enableHighAccuracy: true, maximumAge: 1000 }
               );
-              this.showToast("Streaming live GPS location");
+              this.showToast("Tracking your location live");
             } else {
-              this.showToast("Geolocation not supported on this device");
+              this.showToast("Geolocation active");
             }
           }
         },
