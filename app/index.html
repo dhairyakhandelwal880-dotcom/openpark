@@ -1,0 +1,1112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>OpenPark - Real-Time Smart Parking</title>
+  
+  <!-- MapLibre GL CSS & JS -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body, html {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+      background: #0f172a;
+      color: #1e293b;
+    }
+
+    #map {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Top App Bar */
+    .app-header {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      right: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .header-card {
+      pointer-events: auto;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      padding: 10px 18px;
+      border-radius: 9999px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: #2563eb;
+      color: white;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+    }
+
+    .app-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.3px;
+    }
+
+    .app-city {
+      font-size: 12px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .header-actions {
+      pointer-events: auto;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-action {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(8px);
+      border: none;
+      padding: 9px 15px;
+      border-radius: 9999px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.12);
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-action:hover {
+      background: #ffffff;
+      transform: translateY(-1px);
+    }
+
+    .btn-action.active {
+      background: #2563eb;
+      color: white;
+    }
+
+    /* Arrival / Reroute Notification Banner */
+    .alert-banner {
+      position: absolute;
+      top: 76px;
+      left: 16px;
+      right: 16px;
+      max-width: 500px;
+      margin: 0 auto;
+      z-index: 25;
+      background: #1e293b;
+      color: white;
+      border-radius: 16px;
+      padding: 14px 18px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+      display: none;
+      animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      border-left: 5px solid #22c55e;
+    }
+
+    .alert-banner.reroute {
+      border-left-color: #ef4444;
+      background: #7f1d1d;
+    }
+
+    @keyframes slideDown {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .alert-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .alert-desc {
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    .alert-actions {
+      margin-top: 10px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-alert-action {
+      background: #ffffff;
+      color: #0f172a;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .btn-alert-dismiss {
+      background: transparent;
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* Markers */
+    .parking-marker {
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.2s ease;
+    }
+
+    .parking-marker:hover {
+      transform: scale(1.12);
+      z-index: 10;
+    }
+
+    .marker-pin {
+      width: 38px;
+      height: 38px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      border: 2px solid #ffffff;
+    }
+
+    .marker-inner {
+      transform: rotate(45deg);
+      color: white;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      line-height: 1;
+    }
+
+    .marker-badge {
+      background: rgba(15, 23, 42, 0.9);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-top: 4px;
+      white-space: nowrap;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    /* Status Colors */
+    .status-available { background-color: #16a34a; }
+    .status-filling_up { background-color: #d97706; }
+    .status-full { background-color: #dc2626; }
+    .status-unknown { background-color: #64748b; }
+
+    /* Vehicle Marker */
+    .vehicle-marker {
+      width: 24px;
+      height: 24px;
+      background: #1a73e8;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 6px rgba(26, 115, 232, 0.25), 0 3px 8px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .vehicle-pulse {
+      position: absolute;
+      top: -12px;
+      left: -12px;
+      right: -12px;
+      bottom: -12px;
+      border-radius: 50%;
+      border: 2px solid #1a73e8;
+      animation: pulse 2s infinite ease-out;
+      opacity: 0;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.6); opacity: 0.8; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* Bottom Detail Card (Step 11) */
+    .detail-card {
+      position: absolute;
+      bottom: 24px;
+      left: 16px;
+      right: 16px;
+      max-width: 440px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 20px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+      padding: 20px;
+      z-index: 30;
+      display: none;
+      animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .card-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.25;
+      padding-right: 10px;
+    }
+
+    .card-close {
+      background: #f1f5f9;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: bold;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-meta-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .confidence-badge {
+      font-size: 11px;
+      font-weight: 600;
+      background: #f1f5f9;
+      color: #475569;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .freshness-tag {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    /* Stats Grid */
+    .stats-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      background: #f8fafc;
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .stat-value {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    /* Route Info (when routing) */
+    .route-info-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .route-text {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1e40af;
+    }
+
+    .route-sub {
+      font-size: 12px;
+      color: #3b82f6;
+    }
+
+    /* Action Buttons */
+    .card-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-go {
+      flex: 2;
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+
+    .btn-go:hover {
+      background: #1d4ed8;
+    }
+
+    .btn-report {
+      flex: 1;
+      background: #f1f5f9;
+      color: #334155;
+      border: none;
+      padding: 12px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-report:hover {
+      background: #e2e8f0;
+    }
+
+    /* Crowdsource report sheet */
+    .report-overlay {
+      display: none;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    .report-options {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .btn-tag-report {
+      border: 1px solid #cbd5e1;
+      background: white;
+      padding: 8px 4px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .btn-tag-report:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+
+    /* Live status badge animation */
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      background: white;
+      border-radius: 50%;
+      animation: blink 1.4s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="app-header">
+    <div class="header-card">
+      <div class="logo-icon">P</div>
+      <div>
+        <div class="app-title">OpenPark</div>
+        <div class="app-city">Bengaluru Metro Area</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button id="btnSimulate" class="btn-action" title="Simulate vehicle driving towards lot">
+        🚗 <span>Simulate GPS</span>
+      </button>
+      <button id="btnVoiceToggle" class="btn-action active" title="Toggle audio voice navigation alerts">
+        🔊 <span>Voice</span>
+      </button>
+      <button id="btnRefresh" class="btn-action" title="Refresh nearby parking lots">
+        🔄
+      </button>
+    </div>
+  </header>
+
+  <!-- Arrival / Alert Banner (Step 14) -->
+  <div id="alertBanner" class="alert-banner">
+    <div class="alert-title">
+      <span id="alertIcon">📍</span>
+      <span id="alertHeadline">Arrival Alert</span>
+    </div>
+    <div id="alertMessage" class="alert-desc">
+      You are approaching your parking destination.
+    </div>
+    <div class="alert-actions" id="alertActions">
+      <button id="btnAlertConfirm" class="btn-alert-action">Got It</button>
+      <button id="btnAlertDismiss" class="btn-alert-dismiss">Dismiss</button>
+    </div>
+  </div>
+
+  <!-- Map Container (Step 8) -->
+  <div id="map"></div>
+
+  <!-- Lot Detail & Live Navigation Card (Step 11) -->
+  <div id="detailCard" class="detail-card">
+    <div class="card-top">
+      <div id="lotName" class="card-name">UB City Multi-Level Car Parking</div>
+      <button id="cardCloseBtn" class="card-close">&times;</button>
+    </div>
+
+    <div class="card-meta-row">
+      <div id="statusPill" class="status-pill status-available">
+        <div class="live-dot"></div>
+        <span id="statusLabel">Available</span>
+      </div>
+      <div id="confidenceBadge" class="confidence-badge">High Confidence</div>
+      <div id="updatedTag" class="freshness-tag">Updated 2m ago</div>
+    </div>
+
+    <div class="stats-box">
+      <div>
+        <div class="stat-label">Free Spots</div>
+        <div id="freeSpotsCount" class="stat-value" style="color: #16a34a;">24</div>
+      </div>
+      <div>
+        <div class="stat-label">Capacity</div>
+        <div id="lotCapacity" class="stat-value">1200</div>
+      </div>
+      <div>
+        <div class="stat-label">Pricing</div>
+        <div id="lotPrice" class="stat-value" style="font-size: 13px; margin-top: 3px;">₹50/hr</div>
+      </div>
+    </div>
+
+    <!-- Active Route Details -->
+    <div id="routeInfoBox" class="route-info-box" style="display: none;">
+      <div>
+        <div id="routeEtaText" class="route-text">6 mins (1.8 km)</div>
+        <div class="route-sub">Optimal route via OSRM</div>
+      </div>
+      <div style="font-size: 20px;">🧭</div>
+    </div>
+
+    <div class="card-actions">
+      <button id="btnGo" class="btn-go">
+        <span>Go</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+      <button id="btnShowReport" class="btn-report">📢 Report</button>
+    </div>
+
+    <!-- Step 13 Crowdsource Report Options -->
+    <div id="reportOverlay" class="report-overlay">
+      <div style="font-size: 12px; font-weight: 600; color: #475569;">Crowdsource Status:</div>
+      <div class="report-options">
+        <button class="btn-tag-report" onclick="submitCrowdReport('got_spot')">🅿️ Got Spot</button>
+        <button class="btn-tag-report" onclick="submitCrowdReport('has_space')">🟢 Has Space</button>
+        <button class="btn-tag-report" onclick="submitCrowdReport('lot_full')">🔴 Lot Full</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://localhost:8000";
+    const WS_BASE = "ws://localhost:8000";
+
+    // Bengaluru Coordinates
+    const DEFAULT_CENTER = [77.5946, 12.9716]; // [lon, lat]
+    let userLocation = { lat: 12.9716, lon: 77.5850 }; // default driver location west of city center
+    let currentLot = null;
+    let markers = [];
+    let vehicleMarker = null;
+    let vehicleWs = null;
+    let lotWs = null;
+    let voiceEnabled = true;
+    let isSimulating = false;
+    let simulationTimer = null;
+    let currentTripId = "trip_" + Math.random().toString(36).substring(2, 9);
+    let activeRouteGeoJSON = null;
+
+    // Initialize MapLibre GL Map (Step 8)
+    const map = new maplibregl.Map({
+      container: "map",
+      style: {
+        version: 8,
+        sources: {
+          "osm-raster-tiles": {
+            type: "raster",
+            tiles: [
+              "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            ],
+            tileSize: 256,
+            attribution: "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap contributors</a>"
+          }
+        },
+        layers: [
+          {
+            id: "osm-layer",
+            type: "raster",
+            source: "osm-raster-tiles",
+            minzoom: 0,
+            maxzoom: 19
+          }
+        ]
+      },
+      center: DEFAULT_CENTER,
+      zoom: 13.5
+    });
+
+    map.addControl(new maplibregl.NavigationControl(), "top-right");
+
+    // Connect Vehicle WebSocket (Step 9 & 14)
+    function initVehicleWebSocket() {
+      if (vehicleWs) {
+        vehicleWs.close();
+      }
+      vehicleWs = new WebSocket(`${WS_BASE}/ws/vehicle`);
+
+      vehicleWs.onopen = () => {
+        console.log("Connected to vehicle tracking WebSocket.");
+        sendVehiclePosition();
+      };
+
+      vehicleWs.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          handleVehicleMessage(data);
+        } catch (e) {
+          console.error("Vehicle WS parse error:", e);
+        }
+      };
+
+      vehicleWs.onclose = () => {
+        setTimeout(initVehicleWebSocket, 3000);
+      };
+    }
+
+    function sendVehiclePosition() {
+      if (vehicleWs && vehicleWs.readyState === WebSocket.OPEN) {
+        vehicleWs.send(JSON.stringify({
+          lat: userLocation.lat,
+          lon: userLocation.lon,
+          speed: isSimulating ? 30 : 0,
+          destination_lot_id: currentLot ? currentLot.id : null,
+          trip_id: currentTripId,
+          t: Date.now()
+        }));
+      }
+    }
+
+    // Step 14 & Reroute message handling
+    function handleVehicleMessage(data) {
+      if (data.type === "arrival_alert") {
+        showArrivalAlert(data);
+      } else if (data.type === "lot_full_reroute") {
+        showRerouteAlert(data);
+      }
+    }
+
+    function showArrivalAlert(data) {
+      const banner = document.getElementById("alertBanner");
+      banner.className = "alert-banner";
+      document.getElementById("alertIcon").innerText = "🎯";
+      document.getElementById("alertHeadline").innerText = "Destination Nearby";
+      document.getElementById("alertMessage").innerText = data.message;
+      
+      const actions = document.getElementById("alertActions");
+      actions.innerHTML = `
+        <button class="btn-alert-action" onclick="dismissAlert()">Navigate into Lot</button>
+        <button class="btn-alert-dismiss" onclick="dismissAlert()">Dismiss</button>
+      `;
+      banner.style.display = "block";
+
+      speakNotification(data.message);
+    }
+
+    function showRerouteAlert(data) {
+      const banner = document.getElementById("alertBanner");
+      banner.className = "alert-banner reroute";
+      document.getElementById("alertIcon").innerText = "⚠️";
+      document.getElementById("alertHeadline").innerText = "Chosen Lot is Full";
+      document.getElementById("alertMessage").innerText = data.message;
+      
+      const alt = data.alternative_lot;
+      const actions = document.getElementById("alertActions");
+      actions.innerHTML = `
+        <button class="btn-alert-action" onclick="switchToAlternative(${JSON.stringify(alt).replace(/"/g, '&quot;')})">Switch to ${alt.name}</button>
+        <button class="btn-alert-dismiss" onclick="dismissAlert()">Ignore</button>
+      `;
+      banner.style.display = "block";
+
+      speakNotification(data.message);
+    }
+
+    function dismissAlert() {
+      document.getElementById("alertBanner").style.display = "none";
+    }
+
+    function speakNotification(text) {
+      if (!voiceEnabled || !window.speechSynthesis) return;
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    // Live Vehicle Marker (Step 9)
+    function updateVehicleMarker(lat, lon) {
+      userLocation = { lat, lon };
+      if (!vehicleMarker) {
+        const el = document.createElement("div");
+        el.className = "vehicle-marker";
+        const pulse = document.createElement("div");
+        pulse.className = "vehicle-pulse";
+        el.appendChild(pulse);
+
+        vehicleMarker = new maplibregl.Marker({ element: el })
+          .setLngLat([lon, lat])
+          .addTo(map);
+      } else {
+        vehicleMarker.setLngLat([lon, lat]);
+      }
+      sendVehiclePosition();
+    }
+
+    // Geolocation API with graceful fallback
+    function startGeolocation() {
+      if ("geolocation" in navigator) {
+        navigator.geolocation.watchPosition(
+          (pos) => {
+            if (!isSimulating) {
+              updateVehicleMarker(pos.coords.latitude, pos.coords.longitude);
+            }
+          },
+          (err) => {
+            console.log("GPS watch notice (using virtual location):", err.message);
+            updateVehicleMarker(userLocation.lat, userLocation.lon);
+          },
+          { enableHighAccuracy: true, maximumAge: 2000, timeout: 10000 }
+        );
+      } else {
+        updateVehicleMarker(userLocation.lat, userLocation.lon);
+      }
+    }
+
+    // Load Nearby Parking Lots (Step 8)
+    async function loadLots() {
+      try {
+        const center = map.getCenter();
+        const res = await fetch(`${API_BASE}/lots/nearby?lat=${center.lat}&lon=${center.lng}&radius=6000`);
+        const lots = await res.json();
+        renderMarkers(lots);
+      } catch (err) {
+        console.error("Failed to load lots:", err);
+      }
+    }
+
+    function renderMarkers(lots) {
+      // Clear existing markers
+      markers.forEach(m => m.remove());
+      markers = [];
+
+      lots.forEach(lot => {
+        const el = document.createElement("div");
+        el.className = "parking-marker";
+        
+        const pin = document.createElement("div");
+        pin.className = `marker-pin status-${lot.status}`;
+        
+        const inner = document.createElement("div");
+        inner.className = "marker-inner";
+        inner.innerText = lot.free_spots !== null ? lot.free_spots : "P";
+        pin.appendChild(inner);
+
+        const badge = document.createElement("div");
+        badge.className = "marker-badge";
+        badge.innerText = formatStatusLabel(lot.status);
+
+        el.appendChild(pin);
+        el.appendChild(badge);
+
+        el.addEventListener("click", () => {
+          selectLot(lot);
+        });
+
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat([lot.lon, lot.lat])
+          .addTo(map);
+
+        markers.push(marker);
+      });
+    }
+
+    function formatStatusLabel(status) {
+      switch (status) {
+        case "available": return "Available";
+        case "filling_up": return "Filling Up";
+        case "full": return "Full";
+        default: return "Unknown";
+      }
+    }
+
+    // Step 11: Select Lot & Show Detail Card
+    function selectLot(lot) {
+      currentLot = lot;
+      const card = document.getElementById("detailCard");
+      card.style.display = "block";
+
+      document.getElementById("lotName").innerText = lot.name;
+      document.getElementById("lotCapacity").innerText = lot.capacity;
+      document.getElementById("lotPrice").innerText = lot.price_note || "Standard";
+      
+      updateCardStatus(lot);
+
+      // Subscribe to WebSocket for this lot
+      subscribeToLotWS(lot.id);
+
+      // Send vehicle destination update
+      sendVehiclePosition();
+    }
+
+    function updateCardStatus(data) {
+      const freeEl = document.getElementById("freeSpotsCount");
+      freeEl.innerText = data.free_spots !== null ? data.free_spots : "-";
+      
+      const statusPill = document.getElementById("statusPill");
+      statusPill.className = `status-pill status-${data.status}`;
+      document.getElementById("statusLabel").innerText = formatStatusLabel(data.status);
+
+      if (data.status === "full") {
+        freeEl.style.color = "#dc2626";
+      } else if (data.status === "filling_up") {
+        freeEl.style.color = "#d97706";
+      } else {
+        freeEl.style.color = "#16a34a";
+      }
+
+      document.getElementById("confidenceBadge").innerText = `${data.confidence || "High"} Confidence`;
+      document.getElementById("updatedTag").innerText = data.updated_human || "Just now";
+    }
+
+    // Step 11 WebSocket live subscription for chosen lot
+    function subscribeToLotWS(lotId) {
+      if (lotWs) {
+        lotWs.close();
+      }
+      lotWs = new WebSocket(`${WS_BASE}/ws/lots/${lotId}`);
+      lotWs.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "availability_update" && currentLot && currentLot.id === data.lot_id) {
+            currentLot.free_spots = data.free_spots;
+            currentLot.status = data.status;
+            currentLot.confidence = data.confidence;
+            currentLot.updated_human = data.updated_human;
+            updateCardStatus(data);
+          }
+        } catch (e) {
+          console.error("Lot WS parse error:", e);
+        }
+      };
+    }
+
+    // Step 10: Routing with OSRM
+    async function calculateRoute(destinationLat, destinationLon) {
+      const start = `${userLocation.lon},${userLocation.lat}`;
+      const end = `${destinationLon},${destinationLat}`;
+      
+      // Try local OSRM first, then public OSRM fallback
+      const urls = [
+        `http://localhost:5000/route/v1/driving/${start};${end}?overview=full&geometries=geojson`,
+        `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson`
+      ];
+
+      let routeData = null;
+      for (const url of urls) {
+        try {
+          const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
+          if (res.ok) {
+            routeData = await res.json();
+            break;
+          }
+        } catch (e) {
+          // try next url
+        }
+      }
+
+      if (routeData && routeData.routes && routeData.routes.length > 0) {
+        const route = routeData.routes[0];
+        drawRoute(route.geometry);
+        
+        const distKm = (route.distance / 1000).toFixed(1);
+        const durationMin = Math.round(route.duration / 60);
+        document.getElementById("routeInfoBox").style.display = "flex";
+        document.getElementById("routeEtaText").innerText = `${durationMin} mins (${distKm} km)`;
+        return route;
+      } else {
+        // Direct line fallback if OSRM service is not running locally
+        const directLine = {
+          type: "LineString",
+          coordinates: [
+            [userLocation.lon, userLocation.lat],
+            [destinationLon, destinationLat]
+          ]
+        };
+        drawRoute(directLine);
+        const distKm = (haversineDistance(userLocation.lat, userLocation.lon, destinationLat, destinationLon) / 1000).toFixed(1);
+        document.getElementById("routeInfoBox").style.display = "flex";
+        document.getElementById("routeEtaText").innerText = `~${Math.round(distKm * 3)} mins (${distKm} km)`;
+      }
+    }
+
+    function drawRoute(geometry) {
+      if (map.getSource("route-source")) {
+        map.getSource("route-source").setData({
+          type: "Feature",
+          geometry: geometry
+        });
+      } else {
+        map.addSource("route-source", {
+          type: "geojson",
+          data: {
+            type: "Feature",
+            geometry: geometry
+          }
+        });
+
+        map.addLayer({
+          id: "route-line",
+          type: "line",
+          source: "route-source",
+          layout: {
+            "line-join": "round",
+            "line-cap": "round"
+          },
+          paint: {
+            "line-color": "#2563eb",
+            "line-width": 6,
+            "line-opacity": 0.85
+          }
+        });
+      }
+    }
+
+    function haversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371e3;
+      const phi1 = lat1 * Math.PI / 180, phi2 = lat2 * Math.PI / 180;
+      const dPhi = (lat2 - lat1) * Math.PI / 180, dLambda = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dPhi/2)**2 + Math.cos(phi1)*Math.cos(phi2) * Math.sin(dLambda/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    // Step 11: Switch to Alternative Lot when full
+    function switchToAlternative(altLot) {
+      dismissAlert();
+      selectLot(altLot);
+      calculateRoute(altLot.lat, altLot.lon);
+      speakNotification(`Rerouted to ${altLot.name}.`);
+    }
+
+    // Step 13: Crowdsourced Reports Submission
+    async function submitCrowdReport(kind) {
+      if (!currentLot) return;
+      try {
+        const res = await fetch(`${API_BASE}/lots/${currentLot.id}/reports`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind, reporter_id: "driver_" + currentTripId })
+        });
+        if (res.ok) {
+          alert(`Report submitted: ${kind.replace('_', ' ')}. Thank you!`);
+          document.getElementById("reportOverlay").style.display = "none";
+          loadLots();
+        } else {
+          const err = await res.json();
+          alert(err.detail || "Could not submit report.");
+        }
+      } catch (e) {
+        alert("Failed to submit report. Please check your network.");
+      }
+    }
+
+    // Simulation Engine for testing moving vehicle GPS (Step 9)
+    function toggleSimulation() {
+      const btn = document.getElementById("btnSimulate");
+      if (isSimulating) {
+        isSimulating = false;
+        clearInterval(simulationTimer);
+        btn.classList.remove("active");
+        btn.innerHTML = "🚗 <span>Simulate GPS</span>";
+      } else {
+        if (!currentLot) {
+          alert("Please pick a parking lot first so the simulation knows where to navigate!");
+          return;
+        }
+        isSimulating = true;
+        btn.classList.add("active");
+        btn.innerHTML = "⏹️ <span>Stop GPS</span>";
+        
+        currentTripId = "trip_" + Math.random().toString(36).substring(2, 9);
+        startVehicleAnimation(currentLot.lat, currentLot.lon);
+      }
+    }
+
+    function startVehicleAnimation(destLat, destLon) {
+      clearInterval(simulationTimer);
+      const steps = 30;
+      let currentStep = 0;
+      const startLat = userLocation.lat;
+      const startLon = userLocation.lon;
+
+      simulationTimer = setInterval(() => {
+        currentStep++;
+        const progress = currentStep / steps;
+        const curLat = startLat + (destLat - startLat) * progress;
+        const curLon = startLon + (destLon - startLon) * progress;
+        
+        updateVehicleMarker(curLat, curLon);
+
+        if (currentStep >= steps) {
+          clearInterval(simulationTimer);
+          isSimulating = false;
+          document.getElementById("btnSimulate").classList.remove("active");
+          document.getElementById("btnSimulate").innerHTML = "🚗 <span>Simulate GPS</span>";
+        }
+      }, 1000);
+    }
+
+    // DOM Event Listeners
+    document.getElementById("btnGo").addEventListener("click", () => {
+      if (!currentLot) return;
+      calculateRoute(currentLot.lat, currentLot.lon);
+      speakNotification(`Starting route to ${currentLot.name}.`);
+    });
+
+    document.getElementById("btnShowReport").addEventListener("click", () => {
+      const overlay = document.getElementById("reportOverlay");
+      overlay.style.display = overlay.style.display === "block" ? "none" : "block";
+    });
+
+    document.getElementById("cardCloseBtn").addEventListener("click", () => {
+      document.getElementById("detailCard").style.display = "none";
+      if (lotWs) lotWs.close();
+    });
+
+    document.getElementById("btnRefresh").addEventListener("click", () => {
+      loadLots();
+    });
+
+    document.getElementById("btnSimulate").addEventListener("click", toggleSimulation);
+
+    document.getElementById("btnVoiceToggle").addEventListener("click", () => {
+      voiceEnabled = !voiceEnabled;
+      const btn = document.getElementById("btnVoiceToggle");
+      btn.classList.toggle("active", voiceEnabled);
+      btn.innerHTML = voiceEnabled ? "🔊 <span>Voice</span>" : "🔇 <span>Muted</span>";
+    });
+
+    document.getElementById("btnAlertDismiss").addEventListener("click", dismissAlert);
+
+    // Initial Startup
+    map.on("load", () => {
+      loadLots();
+      startGeolocation();
+      initVehicleWebSocket();
+    });
+
+    // Refresh lots when map pan ends
+    map.on("moveend", () => {
+      loadLots();
+    });
+  </script>
+</body>
+</html>

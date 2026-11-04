@@ -1,3 +1,1 @@
-# simulator/requirements.txt
-# The simulator uses only Python's standard library (urllib, json, random, time, datetime).
-# No external pip dependencies are required to run the simulator!
+requests>=2.31.0
