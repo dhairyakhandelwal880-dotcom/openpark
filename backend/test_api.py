@@ -98,3 +98,75 @@ def test_crowd_report():
     )
     assert res.status_code == 201
     assert res.json()["status"] == "received"
+
+
+def test_lot_telemetry_endpoint():
+    res = client.get("/lots/1/telemetry")
+    assert res.status_code == 200
+    tel = res.json()
+    assert "zones" in tel
+    assert "Zone A" in tel["zones"]
+    assert "dynamic_pricing" in tel
+    assert "factor" in tel["dynamic_pricing"]
+    assert "traffic_level" in tel
+    assert "sensors" in tel
+    assert "status" in tel["sensors"]
+    assert "ev_charging" in tel
+
+
+def test_mapbox_config_endpoints():
+    res = client.get("/config/mapbox")
+    assert res.status_code == 200
+    data = res.json()
+    assert "mapbox_access_token" in data
+    assert "has_token" in data
+
+    # Test updating token
+    post_res = client.post("/config/mapbox", json={"mapbox_access_token": "pk.test_sample_token_123"})
+    assert post_res.status_code == 200
+    assert post_res.json()["mapbox_access_token"] == "pk.test_sample_token_123"
+    assert post_res.json()["has_token"] is True
+
+
+def test_traccar_endpoints():
+    # 1. Test Traccar Client GET protocol (OsmAnd format)
+    res = client.get("/api/traccar?id=OP-TRACKER-01&lat=12.9719&lon=77.5958&speed=45.2&bearing=120.0&altitude=922&batt=95")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "success"
+    assert data["device_id"] == "OP-TRACKER-01"
+    assert data["position"]["latitude"] == 12.9719
+    assert data["position"]["speed"] == 45.2
+
+    # 2. Test Traccar Client POST protocol (JSON)
+    post_res = client.post("/api/traccar", json={
+        "id": "OP-TRACKER-02",
+        "lat": 12.9740,
+        "lon": 77.6074,
+        "speed": 30.0,
+        "bearing": 90.0,
+        "altitude": 918.5,
+        "accuracy": 3.0,
+        "batt": 88.0,
+        "charge": True
+    })
+    assert post_res.status_code == 200
+    assert post_res.json()["status"] == "success"
+
+    # 3. Test Traccar /api/devices
+    dev_res = client.get("/api/devices")
+    assert dev_res.status_code == 200
+    devices = dev_res.json()
+    assert len(devices) >= 2
+
+    # 4. Test Traccar /api/positions
+    pos_res = client.get("/api/positions")
+    assert pos_res.status_code == 200
+    positions = pos_res.json()
+    assert len(positions) >= 2
+
+    # 5. Test Traccar /api/positions/history
+    hist_res = client.get("/api/positions/history?deviceId=OP-TRACKER-01")
+    assert hist_res.status_code == 200
+    assert len(hist_res.json()) >= 1
+

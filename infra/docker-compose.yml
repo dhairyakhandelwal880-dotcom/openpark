@@ -27,5 +27,18 @@ services:
       timeout: 5s
       retries: 5
 
+  # Optional official Traccar server (https://www.traccar.org/)
+  traccar:
+    image: traccar/traccar:latest
+    restart: unless-stopped
+    ports:
+      - "8082:8082"  # Traccar Web Dashboard
+      - "5055:5055"  # Traccar Client (OsmAnd) protocol
+    volumes:
+      - traccardata:/opt/traccar/data
+    profiles:
+      - traccar-server
+
 volumes:
   pgdata:
+  traccardata:

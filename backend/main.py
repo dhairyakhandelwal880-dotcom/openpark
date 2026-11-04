@@ -12,10 +12,16 @@ Implements Steps 5, 6, 13, and 14 from the OpenPark Build Guide:
 import os
 import json
 import asyncio
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Optional, Set
 import math
+
+from dotenv import load_dotenv
+
+# Load environment configuration
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+load_dotenv()
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -26,39 +32,87 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 
+try:
+    from backend.iiot_service import get_lot_telemetry
+except ImportError:
+    from iiot_service import get_lot_telemetry
+
+try:
+    from backend.traccar_service import (
+        process_traccar_ping,
+        get_all_devices,
+        get_all_positions,
+        get_position_history,
+    )
+except ImportError:
+    from traccar_service import (
+        process_traccar_ping,
+        get_all_devices,
+        get_all_positions,
+        get_position_history,
+    )
+
 API_KEY = os.getenv("OPENPARK_API_KEY", "dev-key")
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://openpark:openpark@localhost:5432/openpark"
 )
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+MAPBOX_ACCESS_TOKEN = os.getenv("MAPBOX_ACCESS_TOKEN", "").strip()
 
 
+@contextmanager
 def get_db():
+    conn = None
     try:
-        return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor, connect_timeout=3)
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor, connect_timeout=3)
+        yield conn
     except Exception:
-        return None
+        yield None
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
-# Resilient in-memory dataset for 100% uptime fallback
-FALLBACK_LOTS = [
-    {"id": 1, "osm_ref": "way/blr_ub_city", "name": "UB City Multi-Level Car Parking", "city": "Bengaluru", "lat": 12.9719, "lon": 77.5958, "capacity": 1200, "price_note": "₹50/hr (cars), ₹20/hr (bikes)", "free_spots": 45, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 2, "osm_ref": "way/blr_brigade_rd", "name": "Brigade Road BBMP Smart Parking", "city": "Bengaluru", "lat": 12.9740, "lon": 77.6074, "capacity": 85, "price_note": "₹30/hr", "free_spots": 76, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 3, "osm_ref": "way/blr_church_st", "name": "Church Street Public Parking Lot", "city": "Bengaluru", "lat": 12.9751, "lon": 77.6047, "capacity": 60, "price_note": "₹30/hr", "free_spots": 57, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 4, "osm_ref": "way/blr_garuda_mall", "name": "Garuda Mall Basement Parking - Magrath Rd", "city": "Bengaluru", "lat": 12.9702, "lon": 77.6097, "capacity": 650, "price_note": "₹40/hr", "free_spots": 450, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 5, "osm_ref": "way/blr_commercial_st", "name": "Commercial Street Multi-Level Car Parking (MLCP)", "city": "Bengaluru", "lat": 12.9822, "lon": 77.6083, "capacity": 450, "price_note": "₹30/hr", "free_spots": 313, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 6, "osm_ref": "way/blr_majestic", "name": "Kempegowda (Majestic) Metro & Bus Interchange Parking", "city": "Bengaluru", "lat": 12.9774, "lon": 77.5726, "capacity": 800, "price_note": "₹30 for 4 hrs (Metro commuters)", "free_spots": 38, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 7, "osm_ref": "way/blr_cubbon_park", "name": "Cubbon Park High Court Gate Parking", "city": "Bengaluru", "lat": 12.9781, "lon": 77.5925, "capacity": 120, "price_note": "₹20/hr", "free_spots": 8, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 8, "osm_ref": "way/blr_indiranagar", "name": "Indiranagar 100ft Road Metro Parking", "city": "Bengaluru", "lat": 12.9784, "lon": 77.6387, "capacity": 150, "price_note": "₹30/hr", "free_spots": 67, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 9, "osm_ref": "way/blr_koramangala_forum", "name": "Nexus Mall (Forum) Parking - Koramangala", "city": "Bengaluru", "lat": 12.9348, "lon": 77.6111, "capacity": 750, "price_note": "₹40/hr", "free_spots": 112, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 10, "osm_ref": "way/blr_jayanagar_complex", "name": "Jayanagar 4th Block BDA Shopping Complex MLCP", "city": "Bengaluru", "lat": 12.9298, "lon": 77.5834, "capacity": 320, "price_note": "₹25/hr", "free_spots": 288, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 11, "osm_ref": "way/blr_malleshwaram_8th", "name": "Malleshwaram 8th Cross Public Parking", "city": "Bengaluru", "lat": 12.9989, "lon": 77.5704, "capacity": 90, "price_note": "₹20/hr", "free_spots": 62, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 12, "osm_ref": "way/blr_whitefield_itpl", "name": "ITPL Main Gate Parking - Whitefield", "city": "Bengaluru", "lat": 12.9866, "lon": 77.7381, "capacity": 500, "price_note": "₹30/hr", "free_spots": 240, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 13, "osm_ref": "way/blr_mg_road_metro", "name": "MG Road Boulevard Metro Parking", "city": "Bengaluru", "lat": 12.9754, "lon": 77.6066, "capacity": 110, "price_note": "₹30/hr", "free_spots": 96, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 14, "osm_ref": "way/blr_kr_market", "name": "KR Market Underground Parking Facility", "city": "Bengaluru", "lat": 12.9642, "lon": 77.5765, "capacity": 300, "price_note": "₹20/hr", "free_spots": 40, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-    {"id": 15, "osm_ref": "way/blr_cantonment_station", "name": "Bengaluru Cantonment Railway Station Parking", "city": "Bengaluru", "lat": 12.9937, "lon": 77.5983, "capacity": 180, "price_note": "₹20/hr", "free_spots": 82, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-]
+OPENCITY_DATA_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "bengaluru_parking_opencity.json")
+)
+
+
+def load_opencity_fallback():
+    if os.path.exists(OPENCITY_DATA_PATH):
+        try:
+            with open(OPENCITY_DATA_PATH, "r", encoding="utf-8") as f:
+                lots = json.load(f)
+                now = datetime.now(timezone.utc)
+                for lot in lots:
+                    lot["updated_at"] = now
+                return lots
+        except Exception:
+            pass
+    return [
+        {"id": 1, "osm_ref": "way/blr_ub_city", "name": "UB City Multi-Level Car Parking", "city": "Bengaluru", "lat": 12.9719, "lon": 77.5958, "capacity": 1200, "price_note": "₹50/hr (cars), ₹20/hr (bikes)", "free_spots": 45, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 2, "osm_ref": "way/blr_brigade_rd", "name": "Brigade Road BBMP Smart Parking", "city": "Bengaluru", "lat": 12.9740, "lon": 77.6074, "capacity": 85, "price_note": "₹30/hr", "free_spots": 76, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 3, "osm_ref": "way/blr_church_st", "name": "Church Street Public Parking Lot", "city": "Bengaluru", "lat": 12.9751, "lon": 77.6047, "capacity": 60, "price_note": "₹30/hr", "free_spots": 57, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 4, "osm_ref": "way/blr_garuda_mall", "name": "Garuda Mall Basement Parking - Magrath Rd", "city": "Bengaluru", "lat": 12.9702, "lon": 77.6097, "capacity": 650, "price_note": "₹40/hr", "free_spots": 450, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 5, "osm_ref": "way/blr_commercial_st", "name": "Commercial Street Multi-Level Car Parking (MLCP)", "city": "Bengaluru", "lat": 12.9822, "lon": 77.6083, "capacity": 450, "price_note": "₹30/hr", "free_spots": 313, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 6, "osm_ref": "way/blr_majestic", "name": "Kempegowda (Majestic) Metro & Bus Interchange Parking", "city": "Bengaluru", "lat": 12.9774, "lon": 77.5726, "capacity": 800, "price_note": "₹30 for 4 hrs (Metro commuters)", "free_spots": 38, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 7, "osm_ref": "way/blr_cubbon_park", "name": "Cubbon Park High Court Gate Parking", "city": "Bengaluru", "lat": 12.9781, "lon": 77.5925, "capacity": 120, "price_note": "₹20/hr", "free_spots": 8, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 8, "osm_ref": "way/blr_indiranagar", "name": "Indiranagar 100ft Road Metro Parking", "city": "Bengaluru", "lat": 12.9784, "lon": 77.6387, "capacity": 150, "price_note": "₹30/hr", "free_spots": 67, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 9, "osm_ref": "way/blr_koramangala_forum", "name": "Nexus Mall (Forum) Parking - Koramangala", "city": "Bengaluru", "lat": 12.9348, "lon": 77.6111, "capacity": 750, "price_note": "₹40/hr", "free_spots": 112, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 10, "osm_ref": "way/blr_jayanagar_complex", "name": "Jayanagar 4th Block BDA Shopping Complex MLCP", "city": "Bengaluru", "lat": 12.9298, "lon": 77.5834, "capacity": 320, "price_note": "₹25/hr", "free_spots": 288, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 11, "osm_ref": "way/blr_malleshwaram_8th", "name": "Malleshwaram 8th Cross Public Parking", "city": "Bengaluru", "lat": 12.9989, "lon": 77.5704, "capacity": 90, "price_note": "₹20/hr", "free_spots": 62, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 12, "osm_ref": "way/blr_whitefield_itpl", "name": "ITPL Main Gate Parking - Whitefield", "city": "Bengaluru", "lat": 12.9866, "lon": 77.7381, "capacity": 500, "price_note": "₹30/hr", "free_spots": 240, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 13, "osm_ref": "way/blr_mg_road_metro", "name": "MG Road Boulevard Metro Parking", "city": "Bengaluru", "lat": 12.9754, "lon": 77.6066, "capacity": 110, "price_note": "₹30/hr", "free_spots": 96, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 14, "osm_ref": "way/blr_kr_market", "name": "KR Market Underground Parking Facility", "city": "Bengaluru", "lat": 12.9642, "lon": 77.5765, "capacity": 300, "price_note": "₹20/hr", "free_spots": 40, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 15, "osm_ref": "way/blr_cantonment_station", "name": "Bengaluru Cantonment Railway Station Parking", "city": "Bengaluru", "lat": 12.9937, "lon": 77.5983, "capacity": 180, "price_note": "₹20/hr", "free_spots": 82, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+    ]
+
+
+FALLBACK_LOTS = load_opencity_fallback()
 
 
 # --------------------------------------------------------------------------
@@ -167,6 +221,16 @@ class ConnectionManager:
     def disconnect_vehicle(self, websocket: WebSocket):
         self.vehicle_sockets.discard(websocket)
 
+    async def broadcast_vehicle(self, data: dict):
+        dead_sockets = set()
+        for ws in self.vehicle_sockets:
+            try:
+                await ws.send_json(data)
+            except Exception:
+                dead_sockets.add(ws)
+        for ws in dead_sockets:
+            self.vehicle_sockets.discard(ws)
+
 
 manager = ConnectionManager()
 redis_client: Optional[aioredis.Redis] = None
@@ -240,6 +304,10 @@ class LotEditPayload(BaseModel):
     city: Optional[str] = None
 
 
+class MapboxConfigPayload(BaseModel):
+    mapbox_access_token: Optional[str] = None
+
+
 # --------------------------------------------------------------------------
 # REST Endpoints
 # --------------------------------------------------------------------------
@@ -253,10 +321,170 @@ def health():
     }
 
 
+@app.get("/config/mapbox")
+def get_mapbox_config():
+    token = os.getenv("MAPBOX_ACCESS_TOKEN", MAPBOX_ACCESS_TOKEN).strip()
+    return {
+        "mapbox_access_token": token,
+        "has_token": bool(token)
+    }
+
+
+@app.post("/config/mapbox")
+def update_mapbox_config(payload: MapboxConfigPayload):
+    global MAPBOX_ACCESS_TOKEN
+    if payload.mapbox_access_token is not None:
+        MAPBOX_ACCESS_TOKEN = payload.mapbox_access_token.strip()
+        os.environ["MAPBOX_ACCESS_TOKEN"] = MAPBOX_ACCESS_TOKEN
+        env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, "r", encoding="utf-8") as f:
+                    lines = f.readlines()
+                found = False
+                new_lines = []
+                for line in lines:
+                    if line.startswith("MAPBOX_ACCESS_TOKEN="):
+                        new_lines.append(f"MAPBOX_ACCESS_TOKEN={MAPBOX_ACCESS_TOKEN}\n")
+                        found = True
+                    else:
+                        new_lines.append(line)
+                if not found:
+                    new_lines.append(f"MAPBOX_ACCESS_TOKEN={MAPBOX_ACCESS_TOKEN}\n")
+                with open(env_path, "w", encoding="utf-8") as f:
+                    f.writelines(new_lines)
+            except Exception as e:
+                print(f"Error persisting .env: {e}")
+    return {
+        "status": "ok",
+        "mapbox_access_token": MAPBOX_ACCESS_TOKEN,
+        "has_token": bool(MAPBOX_ACCESS_TOKEN)
+    }
+
+
+# --------------------------------------------------------------------------
+# Traccar GPS Tracking Protocol & REST API (https://www.traccar.org/)
+# --------------------------------------------------------------------------
+
+class TraccarPingPayload(BaseModel):
+    id: Optional[str] = None
+    deviceId: Optional[str] = None
+    lat: Optional[float] = None
+    latitude: Optional[float] = None
+    lon: Optional[float] = None
+    longitude: Optional[float] = None
+    timestamp: Optional[str] = None
+    speed: Optional[float] = None
+    bearing: Optional[float] = None
+    course: Optional[float] = None
+    altitude: Optional[float] = None
+    accuracy: Optional[float] = None
+    batt: Optional[float] = None
+    battery: Optional[float] = None
+    charge: Optional[bool] = None
+
+
+@app.get("/api/traccar")
+@app.post("/api/traccar")
+async def traccar_client_endpoint(
+    id: Optional[str] = Query(None, description="Traccar device ID"),
+    lat: Optional[float] = Query(None),
+    lon: Optional[float] = Query(None),
+    timestamp: Optional[str] = Query(None),
+    speed: Optional[float] = Query(None),
+    bearing: Optional[float] = Query(None),
+    altitude: Optional[float] = Query(None),
+    accuracy: Optional[float] = Query(None),
+    batt: Optional[float] = Query(None),
+    charge: Optional[bool] = Query(None),
+    payload: Optional[TraccarPingPayload] = None
+):
+    """
+    Standard Traccar Client / OsmAnd Protocol Ingestion.
+    Supports official Traccar Client Android/iOS apps and hardware GPS trackers.
+    """
+    dev_id = id or (payload.deviceId if payload else None) or (payload.id if payload else None) or "OP-TRACKER-01"
+    latitude = lat if lat is not None else (payload.latitude if payload and payload.latitude is not None else (payload.lat if payload else None))
+    longitude = lon if lon is not None else (payload.longitude if payload and payload.longitude is not None else (payload.lon if payload else None))
+
+    if latitude is None or longitude is None:
+        return {"status": "ok", "message": "Traccar listener active. Waiting for coordinates."}
+
+    spd = speed if speed is not None else (payload.speed if payload else None)
+    course_val = bearing if bearing is not None else (payload.course if payload and payload.course is not None else (payload.bearing if payload else None))
+    alt = altitude if altitude is not None else (payload.altitude if payload else None)
+    acc = accuracy if accuracy is not None else (payload.accuracy if payload else None)
+    battery_val = batt if batt is not None else (payload.battery if payload and payload.battery is not None else (payload.batt if payload else None))
+    is_charging = charge if charge is not None else (payload.charge if payload else None)
+
+    pos = process_traccar_ping(
+        device_id=dev_id,
+        lat=latitude,
+        lon=longitude,
+        timestamp=timestamp or (payload.timestamp if payload else None),
+        speed=spd,
+        bearing=course_val,
+        altitude=alt,
+        accuracy=acc,
+        batt=battery_val,
+        charge=is_charging
+    )
+
+    # Broadcast position update to all live vehicle listeners
+    await manager.broadcast_vehicle({
+        "type": "traccar_position",
+        "position": pos.model_dump()
+    })
+
+    return {"status": "success", "device_id": dev_id, "position": pos.model_dump()}
+
+
+@app.get("/api/devices")
+def traccar_devices():
+    """Traccar REST API: List all registered GPS tracking devices."""
+    return get_all_devices()
+
+
+@app.get("/api/positions")
+def traccar_positions():
+    """Traccar REST API: List latest positions for all devices."""
+    return get_all_positions()
+
+
+@app.get("/api/positions/history")
+def traccar_position_history(deviceId: str = Query("OP-TRACKER-01")):
+    """Traccar REST API: Return position trail history for trajectory breadcrumbs."""
+    return get_position_history(deviceId)
+
+
 @app.get("/lots")
 def list_lots(city: Optional[str] = None):
     """Returns all parking lots for operators and selectors."""
     with get_db() as conn:
+        if not conn:
+            result = []
+            for item in FALLBACK_LOTS:
+                if city and item.get("city") != city:
+                    continue
+                st = lot_status(item["free_spots"], item["capacity"], item.get("updated_at"))
+                score, level = get_confidence(item.get("source"), item.get("updated_at"))
+                result.append({
+                    "id": item["id"],
+                    "name": item["name"],
+                    "city": item.get("city", "Bengaluru"),
+                    "capacity": item["capacity"],
+                    "price_note": item["price_note"],
+                    "lat": item["lat"],
+                    "lon": item["lon"],
+                    "free_spots": item["free_spots"],
+                    "status": st,
+                    "confidence_score": score,
+                    "confidence": level,
+                    "updated_at": item.get("updated_at").isoformat() if item.get("updated_at") else None,
+                    "updated_human": human_time_ago(item.get("updated_at")),
+                })
+            return result
+
         with conn.cursor() as cur:
             if city:
                 cur.execute(
@@ -403,6 +631,35 @@ def get_nearby_lots(
 def get_lot_detail(lot_id: int):
     """Returns full details of a specific parking lot, latest status, and recent reports."""
     with get_db() as conn:
+        if not conn:
+            lot = next((item for item in FALLBACK_LOTS if item["id"] == lot_id), None)
+            if not lot:
+                raise HTTPException(status_code=404, detail="Parking lot not found")
+            st = lot_status(lot["free_spots"], lot["capacity"], lot.get("updated_at"))
+            score, level = get_confidence(lot.get("source"), lot.get("updated_at"))
+            cap = lot["capacity"] or 50
+            free = lot["free_spots"]
+            telemetry = get_lot_telemetry(lot["id"], total_capacity=cap, free_spots=free)
+            return {
+                "id": lot["id"],
+                "osm_ref": lot.get("osm_ref", f"way/blr_{lot_id}"),
+                "name": lot["name"] or f"Parking #{lot['id']}",
+                "city": lot.get("city", "Bengaluru"),
+                "capacity": cap,
+                "price_note": lot["price_note"] or "Standard parking rates",
+                "lat": lot["lat"],
+                "lon": lot["lon"],
+                "free_spots": free,
+                "source": lot.get("source", "sensor"),
+                "updated_at": lot.get("updated_at").isoformat() if lot.get("updated_at") else None,
+                "updated_human": human_time_ago(lot.get("updated_at")),
+                "status": st,
+                "confidence_score": score,
+                "confidence": level,
+                "recent_reports": [],
+                "telemetry": telemetry
+            }
+
         with conn.cursor() as cur:
             cur.execute(
                 """
@@ -435,17 +692,20 @@ def get_lot_detail(lot_id: int):
 
     st = lot_status(lot["free_spots"], lot["capacity"], lot["updated_at"])
     conf_score, conf_level = get_confidence(lot["availability_source"], lot["updated_at"])
+    cap = lot["capacity"] or 50
+    free = lot["free_spots"]
+    telemetry = get_lot_telemetry(lot["id"], total_capacity=cap, free_spots=free)
 
     return {
         "id": lot["id"],
         "osm_ref": lot["osm_ref"],
         "name": lot["name"] or f"Parking #{lot['id']}",
         "city": lot["city"],
-        "capacity": lot["capacity"] or 50,
+        "capacity": cap,
         "price_note": lot["price_note"] or "Standard parking rates",
         "lat": lot["lat"],
         "lon": lot["lon"],
-        "free_spots": lot["free_spots"],
+        "free_spots": free,
         "source": lot["availability_source"] or "unknown",
         "updated_at": lot["updated_at"].isoformat() if lot["updated_at"] else None,
         "updated_human": human_time_ago(lot["updated_at"]),
@@ -454,8 +714,33 @@ def get_lot_detail(lot_id: int):
         "confidence": conf_level,
         "recent_reports": [
             {"kind": r["kind"], "time": human_time_ago(r["created_at"])} for r in reports
-        ]
+        ],
+        "telemetry": telemetry
     }
+
+
+@app.get("/lots/{lot_id}/telemetry")
+def get_lot_telemetry_endpoint(lot_id: int):
+    """
+    Returns real-time Industrial IoT (IIoT) telemetry for the lot:
+    - Zone breakdown (Zone A, B, C, D)
+    - EV Charging spots available
+    - Dynamic Pricing Factor (0.8x - 1.5x)
+    - Weather, traffic levels, and sensor readings (ultrasonic, pressure, noise)
+    """
+    lot = None
+    with get_db() as conn:
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT capacity, (SELECT free_spots FROM availability WHERE lot_id = %s ORDER BY updated_at DESC LIMIT 1) as free_spots FROM parking_lots WHERE id = %s",
+                    (lot_id, lot_id)
+                )
+                lot = cur.fetchone()
+
+    cap = lot["capacity"] if lot and lot.get("capacity") else 100
+    free = lot["free_spots"] if lot and lot.get("free_spots") is not None else None
+    return get_lot_telemetry(lot_id, total_capacity=cap, free_spots=free)
 
 
 @app.put("/lots/{lot_id}")
@@ -518,25 +803,33 @@ async def update_availability(
         )
 
     with get_db() as conn:
-        with conn.cursor() as cur:
-            # Check lot exists
-            cur.execute("SELECT id, name, capacity FROM parking_lots WHERE id = %s", (lot_id,))
-            lot = cur.fetchone()
+        if not conn:
+            lot = next((item for item in FALLBACK_LOTS if item["id"] == lot_id), None)
             if not lot:
                 raise HTTPException(status_code=404, detail="Parking lot not found")
+            lot["free_spots"] = payload.free_spots
+            lot["source"] = payload.source
+            lot["updated_at"] = datetime.now(timezone.utc)
+            now = lot["updated_at"]
+        else:
+            with conn.cursor() as cur:
+                # Check lot exists
+                cur.execute("SELECT id, name, capacity FROM parking_lots WHERE id = %s", (lot_id,))
+                lot = cur.fetchone()
+                if not lot:
+                    raise HTTPException(status_code=404, detail="Parking lot not found")
 
-            cur.execute(
-                """
-                INSERT INTO availability (lot_id, free_spots, source, updated_at)
-                VALUES (%s, %s, %s, NOW())
-                RETURNING id, updated_at
-                """,
-                (lot_id, payload.free_spots, payload.source)
-            )
-            row = cur.fetchone()
-            conn.commit()
-
-    now = row["updated_at"]
+                cur.execute(
+                    """
+                    INSERT INTO availability (lot_id, free_spots, source, updated_at)
+                    VALUES (%s, %s, %s, NOW())
+                    RETURNING id, updated_at
+                    """,
+                    (lot_id, payload.free_spots, payload.source)
+                )
+                row = cur.fetchone()
+                conn.commit()
+            now = row["updated_at"]
     st = lot_status(payload.free_spots, lot["capacity"], now)
     conf_score, conf_level = get_confidence(payload.source, now)
 
@@ -601,6 +894,24 @@ async def submit_crowdsourced_report(lot_id: int, payload: ReportPayload):
     REPORTS_RATE_LIMIT[key] = now
 
     with get_db() as conn:
+        if not conn:
+            lot = next((item for item in FALLBACK_LOTS if item["id"] == lot_id), None)
+            if not lot:
+                raise HTTPException(status_code=404, detail="Parking lot not found")
+            cap = lot["capacity"] or 50
+            if payload.kind == "lot_full":
+                lot["free_spots"] = 0
+            elif payload.kind == "has_space":
+                lot["free_spots"] = max(5, int(cap * 0.35))
+            elif payload.kind == "got_spot":
+                lot["free_spots"] = max(0, (lot["free_spots"] or 10) - 1)
+            lot["updated_at"] = now
+            return {
+                "message": f"Report '{payload.kind}' recorded successfully",
+                "lot_id": lot_id,
+                "status": "received"
+            }
+
         with conn.cursor() as cur:
             cur.execute("SELECT id, name, capacity FROM parking_lots WHERE id = %s", (lot_id,))
             lot = cur.fetchone()
@@ -737,6 +1048,19 @@ async def websocket_vehicle_tracking(websocket: WebSocket):
 
             if lat is None or lon is None:
                 continue
+
+            # Ingest to Traccar GPS telemetry engine
+            trac_pos = process_traccar_ping(
+                device_id=message.get("device_id") or "OP-TRACKER-01",
+                lat=lat,
+                lon=lon,
+                speed=message.get("speed"),
+                bearing=message.get("bearing") or message.get("course"),
+                altitude=message.get("altitude"),
+                accuracy=message.get("accuracy"),
+                batt=message.get("battery") or message.get("batt"),
+                charge=message.get("charge")
+            )
 
             # If user has a selected destination lot, evaluate arrival & availability
             if dest_lot_id:

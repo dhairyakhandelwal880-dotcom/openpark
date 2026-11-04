@@ -320,8 +320,64 @@
       border-radius: 16px;
       padding: 20px;
       width: 100%;
-      max-width: 360px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    /* IIoT Telemetry Styles */
+    .telemetry-card {
+      margin-top: 4px;
+    }
+
+    .zone-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .zone-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .zone-spots {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .zone-progress-bg {
+      background: #e2e8f0;
+      height: 6px;
+      border-radius: 999px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .zone-progress-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: #16a34a;
+      transition: width 0.4s ease;
+    }
+
+    .pulse-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #16a34a;
+      animation: live-pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes live-pulse {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.15); }
+      100% { opacity: 0.4; transform: scale(0.9); }
     }
   </style>
 </head>
@@ -337,7 +393,13 @@
             <div class="brand-subtitle">OpenPark City Network</div>
           </div>
         </div>
-        <button id="btnApiKey" class="key-btn">🔑 Key</button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div id="liveSyncBadge" style="display: flex; align-items: center; gap: 6px; background: #dcfce7; color: #15803d; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px;">
+            <span class="pulse-dot"></span>
+            <span>LIVE SYNC</span>
+          </div>
+          <button id="btnApiKey" class="key-btn">🔑 Key</button>
+        </div>
       </header>
 
       <!-- Lot Selector -->
@@ -399,6 +461,57 @@
       </div>
     </div>
 
+    <!-- IIoT Sensor Telemetry & Diagnostics Card -->
+    <div class="card telemetry-card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div style="font-size: 14px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+          <span>📡 IIoT Live Sensor Telemetry</span>
+        </div>
+        <span id="telemetryBadge" style="font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; padding: 3px 8px; border-radius: 6px;">
+          Sensors Online
+        </span>
+      </div>
+
+      <!-- Dynamic Pricing & Traffic Banner -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px;">
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Dynamic Pricing</div>
+          <div id="telemetryPricing" style="font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 2px;">1.0x (Standard)</div>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px;">
+          <div style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase;">Nearby Traffic</div>
+          <div id="telemetryTraffic" style="font-size: 15px; font-weight: 800; color: #0f172a; margin-top: 2px;">Low Flow</div>
+        </div>
+      </div>
+
+      <!-- Zone Breakdown Grid -->
+      <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px;">
+        Zone Occupancy Breakdown
+      </div>
+      <div id="zonesGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+        <!-- Filled dynamically -->
+      </div>
+
+      <!-- EV & Violations Strip -->
+      <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">⚡</span>
+          <div>
+            <div style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;">EV Charging Bays</div>
+            <div id="telemetryEV" style="font-size: 13px; font-weight: 800; color: #0f172a;">3 / 8 Free</div>
+          </div>
+        </div>
+        <div id="violationAlertBox" style="display: none; align-items: center; gap: 6px; background: #fee2e2; color: #991b1b; padding: 5px 10px; border-radius: 8px; font-size: 11px; font-weight: 700;">
+          <span>⚠️</span> <span id="violationCount">1 Overstay</span>
+        </div>
+      </div>
+
+      <!-- Hardware Diagnostics Subtext -->
+      <div id="telemetryDiagnostics" style="margin-top: 10px; font-size: 11px; color: #94a3b8; text-align: center;">
+        Sensors: Ultrasonic (95cm) • Pressure (2.5 kPa) • Gateways Healthy
+      </div>
+    </div>
+
     <!-- Recent Activity / Crowdsourced Reports Card -->
     <div class="card reports-card">
       <div style="font-size: 14px; font-weight: 700; color: #334155; margin-bottom: 10px;">
@@ -436,9 +549,12 @@
     let currentLot = null;
     let currentFreeSpots = 0;
 
+    let pollTimer = null;
+
     async function init() {
       await loadLots();
       setupEventListeners();
+      startLiveSync();
     }
 
     async function loadLots() {
@@ -475,7 +591,24 @@
       }
     }
 
-    function updateUI() {
+    function startLiveSync() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(async () => {
+        if (!currentLot) return;
+        try {
+          const res = await fetch(`${API_BASE}/lots/${currentLot.id}`);
+          if (!res.ok) return;
+          const freshData = await res.json();
+          currentLot = freshData;
+          currentFreeSpots = currentLot.free_spots !== null ? currentLot.free_spots : currentLot.capacity;
+          updateDisplayOnly();
+        } catch (e) {
+          // ignore transient background fetch errors
+        }
+      }, 3500);
+    }
+
+    function updateDisplayOnly() {
       if (!currentLot) return;
       
       const freeEl = document.getElementById("freeSpotsDisplay");
@@ -483,7 +616,7 @@
 
       const badge = document.getElementById("statusBadge");
       badge.className = `badge-status status-${currentLot.status}`;
-      badge.innerText = currentLot.status.replace("_", " ").toUpperCase();
+      badge.innerText = (currentLot.status || "available").replace("_", " ").toUpperCase();
 
       if (currentLot.status === "full") {
         freeEl.style.color = "#dc2626";
@@ -494,6 +627,83 @@
       }
 
       document.getElementById("capacityLabel").innerText = `of ${currentLot.capacity} spots`;
+
+      // Render Telemetry
+      if (currentLot.telemetry) {
+        renderTelemetry(currentLot.telemetry);
+      }
+    }
+
+    function renderTelemetry(t) {
+      if (!t) return;
+
+      // Dynamic Pricing
+      const pricingEl = document.getElementById("telemetryPricing");
+      if (pricingEl && t.dynamic_pricing) {
+        pricingEl.innerText = `${t.dynamic_pricing.factor}x (${t.dynamic_pricing.label})`;
+      }
+
+      // Traffic
+      const trafficEl = document.getElementById("telemetryTraffic");
+      if (trafficEl && t.traffic_level) {
+        trafficEl.innerText = `${t.traffic_level} Flow`;
+      }
+
+      // Zone Breakdown
+      const zonesGrid = document.getElementById("zonesGrid");
+      if (zonesGrid && t.zones) {
+        zonesGrid.innerHTML = Object.entries(t.zones).map(([zoneName, z]) => {
+          const total = z.total || 1;
+          const free = z.free || 0;
+          const pct = Math.round((free / total) * 100);
+          let barColor = "#16a34a";
+          if (pct < 15) barColor = "#dc2626";
+          else if (pct < 35) barColor = "#d97706";
+
+          return `
+            <div class="zone-box">
+              <div class="zone-title">
+                <span>${zoneName}</span>
+                <span>${pct}% free</span>
+              </div>
+              <div class="zone-spots">${free} <span style="font-size: 11px; color: #64748b; font-weight: 500;">/ ${total} spots</span></div>
+              <div class="zone-progress-bg">
+                <div class="zone-progress-fill" style="width: ${pct}%; background: ${barColor};"></div>
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      // EV Charging
+      const evEl = document.getElementById("telemetryEV");
+      if (evEl && t.ev_charging) {
+        evEl.innerText = `${t.ev_charging.free} / ${t.ev_charging.total} Free`;
+      }
+
+      // Violations
+      const alertBox = document.getElementById("violationAlertBox");
+      const countEl = document.getElementById("violationCount");
+      if (alertBox && countEl) {
+        if (t.violations_detected && t.violations_detected > 0) {
+          countEl.innerText = `${t.violations_detected} Overstay Alert`;
+          alertBox.style.display = "flex";
+        } else {
+          alertBox.style.display = "none";
+        }
+      }
+
+      // Sensor Diagnostics
+      const diagEl = document.getElementById("telemetryDiagnostics");
+      if (diagEl && t.sensors) {
+        diagEl.innerText = `Sensors: Ultrasonic (${t.sensors.ultrasonic_avg_cm}cm) • Pressure (${t.sensors.pressure_avg_kpa} kPa) • Gateways Active`;
+      }
+    }
+
+    function updateUI() {
+      if (!currentLot) return;
+      
+      updateDisplayOnly();
 
       // Fill edit form
       document.getElementById("editName").value = currentLot.name;
@@ -542,8 +752,15 @@
         if (res.ok) {
           const data = await res.json();
           currentFreeSpots = data.free_spots;
+          currentLot.free_spots = data.free_spots;
           currentLot.status = data.status_label;
-          updateUI();
+          try {
+            const telRes = await fetch(`${API_BASE}/lots/${currentLot.id}/telemetry`);
+            if (telRes.ok) {
+              currentLot.telemetry = await telRes.json();
+            }
+          } catch (_) {}
+          updateDisplayOnly();
         } else {
           const err = await res.json();
           alert(`Update failed (${res.status}): ${err.detail || 'Check API Key'}`);

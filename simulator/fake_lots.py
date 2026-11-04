@@ -16,19 +16,20 @@ DEFAULT_LON = 77.5946
 DEFAULT_API_KEY = "dev-key"
 
 
-def get_nearest_lots(api_url: str, lat: float, lon: float, count: int = 10):
+def get_nearest_lots(api_url: str, lat: float, lon: float, count: int = 50):
     try:
-        url = f"{api_url}/lots/nearby?lat={lat}&lon={lon}&radius=8000"
+        url = f"{api_url}/lots"
         res = requests.get(url, timeout=5)
         res.raise_for_status()
         lots = res.json()
         if lots:
             return lots[:count]
     except Exception as e:
-        print(f"Could not fetch nearby lots from {api_url}: {e}. Falling back to default list.")
+        pass
 
     try:
-        res = requests.get(f"{api_url}/lots", timeout=5)
+        url = f"{api_url}/lots/nearby?lat={lat}&lon={lon}&radius=35000"
+        res = requests.get(url, timeout=5)
         res.raise_for_status()
         lots = res.json()
         return lots[:count]
@@ -50,7 +51,7 @@ def run_simulation(
     print(f"API Target: {api_url}")
     print(f"Test Center: ({lat}, {lon})")
 
-    lots = get_nearest_lots(api_url, lat, lon, count=10)
+    lots = get_nearest_lots(api_url, lat, lon, count=50)
     print(f"Simulating sensor updates for {len(lots)} parking lots:")
     for lot in lots:
         print(f" - [{lot['id']}] {lot['name']} (Capacity: {lot.get('capacity', 50)})")
