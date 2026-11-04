@@ -129,6 +129,38 @@ def test_maplibre_config_endpoints():
     assert post_res.json()["requires_token"] is False
 
 
+def test_mappls_rest_api_endpoints():
+    # 1. Test Mappls config endpoint
+    res = client.get("/config/mappls")
+    assert res.status_code == 200
+    data = res.json()
+    assert "Mappls REST API" in data["engine"]
+    assert "has_rest_key" in data
+
+    # 2. Test updating Mappls REST key
+    post_res = client.post("/config/mappls", json={"mappls_rest_key": "test_dummy_mappls_key_12345"})
+    assert post_res.status_code == 200
+    assert post_res.json()["has_rest_key"] is True
+
+    # 3. Test Mappls AutoSuggest endpoint
+    sugg_res = client.get("/api/mappls/autosuggest?query=MG%20Road&lat=12.9716&lon=77.5946")
+    assert sugg_res.status_code == 200
+    sugg_data = sugg_res.json()
+    assert sugg_data["status"] == "ok"
+    assert len(sugg_data["results"]) >= 1
+    assert "name" in sugg_data["results"][0]
+    assert "lat" in sugg_data["results"][0]
+
+    # 4. Test Mappls Route Directions endpoint
+    route_res = client.get("/api/mappls/route?start_lat=12.9716&start_lon=77.5946&dest_lat=12.9750&dest_lon=77.6000")
+    assert route_res.status_code == 200
+    route_data = route_res.json()
+    assert route_data["status"] == "ok"
+    assert len(route_data["coordinates"]) >= 2
+    assert "steps" in route_data
+    assert "distance_km" in route_data
+
+
 def test_traccar_endpoints():
     # 1. Test Traccar Client GET protocol (OsmAnd format)
     res = client.get("/api/traccar?id=OP-TRACKER-01&lat=12.9719&lon=77.5958&speed=45.2&bearing=120.0&altitude=922&batt=95")

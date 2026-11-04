@@ -3,69 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <title>OpenPark — Next-Gen Spatial Smart Parking & Telemetry</title>
+  <title>OpenPark — Next-Gen Urban Parking & Live GPS Telemetry</title>
 
-  <!-- Typography: Inter & JetBrains Mono -->
+  <!-- Typography: Apple SF Pro & Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
 
-  <!-- MapLibre GL JS (Free & Open-Source Vector Map Engine: https://maplibre.org/maplibre-gl-js/docs/API/) -->
+  <!-- MapLibre GL JS (100% Free & Open-Source Vector Map Engine: https://maplibre.org/maplibre-gl-js/docs/API/) -->
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
 
   <style>
-    /* ----------------------------------------------------
-       CORE DESIGN TOKENS & CSS VARIABLES
-       ---------------------------------------------------- */
+    /* ==========================================================================
+       1. Design Tokens & Apple Clear Glass Visual Language
+       High-contrast, crystal-clear surfaces without blurry haze or cloud effect
+       ========================================================================== */
     :root {
-      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      /* Typography */
+      --font-stack: -apple-system, "SF Pro Text", "SF Pro Display", Inter, system-ui, sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
+      --font-size-sec: 13px;
+      --font-size-body: 15px;
+      --font-size-title: 17px;
+      --font-size-lg: 28px;
 
-      --color-emerald: #10b981;
-      --color-amber: #f59e0b;
-      --color-crimson: #ef4444;
-      --color-cobalt: #2563eb;
-      --color-cyan: #38bdf8;
+      /* Radii */
+      --radius-panel: 22px;
+      --radius-card: 14px;
+      --radius-pill: 999px;
 
-      --bg-carbon: #0b1120;
-      --glass-surface: #0f172a;
-      --glass-surface-dense: #0f172a;
-      --glass-border: rgba(255, 255, 255, 0.12);
-      --glass-border-hover: rgba(255, 255, 255, 0.22);
-      --glass-highlight: rgba(255, 255, 255, 0.05);
+      /* Status Palette */
+      --status-available: #10b981;
+      --status-filling: #f59e0b;
+      --status-full: #ef4444;
+      --status-unknown: #94a3b8;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-subtle: #38bdf8;
 
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --text-subtle: #64748b;
+      /* Transitions */
+      --transition-standard: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-smooth: 280ms cubic-bezier(0.32, 0.72, 0, 1);
 
-      --shadow-elevation: 0 12px 28px rgba(0, 0, 0, 0.45);
-      --shadow-ambient: 0 4px 16px rgba(0, 0, 0, 0.3);
-      --radius-sm: 8px;
-      --radius-md: 14px;
-      --radius-lg: 20px;
-      --radius-pill: 9999px;
+      /* Dark Theme (Default) - Crisp, Solid & Clean */
+      --glass-bg: rgba(15, 23, 42, 0.92);
+      --glass-border: 1px solid rgba(255, 255, 255, 0.12);
+      --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+
+      --solid-panel-bg: #0f172a;
+      --text-contrast-layer: #1e293b;
+      --text-contrast-subtle: #334155;
+
+      --color-text-primary: #f8fafc;
+      --color-text-secondary: #cbd5e1;
+      --color-text-tertiary: #94a3b8;
+      --color-border-subtle: rgba(255, 255, 255, 0.1);
+      --color-hover: rgba(255, 255, 255, 0.08);
+      --color-active: rgba(255, 255, 255, 0.14);
+
+      --map-tile-style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
     }
 
-    * {
+    /* Reset & Base */
+    *, *::before, *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
     }
 
-    body, html {
-      width: 100%;
-      height: 100%;
+    body {
+      font-family: var(--font-stack);
+      font-size: var(--font-size-body);
+      color: var(--color-text-primary);
+      background: #0b0f19;
       overflow: hidden;
-      background-color: var(--bg-carbon);
-      color: var(--text-main);
-      font-family: var(--font-sans);
-      font-size: 14px;
+      width: 100vw;
+      height: 100vh;
+      line-height: 1.4;
       user-select: none;
     }
 
-    #map {
+    :focus-visible {
+      outline: 2px solid var(--accent-subtle);
+      outline-offset: 2px;
+    }
+
+    /* Clean solid glass panel */
+    .glass-surface {
+      background: var(--glass-bg);
+      border: var(--glass-border);
+      box-shadow: var(--glass-shadow), var(--glass-highlight);
+    }
+
+    .contrast-card {
+      background: var(--text-contrast-layer);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-card);
+    }
+
+    /* Icon system */
+    .svg-icon {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* ==========================================================================
+       2. Layout Elements
+       ========================================================================== */
+    #map-viewport {
       position: absolute;
       inset: 0;
       width: 100%;
@@ -73,1255 +129,1339 @@
       z-index: 1;
     }
 
-    /* ----------------------------------------------------
-       CLEAN HIGH-CONTRAST PANELS (NO FOG/BLUR CLOUD EFFECT)
-       ---------------------------------------------------- */
-    .glass-panel {
-      background: var(--glass-surface);
-      border: 1px solid var(--glass-border);
-      box-shadow: var(--shadow-elevation);
-    }
-
-    .glass-dense {
-      background: var(--glass-surface-dense);
-      border: 1px solid var(--glass-border);
-      box-shadow: var(--shadow-elevation);
-    }
-
-    .btn-glass {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 7px 13px;
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--glass-border);
-      background: #1e293b;
-      color: var(--text-main);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-      white-space: nowrap;
-    }
-
-    .btn-glass:hover {
-      background: #334155;
-      border-color: var(--glass-border-hover);
-      transform: translateY(-1px);
-    }
-
-    .btn-glass:active {
-      transform: translateY(1px);
-    }
-
-    .btn-glass.active-gps {
-      background: #064e3b;
-      border-color: var(--color-emerald);
-      color: #34d399;
-    }
-
-    .btn-glass.active-sim {
-      background: #0c4a6e;
-      border-color: var(--color-cyan);
-      color: #7dd3fc;
-    }
-
-    /* ----------------------------------------------------
-       1. TOP FLOATING APP BAR
-       ---------------------------------------------------- */
-    #top-nav-bar {
+    /* Desktop Sidebar */
+    #sidebar {
       position: absolute;
       top: 14px;
-      left: 16px;
-      right: 16px;
-      z-index: 100;
+      left: 14px;
+      bottom: 14px;
+      width: 390px;
+      border-radius: var(--radius-panel);
+      z-index: 20;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      overflow: hidden;
+      transition: transform var(--transition-smooth), opacity var(--transition-smooth);
+    }
+
+    #sidebar.is-collapsed {
+      transform: translateX(calc(-100% - 28px));
       pointer-events: none;
     }
 
-    .top-nav-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      pointer-events: auto;
-      flex-wrap: wrap;
-    }
-
-    .brand-pill {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      padding: 6px 14px;
+    .sidebar-collapse-toggle {
+      position: absolute;
+      top: 20px;
+      left: 418px;
+      width: 38px;
+      height: 38px;
       border-radius: var(--radius-pill);
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: -0.01em;
-    }
-
-    .brand-logo-icon {
-      width: 22px;
-      height: 22px;
-      background: linear-gradient(135deg, var(--color-cobalt), var(--color-cyan));
-      border-radius: 6px;
+      z-index: 21;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: white;
-      font-size: 12px;
-      font-weight: 900;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-    }
-
-    .brand-subtext {
-      color: var(--text-muted);
-      font-weight: 400;
-      font-size: 11.5px;
-      padding-left: 6px;
-      border-left: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .action-button-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      overflow-x: auto;
-      padding-bottom: 2px;
-      max-width: 100%;
-    }
-
-    /* Filter Chips Row */
-    .filter-chips-row {
-      display: flex;
-      gap: 8px;
-      pointer-events: auto;
-      overflow-x: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-      padding: 2px 0;
-    }
-    .filter-chips-row::-webkit-scrollbar { display: none; }
-
-    .filter-chip {
-      padding: 5px 12px;
-      border-radius: var(--radius-pill);
-      font-size: 11.5px;
-      font-weight: 500;
-      background: #1e293b;
-      border: 1px solid var(--glass-border);
-      color: var(--text-muted);
       cursor: pointer;
-      transition: all 0.2s ease;
+      color: var(--color-text-primary);
+      transition: left var(--transition-smooth), transform var(--transition-standard);
+      border: var(--glass-border);
+    }
+    #sidebar.is-collapsed + .sidebar-collapse-toggle {
+      left: 14px;
+    }
+    .sidebar-collapse-toggle:hover {
+      background: var(--color-hover);
     }
 
-    .filter-chip.active {
-      background: #334155;
-      color: var(--text-main);
-      border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    /* ----------------------------------------------------
-       2. ACTIVE TURN-BY-TURN DYNAMIC ISLAND NAV HUD
-       ---------------------------------------------------- */
-    #active-nav-island {
+    /* Control Cluster (Right Side) */
+    .control-cluster {
       position: absolute;
-      top: 14px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-120px);
-      z-index: 150;
-      width: min(440px, 94vw);
-      border-radius: var(--radius-lg);
-      padding: 14px 18px;
+      top: 16px;
+      right: 16px;
+      z-index: 10;
+      border-radius: var(--radius-pill);
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      transition: transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
-      opacity: 0;
-      pointer-events: auto;
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      box-shadow: 0 16px 36px rgba(0,0,0,0.6), 0 0 24px rgba(37, 99, 235, 0.3);
+      flex-direction: column;
+      overflow: hidden;
     }
 
-    #active-nav-island.visible {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
-
-    .island-turn-icon {
+    .cluster-btn {
       width: 44px;
       height: 44px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-      border: 1px solid rgba(56, 189, 248, 0.4);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 22px;
-      color: var(--color-cyan);
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+      border: none;
+      background: transparent;
+      color: var(--color-text-primary);
+      cursor: pointer;
+      transition: background-color var(--transition-standard);
+      position: relative;
     }
 
-    .island-nav-info {
+    .cluster-btn + .cluster-btn {
+      border-top: 1px solid var(--color-border-subtle);
+    }
+
+    .cluster-btn:hover {
+      background: var(--color-hover);
+    }
+
+    .cluster-btn:active {
+      background: var(--color-active);
+    }
+
+    .cluster-btn.active-blue {
+      color: var(--accent-subtle);
+    }
+
+    .cluster-btn.active-pulse::after {
+      content: "";
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: var(--accent-subtle);
+      border-radius: 50%;
+      bottom: 8px;
+      animation: pulse-dot 1.8s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0% { transform: scale(0.9); opacity: 0.9; }
+      50% { transform: scale(1.6); opacity: 0.3; }
+      100% { transform: scale(0.9); opacity: 0.9; }
+    }
+
+    /* Attribution */
+    .map-attribution {
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      z-index: 10;
+      font-size: 11px;
+      color: var(--color-text-tertiary);
+      pointer-events: auto;
+    }
+    .map-attribution a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .map-attribution a:hover {
+      text-decoration: underline;
+    }
+
+    /* Top Banners (Turn & Alert) */
+    .banner-container {
+      position: absolute;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 25;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 90%;
+      max-width: 440px;
+      pointer-events: none;
+    }
+
+    .banner {
+      width: 100%;
+      padding: 12px 18px;
+      border-radius: var(--radius-card);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      pointer-events: auto;
+      transition: transform var(--transition-standard), opacity var(--transition-standard);
+      animation: slide-down 220ms ease-out;
+    }
+
+    @keyframes slide-down {
+      from { transform: translateY(-16px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .banner-turn-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .banner-instruction {
+      font-size: var(--font-size-title);
+      font-weight: 600;
+      line-height: 1.25;
+    }
+
+    .banner-distance {
+      font-size: var(--font-size-sec);
+      color: var(--color-text-secondary);
+    }
+
+    .banner-btn-pill {
+      margin-left: auto;
+      padding: 6px 14px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-pill);
+      font-size: var(--font-size-sec);
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    /* Telemetry HUD Panel (Desktop bottom-left) */
+    #telemetry-hud {
+      position: absolute;
+      bottom: 24px;
+      left: 426px;
+      width: 310px;
+      border-radius: var(--radius-card);
+      padding: 14px;
+      z-index: 15;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #telemetry-hud.active {
+      display: flex;
+    }
+    .hud-title-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .hud-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .hud-stat-box {
+      background: var(--text-contrast-layer);
+      padding: 8px 10px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid var(--color-border-subtle);
+    }
+    .hud-stat-val {
+      font-size: 18px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .hud-stat-lbl {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+    }
+
+    /* ==========================================================================
+       3. Sidebar Content & Components
+       ========================================================================== */
+    .sidebar-header {
+      padding: 16px 16px 10px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand-title {
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      letter-spacing: -0.02em;
+    }
+    .brand-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
+      background: rgba(37, 99, 235, 0.2);
+      color: var(--accent-subtle);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-weight: 600;
+    }
+
+    /* Search Box */
+    .search-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 42px;
+      padding: 0 38px 0 38px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--color-border-subtle);
+      background: var(--text-contrast-layer);
+      color: var(--color-text-primary);
+      font-family: inherit;
+      font-size: var(--font-size-body);
+      outline: none;
+      transition: border-color var(--transition-standard);
+    }
+    .search-input:focus {
+      border-color: var(--accent-subtle);
+      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+    }
+    .search-icon-left {
+      position: absolute;
+      left: 12px;
+      pointer-events: none;
+      color: var(--color-text-tertiary);
+    }
+    .search-clear-btn {
+      position: absolute;
+      right: 10px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--color-border-subtle);
+      border: none;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+    }
+    .search-clear-btn.visible {
+      display: flex;
+    }
+
+    /* Autocomplete dropdown */
+    .autocomplete-list {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      border-radius: var(--radius-card);
+      overflow: hidden;
+      z-index: 30;
+      max-height: 260px;
+      overflow-y: auto;
+      display: none;
+      background: #0f172a;
+      border: 1px solid var(--color-border-subtle);
+    }
+    .autocomplete-list.open {
+      display: block;
+    }
+    .autocomplete-item {
+      padding: 10px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--color-border-subtle);
+      background: var(--text-contrast-layer);
+      transition: background-color var(--transition-standard);
+    }
+    .autocomplete-item:last-child {
+      border-bottom: none;
+    }
+    .autocomplete-item:hover, .autocomplete-item.active-item {
+      background: var(--color-hover);
+    }
+    .autocomplete-item-text {
       flex: 1;
       min-width: 0;
     }
-
-    .island-distance {
-      font-family: var(--font-mono);
-      font-size: 19px;
-      font-weight: 700;
-      color: #ffffff;
-      letter-spacing: -0.02em;
+    .autocomplete-item-title {
+      font-size: var(--font-size-body);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-
-    .island-target {
-      font-size: 12px;
-      color: var(--text-muted);
+    .autocomplete-item-sub {
+      font-size: var(--font-size-sec);
+      color: var(--color-text-secondary);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
-    .island-eta-badge {
+    /* Filter Chips */
+    .filter-chip-row {
       display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 2px;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: 2px;
     }
+    .filter-chip-row::-webkit-scrollbar { display: none; }
 
-    .island-eta {
-      font-family: var(--font-mono);
-      font-size: 15px;
-      font-weight: 700;
-      color: #38bdf8;
-    }
-
-    .island-cancel-btn {
-      background: rgba(239, 68, 68, 0.2);
-      border: 1px solid rgba(239, 68, 68, 0.4);
-      color: #fca5a5;
-      border-radius: 8px;
-      padding: 4px 8px;
-      font-size: 10px;
+    .chip-btn {
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--color-border-subtle);
+      background: var(--text-contrast-layer);
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-sec);
+      font-weight: 500;
       cursor: pointer;
-      margin-top: 4px;
-    }
-
-    /* ----------------------------------------------------
-       ARRIVAL & SMART REROUTE BANNERS
-       ---------------------------------------------------- */
-    .banner-notification {
-      position: absolute;
-      top: 86px;
-      left: 50%;
-      transform: translateX(-50%) scale(0.9);
-      opacity: 0;
-      pointer-events: none;
-      z-index: 200;
-      border-radius: var(--radius-md);
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: min(420px, 92vw);
-      transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .banner-notification.visible {
-      transform: translateX(-50%) scale(1);
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    #arrival-banner {
-      background: #064e3b;
-      border: 1px solid var(--color-emerald);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
-    }
-
-    #reroute-banner {
-      background: #7f1d1d;
-      border: 1px solid var(--color-crimson);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
-    }
-
-    /* ----------------------------------------------------
-       3. TRACCAR GPS TELEMETRY HUD (BOTTOM LEFT)
-       ---------------------------------------------------- */
-    #telemetry-hud {
-      position: absolute;
-      bottom: 24px;
-      left: 20px;
-      z-index: 90;
-      width: 290px;
-      border-radius: var(--radius-lg);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      pointer-events: auto;
-      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
-    }
-
-    #telemetry-hud.minimized {
-      transform: translateY(calc(100% - 46px));
-      opacity: 0.85;
-    }
-
-    .hud-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-      padding-bottom: 8px;
-    }
-
-    .hud-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      font-weight: 700;
+      white-space: nowrap;
+      transition: all var(--transition-standard);
       display: flex;
       align-items: center;
       gap: 6px;
     }
+    .chip-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
 
-    .hud-toggle-btn {
-      background: none;
+    /* Segmented Control Bar */
+    .segmented-control {
+      display: flex;
+      padding: 3px;
+      border-radius: var(--radius-pill);
+      background: var(--text-contrast-subtle);
+      border: 1px solid var(--color-border-subtle);
+      margin: 0 16px;
+      flex-shrink: 0;
+    }
+    .segment-tab {
+      flex: 1;
+      padding: 7px 0;
+      text-align: center;
+      font-size: var(--font-size-sec);
+      font-weight: 600;
       border: none;
-      color: var(--text-muted);
+      background: transparent;
+      color: var(--color-text-secondary);
+      border-radius: var(--radius-pill);
       cursor: pointer;
-      font-size: 14px;
+      transition: all var(--transition-standard);
+    }
+    .segment-tab.active {
+      background: #2563eb;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
 
-    .speed-compass-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .speedometer-block {
+    /* Scrollable Views Container */
+    .sidebar-views {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 14px 16px 20px 16px;
       display: flex;
       flex-direction: column;
+      gap: 12px;
     }
 
-    .speed-value-display {
-      font-family: var(--font-mono);
-      font-size: 38px;
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -0.03em;
-      color: #ffffff;
-      text-shadow: 0 0 18px rgba(255, 255, 255, 0.2);
-    }
-
-    .speed-unit {
-      font-size: 11px;
-      color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .motion-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 10px;
-      padding: 2px 7px;
-      border-radius: var(--radius-pill);
-      margin-top: 5px;
-      font-weight: 600;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--color-emerald);
-      border: 1px solid rgba(16, 185, 129, 0.3);
-    }
-
-    /* 3D Compass Dial */
-    .compass-container {
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      position: relative;
+    /* Parking Lot Cards in Explore */
+    .lot-card {
+      padding: 14px;
+      border-radius: var(--radius-card);
+      cursor: pointer;
+      transition: transform var(--transition-standard), border-color var(--transition-standard);
       display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+      flex-direction: column;
+      gap: 8px;
     }
-
-    .compass-cardinals {
-      position: absolute;
-      inset: 3px;
-      font-size: 8px;
-      font-weight: 700;
-      color: var(--text-subtle);
+    .lot-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(56, 189, 248, 0.4);
     }
-
-    .cardinal-n { position: absolute; top: 0; left: 50%; transform: translateX(-50%); color: var(--color-crimson); }
-    .cardinal-e { position: absolute; top: 50%; right: 1px; transform: translateY(-50%); }
-    .cardinal-s { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); }
-    .cardinal-w { position: absolute; top: 50%; left: 1px; transform: translateY(-50%); }
-
-    .compass-needle {
-      width: 4px;
-      height: 38px;
-      position: relative;
-      transition: transform 0.15s ease-out;
-    }
-    .compass-needle::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 50%;
-      background: var(--color-crimson);
-      border-radius: 2px 2px 0 0;
-    }
-    .compass-needle::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      height: 50%;
-      background: #e2e8f0;
-      border-radius: 0 0 2px 2px;
-    }
-
-    .compass-heading-text {
-      position: absolute;
-      bottom: -15px;
-      font-family: var(--font-mono);
-      font-size: 9.5px;
-      font-weight: 600;
-      color: var(--text-muted);
-    }
-
-    /* Telemetry Data Grid */
-    .telemetry-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      padding-top: 6px;
-      border-top: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .telemetry-cell {
-      background: rgba(255, 255, 255, 0.03);
-      padding: 6px 8px;
-      border-radius: var(--radius-sm);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-
-    .telemetry-cell-label {
-      font-size: 9px;
-      color: var(--text-subtle);
-      text-transform: uppercase;
-      font-weight: 600;
-    }
-
-    .telemetry-cell-val {
-      font-family: var(--font-mono);
-      font-size: 11.5px;
-      font-weight: 600;
-      color: var(--text-main);
-      margin-top: 1px;
-    }
-
-    /* Breadcrumbs Toggle */
-    .breadcrumbs-toggle-row {
+    .lot-card-header {
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      font-size: 11px;
-      color: var(--text-muted);
-      padding-top: 4px;
-    }
-
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 32px;
-      height: 18px;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      inset: 0;
-      background-color: rgba(255, 255, 255, 0.2);
-      transition: .3s cubic-bezier(0.16, 1, 0.3, 1);
-      border-radius: 34px;
-    }
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 12px;
-      width: 12px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .3s cubic-bezier(0.16, 1, 0.3, 1);
-      border-radius: 50%;
-    }
-    input:checked + .slider { background-color: var(--color-cyan); }
-    input:checked + .slider:before { transform: translateX(14px); }
-
-    /* ----------------------------------------------------
-       4. BOTTOM SHEET PARKING LOT DETAIL CARD
-       ---------------------------------------------------- */
-    #lot-detail-sheet {
-      position: absolute;
-      bottom: 0;
-      right: 20px;
-      z-index: 100;
-      width: min(420px, calc(100vw - 40px));
-      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-      padding: 20px 22px 28px 22px;
-      transform: translateY(115%);
-      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-      pointer-events: auto;
-    }
-
-    #lot-detail-sheet.visible {
-      transform: translateY(0);
-    }
-
-    .sheet-handle {
-      width: 36px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.25);
-      border-radius: var(--radius-pill);
-      margin: -6px auto 14px auto;
-      cursor: pointer;
-    }
-
-    .sheet-header {
-      display: flex;
       align-items: flex-start;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
+      gap: 8px;
     }
-
-    .sheet-lot-name {
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
+    .lot-title {
+      font-size: var(--font-size-body);
+      font-weight: 600;
+      line-height: 1.25;
     }
-
-    .sheet-lot-address {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .sheet-pricing-pill {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid var(--glass-border);
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
+    .lot-dist {
+      font-size: var(--font-size-sec);
+      color: var(--color-text-secondary);
       white-space: nowrap;
     }
-
-    /* Occupancy Bar */
-    .occupancy-bar-container {
-      margin-bottom: 14px;
-    }
-
-    .occupancy-labels {
+    .lot-meta-row {
       display: flex;
       justify-content: space-between;
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-      font-weight: 500;
+      align-items: center;
+      font-size: var(--font-size-sec);
     }
-
-    .occupancy-track {
-      height: 8px;
-      background: rgba(255, 255, 255, 0.1);
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
       border-radius: var(--radius-pill);
-      overflow: hidden;
-      position: relative;
+      font-size: var(--font-size-sec);
+      font-weight: 600;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+    .status-available { background: rgba(16, 185, 129, 0.18); color: var(--status-available); }
+    .status-available .status-dot { background: var(--status-available); }
+    .status-filling { background: rgba(245, 158, 11, 0.18); color: var(--status-filling); }
+    .status-filling .status-dot { background: var(--status-filling); }
+    .status-full { background: rgba(239, 68, 68, 0.18); color: var(--status-full); }
+    .status-full .status-dot { background: var(--status-full); }
+    .status-unknown { background: rgba(148, 163, 184, 0.18); color: var(--status-unknown); }
+    .status-unknown .status-dot { background: var(--status-unknown); }
+
+    .lot-price {
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+    .lot-footer-sub {
+      font-size: 11px;
+      color: var(--color-text-tertiary);
     }
 
-    .occupancy-fill {
+    /* Lot Detail Sub-View */
+    #view-detail {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .detail-nav-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: none;
+      border: none;
+      color: var(--accent-subtle);
+      font-size: var(--font-size-sec);
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 0;
+      width: fit-content;
+    }
+    .detail-hero-title {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+    .detail-address {
+      font-size: var(--font-size-sec);
+      color: var(--color-text-secondary);
+      margin-top: 2px;
+    }
+    .occupancy-bar-bg {
+      height: 6px;
+      border-radius: var(--radius-pill);
+      background: var(--text-contrast-layer);
+      overflow: hidden;
+      margin: 10px 0 6px 0;
+    }
+    .occupancy-bar-fill {
       height: 100%;
       border-radius: var(--radius-pill);
-      transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.4s ease;
+      transition: width var(--transition-standard);
+    }
+    .occupancy-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--color-text-secondary);
     }
 
-    /* 3-Column Metrics */
-    .metrics-3col {
+    .metrics-row {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 16px;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
     }
-
-    .metric-card {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.07);
-      border-radius: var(--radius-md);
-      padding: 10px;
+    .metric-cell {
+      background: var(--text-contrast-layer);
+      padding: 10px 8px;
+      border-radius: 10px;
       text-align: center;
+      border: 1px solid var(--color-border-subtle);
     }
-
-    .metric-num {
+    .metric-cell .num {
+      font-size: 18px;
+      font-weight: 700;
       font-family: var(--font-mono);
-      font-size: 20px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
     }
-
-    .metric-lbl {
-      font-size: 10px;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      font-weight: 600;
+    .metric-cell .lbl {
+      font-size: 11px;
+      color: var(--color-text-secondary);
       margin-top: 2px;
     }
 
-    /* IIoT Sensor Zone Subcards */
-    .sensor-subzones {
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: var(--radius-md);
-      padding: 12px;
-      margin-bottom: 16px;
-    }
-
-    .sensor-header {
-      font-size: 10.5px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--text-subtle);
-      font-weight: 700;
-      margin-bottom: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .zones-grid {
+    .sensors-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      margin-bottom: 8px;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
     }
-
-    .zone-badge {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: var(--radius-sm);
-      padding: 4px;
-      text-align: center;
-    }
-
-    .zone-name { font-size: 9px; color: var(--text-muted); font-weight: 600; }
-    .zone-count { font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
-
-    .sensor-extras {
+    .sensor-item {
+      background: var(--text-contrast-layer);
+      padding: 8px 10px;
+      border-radius: 8px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      font-size: 11px;
-      color: var(--text-muted);
-      padding-top: 6px;
-      border-top: 1px dashed rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      border: 1px solid var(--color-border-subtle);
     }
 
-    /* Action Buttons Row */
-    .sheet-actions {
-      display: flex;
-      gap: 10px;
-    }
-
-    .btn-nav-primary {
-      flex: 2;
-      background: linear-gradient(135deg, var(--color-cobalt), #1d4ed8);
-      color: white;
+    .btn-pill-primary {
+      width: 100%;
+      padding: 12px;
+      border-radius: var(--radius-pill);
+      background: var(--accent);
+      color: #fff;
       border: none;
-      border-radius: var(--radius-md);
-      padding: 13px 18px;
-      font-weight: 700;
-      font-size: 13px;
-      cursor: pointer;
+      font-size: var(--font-size-body);
+      font-weight: 600;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      box-shadow: 0 4px 20px rgba(37, 99, 235, 0.45);
-      transition: all 0.2s ease;
+      cursor: pointer;
+      transition: background var(--transition-standard);
     }
-    .btn-nav-primary:hover {
-      background: linear-gradient(135deg, #3b82f6, var(--color-cobalt));
-      box-shadow: 0 6px 26px rgba(37, 99, 235, 0.6);
-      transform: translateY(-1px);
+    .btn-pill-primary:hover {
+      background: var(--accent-hover);
     }
 
-    .btn-report-status {
-      flex: 1;
-      background: rgba(255, 255, 255, 0.07);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      color: var(--text-main);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
+    .btn-pill-secondary {
+      width: 100%;
+      padding: 11px;
+      border-radius: var(--radius-pill);
+      background: var(--text-contrast-layer);
+      color: var(--color-text-primary);
+      border: 1px solid var(--color-border-subtle);
+      font-size: var(--font-size-body);
+      font-weight: 500;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      transition: background 0.2s ease;
+      gap: 8px;
+      cursor: pointer;
     }
-    .btn-report-status:hover {
-      background: rgba(255, 255, 255, 0.12);
+    .btn-pill-secondary:hover {
+      background: var(--color-hover);
     }
 
-    /* ----------------------------------------------------
-       5. MODAL DIALOGS (MAPLIBRE STYLES & REPORT STATUS)
-       ---------------------------------------------------- */
-    .modal-overlay {
+    /* Trip View */
+    #view-trip {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .trip-turn-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: var(--text-contrast-layer);
+      border: 1px solid var(--color-border-subtle);
+    }
+    .trip-turn-item.passed {
+      opacity: 0.5;
+    }
+
+    /* More / Settings View */
+    #view-more {
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .setting-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .setting-group-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: var(--color-text-tertiary);
+      letter-spacing: 0.5px;
+    }
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      background: var(--text-contrast-layer);
+      border-radius: var(--radius-card);
+      font-size: var(--font-size-body);
+      border: 1px solid var(--color-border-subtle);
+    }
+    .toggle-switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      display: inline-block;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
       position: absolute;
       inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 500;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease;
-    }
-
-    .modal-overlay.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .modal-card {
-      width: min(400px, 92vw);
-      border-radius: var(--radius-lg);
-      padding: 24px;
-      position: relative;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-
-    .modal-title {
-      font-size: 16px;
-      font-weight: 700;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 18px;
+      background: var(--text-contrast-subtle);
+      border-radius: 24px;
       cursor: pointer;
+      transition: .25s;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: .25s;
+    }
+    input:checked + .slider {
+      background-color: var(--accent);
+    }
+    input:checked + .slider:before {
+      transform: translateX(20px);
     }
 
-    .input-field {
+    .styled-input {
       width: 100%;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-sm);
-      padding: 10px 12px;
-      color: white;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      margin-top: 6px;
+      padding: 9px 12px;
+      background: var(--solid-panel-bg);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: 8px;
+      color: var(--color-text-primary);
+      font-family: inherit;
+      font-size: var(--font-size-sec);
       outline: none;
     }
-    .input-field:focus {
-      border-color: var(--color-cyan);
-      box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+    .styled-input:focus {
+      border-color: var(--accent-subtle);
     }
 
-    .report-options-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      margin-top: 14px;
+    /* Drop Sheet Modal for Reporting */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 50;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
     }
-
-    .report-btn {
-      padding: 12px;
-      border-radius: var(--radius-md);
-      border: 1px solid var(--glass-border);
-      background: rgba(255, 255, 255, 0.05);
-      color: white;
-      font-weight: 600;
-      font-size: 13px;
-      cursor: pointer;
+    .modal-backdrop.active {
+      display: flex;
+    }
+    .modal-sheet {
+      width: 100%;
+      max-width: 420px;
+      border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      animation: slide-up 200ms ease-out;
+    }
+    @keyframes slide-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-option-btn {
+      padding: 12px 16px;
+      border-radius: var(--radius-card);
+      border: 1px solid var(--color-border-subtle);
+      background: var(--text-contrast-layer);
+      color: var(--color-text-primary);
+      font-size: var(--font-size-body);
+      font-weight: 500;
       display: flex;
       align-items: center;
       gap: 10px;
-      transition: all 0.2s ease;
-    }
-    .report-btn:hover {
-      background: rgba(255, 255, 255, 0.12);
-      transform: translateY(-1px);
-    }
-
-    /* ----------------------------------------------------
-       6. 3D MAP MARKER STYLES (EXACT TIP ANCHORING)
-       ---------------------------------------------------- */
-    .lot-marker {
       cursor: pointer;
-      width: 34px;
-      height: 44px;
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      transform: translate3d(0,0,0);
-      transition: transform 0.2s ease-out;
+    }
+    .modal-option-btn:hover {
+      background: var(--color-hover);
     }
 
-    .lot-marker:hover {
-      transform: scale(1.15) translateY(-4px);
-      z-index: 50;
+    /* Toast notification */
+    #toast {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      padding: 9px 18px;
+      border-radius: var(--radius-pill);
+      font-size: var(--font-size-sec);
+      font-weight: 500;
+      color: #fff;
+      background: #0f172a;
+      border: 1px solid var(--color-border-subtle);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
     }
 
-    .marker-svg {
-      width: 34px;
-      height: 44px;
-      overflow: visible;
+    /* ==========================================================================
+       4. Mobile Responsive Sheet (<900px)
+       ========================================================================== */
+    @media (max-width: 899px) {
+      #sidebar {
+        top: auto;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        width: 100%;
+        max-width: 100%;
+        height: 85vh;
+        border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+        border-bottom: none;
+        transform: translateY(calc(100% - 130px));
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      #sidebar.is-collapsed {
+        transform: translateY(100%);
+      }
+
+      .sidebar-drag-handle {
+        width: 36px;
+        height: 5px;
+        background: var(--color-border-subtle);
+        border-radius: 999px;
+        margin: 8px auto 0 auto;
+        flex-shrink: 0;
+        cursor: grab;
+      }
+
+      .sidebar-collapse-toggle {
+        display: none;
+      }
+
+      .control-cluster {
+        top: auto;
+        bottom: 145px;
+        right: 14px;
+      }
+
+      #telemetry-hud {
+        left: 14px;
+        right: 14px;
+        bottom: 145px;
+        width: auto;
+      }
     }
 
-    .marker-count-text {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 800;
-      fill: #ffffff;
-      text-anchor: middle;
-      dominant-baseline: central;
+    @media (min-width: 900px) {
+      .sidebar-drag-handle { display: none; }
     }
 
-    /* Directional Vehicle Chevron Marker */
-    .vehicle-marker-wrapper {
+    /* Custom Map Marker styles */
+    .openpark-pin {
+      cursor: pointer;
+      transform-origin: 17px 44px;
+      transition: transform 180ms ease-out;
+    }
+    .openpark-pin:hover, .openpark-pin.is-selected {
+      transform: scale(1.15) translateY(-3px);
+      z-index: 100 !important;
+    }
+
+    /* Vehicle dot marker with heading cone */
+    .vehicle-marker-root {
       position: relative;
       width: 48px;
       height: 48px;
       pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-
+    .vehicle-cone {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 48px;
+      height: 48px;
+      background: radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.45) 0%, rgba(37, 99, 235, 0) 70%);
+      clip-path: polygon(50% 50%, 20% 0%, 80% 0%);
+      transform-origin: 50% 50%;
+    }
     .vehicle-accuracy-ring {
       position: absolute;
-      inset: 0;
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: rgba(37, 99, 235, 0.12);
       border-radius: 50%;
-      background: rgba(56, 189, 248, 0.18);
-      border: 1px solid rgba(56, 189, 248, 0.5);
-      animation: pulse-ring 2.5s infinite ease-out;
     }
-
-    @keyframes pulse-ring {
-      0% { transform: scale(0.6); opacity: 0.9; }
-      100% { transform: scale(1.6); opacity: 0; }
-    }
-
-    .vehicle-chevron {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 32px;
-      height: 32px;
-      margin-top: -16px;
-      margin-left: -16px;
-      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
-      transition: transform 0.1s linear;
-    }
-
-    .vehicle-speed-badge {
-      position: absolute;
-      bottom: -4px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.9);
-      border: 1px solid var(--color-cyan);
-      border-radius: var(--radius-pill);
-      padding: 1px 5px;
-      font-family: var(--font-mono);
-      font-size: 9px;
-      font-weight: 700;
-      color: var(--color-cyan);
-      white-space: nowrap;
-    }
-
-    /* ----------------------------------------------------
-       RESPONSIVE ADJUSTMENTS
-       ---------------------------------------------------- */
-    @media (max-width: 768px) {
-      #top-nav-bar { left: 10px; right: 10px; top: 10px; }
-      #telemetry-hud {
-        left: 10px;
-        bottom: 84px;
-        width: 250px;
-      }
-      #lot-detail-sheet {
-        right: 0;
-        left: 0;
-        width: 100vw;
-        border-radius: 20px 20px 0 0;
-      }
+    .vehicle-core-dot {
+      width: 16px;
+      height: 16px;
+      background: var(--accent-subtle);
+      border: 2.5px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+      position: relative;
+      z-index: 2;
     }
   </style>
 </head>
 <body>
 
-  <!-- Fullscreen Interactive 3D Vector Map Container -->
-  <div id="map"></div>
+  <!-- Fullscreen Map Engine Container -->
+  <div id="map-viewport" role="region" aria-label="Interactive city parking map"></div>
 
-  <!-- 1. Floating Top Glass Navigation Bar -->
-  <header id="top-nav-bar">
-    <div class="top-nav-row">
-      <!-- OpenPark Brand Pill -->
-      <div class="brand-pill glass-panel">
-        <div class="brand-logo-icon">P</div>
-        <span>OpenPark</span>
-        <span class="brand-subtext" id="city-lots-label">Bengaluru • 15 Lots Nearby</span>
+  <!-- Map Attribution -->
+  <div class="map-attribution">
+    <a href="https://maplibre.org" target="_blank" rel="noreferrer">MapLibre</a> | 
+    <a href="https://github.com/mappls-api/mapmyindia-rest-api" target="_blank" rel="noreferrer">Mappls REST API</a> |
+    <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">&copy; OpenStreetMap</a>
+  </div>
+
+  <!-- Floating Navigation & Arrival Banners (Top-Centre) -->
+  <div class="banner-container" id="banner-container" aria-live="polite">
+    <!-- Turn navigation banner -->
+    <div id="nav-turn-banner" class="banner glass-surface" style="display: none;">
+      <div class="banner-turn-icon" id="turn-icon-box">
+        <svg class="svg-icon" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
       </div>
+      <div>
+        <div class="banner-instruction" id="nav-turn-text">Continue straight</div>
+        <div class="banner-distance" id="nav-turn-dist">In 350 meters</div>
+      </div>
+    </div>
 
-      <!-- Action Button Group -->
-      <div class="action-button-group">
-        <button id="btn-live-gps" class="btn-glass" title="Toggle Real Device GPS Stream">
-          <span>🎯</span> <span class="btn-text">Live GPS</span>
-        </button>
-        <button id="btn-telemetry-toggle" class="btn-glass" title="Toggle Traccar Telemetry HUD">
-          <span>📡</span> <span class="btn-text">Traccar</span>
-        </button>
-        <button id="btn-map-styles" class="btn-glass" title="Select MapLibre Vector Styles">
-          <span>🗺️</span> <span class="btn-text">Basemap</span>
-        </button>
-        <button id="btn-simulate-nav" class="btn-glass" title="Start 60 FPS Road Driving Simulation">
-          <span>🚗</span> <span class="btn-text">Simulate</span>
-        </button>
-        <button id="btn-voice-toggle" class="btn-glass active-gps" title="Toggle Web Speech Navigation Audio">
-          <span>🔊</span> <span class="btn-text">Voice</span>
-        </button>
-        <button id="btn-refresh-lots" class="btn-glass" title="Refresh Live Occupancy">
+    <!-- Alert / Reroute banner -->
+    <div id="nav-alert-banner" class="banner glass-surface" style="display: none;">
+      <svg class="svg-icon" style="color: var(--status-filling); width: 22px; height: 22px;" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <div>
+        <div class="banner-instruction" id="alert-banner-title">Destination update</div>
+        <div class="banner-distance" id="alert-banner-sub">This lot is currently filling up.</div>
+      </div>
+      <button class="banner-btn-pill" id="alert-action-btn">Switch Lot</button>
+    </div>
+  </div>
+
+  <!-- Desktop Sidebar Collapse Toggle -->
+  <button class="sidebar-collapse-toggle glass-surface" id="btn-toggle-sidebar" aria-label="Toggle Sidebar Navigation">
+    <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+
+  <!-- Left Sidebar / Mobile Bottom Sheet -->
+  <aside id="sidebar" class="glass-surface" role="complementary" aria-label="OpenPark Sidebar Navigation">
+    <div class="sidebar-drag-handle" id="sheet-drag-handle" aria-hidden="true"></div>
+
+    <!-- Sidebar Header: Brand, Search & Filters -->
+    <div class="sidebar-header">
+      <div class="brand-row">
+        <div class="brand-title">
+          <span>OpenPark</span>
+          <span class="brand-badge">Bengaluru Core</span>
+        </div>
+        <button id="btn-refresh-top" class="chip-btn" style="padding: 4px 8px;" title="Refresh Occupancy">
           <span>🔄</span>
         </button>
       </div>
+
+      <!-- Search Box (Integrated with Mappls AutoSuggest REST API) -->
+      <div class="search-wrapper">
+        <svg class="svg-icon search-icon-left" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input 
+          type="text" 
+          id="search-input" 
+          class="search-input" 
+          placeholder="Search places or parking (Mappls API)" 
+          autocomplete="off" 
+          spellcheck="false"
+          aria-label="Search places or parking"
+        />
+        <button id="search-clear" class="search-clear-btn" aria-label="Clear search input">
+          <svg class="svg-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        <!-- Autocomplete Suggestions -->
+        <div id="search-autocomplete-box" class="autocomplete-list" role="listbox"></div>
+      </div>
+
+      <!-- Filter Chips -->
+      <div class="filter-chip-row" role="radiogroup" aria-label="Filter parking status">
+        <button class="chip-btn active" data-filter="all">All Lots (<span id="total-lots-count">15</span>)</button>
+        <button class="chip-btn" data-filter="Available">
+          <span class="status-dot" style="background:var(--status-available);"></span>Available
+        </button>
+        <button class="chip-btn" data-filter="Filling up">
+          <span class="status-dot" style="background:var(--status-filling);"></span>Filling up
+        </button>
+        <button class="chip-btn" data-filter="Full">
+          <span class="status-dot" style="background:var(--status-full);"></span>Full
+        </button>
+      </div>
     </div>
 
-    <!-- Filter Chips Row -->
-    <div class="filter-chips-row">
-      <div class="filter-chip active" data-filter="all">All Lots (15)</div>
-      <div class="filter-chip" data-filter="available">🟢 Available (&gt;30%)</div>
-      <div class="filter-chip" data-filter="filling">🟡 Filling Up (10–30%)</div>
-      <div class="filter-chip" data-filter="full">🔴 Critical / Full (&lt;10%)</div>
-      <div class="filter-chip" data-filter="ev">⚡ EV Fast Charging</div>
+    <!-- Segmented Navigation (Explore / Trip / More) -->
+    <div class="segmented-control" role="tablist">
+      <button class="segment-tab active" id="tab-explore" role="tab" aria-selected="true">Explore</button>
+      <button class="segment-tab" id="tab-trip" role="tab" aria-selected="false">Trip</button>
+      <button class="segment-tab" id="tab-more" role="tab" aria-selected="false">Settings</button>
     </div>
-  </header>
 
-  <!-- 2. Active Turn-by-Turn Dynamic Island Nav HUD -->
-  <aside id="active-nav-island" class="glass-dense" aria-live="polite">
-    <div class="island-turn-icon" id="island-arrow">↱</div>
-    <div class="island-nav-info">
-      <div class="island-distance" id="island-dist">450 m</div>
-      <div class="island-target" id="island-destination">Navigating to TechPark Central Garage</div>
-    </div>
-    <div class="island-eta-badge">
-      <div class="island-eta" id="island-time">3 min</div>
-      <button class="island-cancel-btn" id="island-cancel-btn">End Route</button>
+    <!-- Scrollable View Host -->
+    <div class="sidebar-views">
+      
+      <!-- 1. Explore View (List of nearby lots) -->
+      <div id="view-explore" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Card items populated via JavaScript -->
+      </div>
+
+      <!-- 2. Lot Detail Sub-View (When a lot is tapped) -->
+      <div id="view-detail">
+        <button class="detail-nav-back" id="btn-back-to-list">
+          <svg class="svg-icon" style="width: 14px; height: 14px;" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          Back to nearby parking
+        </button>
+
+        <div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <h2 class="detail-hero-title" id="dt-name">UB City Garage</h2>
+            <div id="dt-status-pill" class="status-pill status-available">
+              <span class="status-dot"></span><span id="dt-status-txt">Available</span>
+            </div>
+          </div>
+          <div class="detail-address" id="dt-address">Vittal Mallya Road, Bengaluru</div>
+          <div class="occupancy-bar-bg">
+            <div class="occupancy-bar-fill" id="dt-occ-fill" style="width: 65%; background: var(--status-available);"></div>
+          </div>
+          <div class="occupancy-label">
+            <span id="dt-occ-count">78 of 120 occupied</span>
+            <span id="dt-updated-time">Updated just now</span>
+          </div>
+        </div>
+
+        <!-- 3 Metrics in a row -->
+        <div class="metrics-row">
+          <div class="metric-cell">
+            <div class="num" id="dt-free-spots" style="color: var(--status-available);">42</div>
+            <div class="lbl">Free Spots</div>
+          </div>
+          <div class="metric-cell">
+            <div class="num" id="dt-capacity">120</div>
+            <div class="lbl">Total Capacity</div>
+          </div>
+          <div class="metric-cell">
+            <div class="num" id="dt-eta">4 min</div>
+            <div class="lbl" id="dt-dist">1.2 km away</div>
+          </div>
+        </div>
+
+        <!-- Hourly Pricing -->
+        <div class="contrast-card" style="padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: var(--font-size-sec); color: var(--color-text-secondary);">Rates</span>
+          <div style="display: flex; gap: 10px; font-weight: 600; font-size: var(--font-size-sec);">
+            <span id="dt-price-car">Car: ₹40/h</span>
+            <span style="color: var(--color-border-subtle);">|</span>
+            <span id="dt-price-bike">Bike: ₹15/h</span>
+          </div>
+        </div>
+
+        <!-- Sensor telemetry block (Rendered only if endpoint returns telemetry) -->
+        <div id="dt-sensor-box" style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--color-text-tertiary);">Live IIoT Sensor Telemetry</div>
+          <div class="sensors-grid" id="dt-sensor-items"></div>
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+          <button class="btn-pill-primary" id="btn-start-nav">
+            <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            Start Mappls Navigation
+          </button>
+          <button class="btn-pill-secondary" id="btn-report-status">
+            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Report Status
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Trip View (Active during navigation) -->
+      <div id="view-trip">
+        <div id="trip-idle-state" style="text-align: center; padding: 40px 20px; color: var(--color-text-secondary);">
+          <svg class="svg-icon" style="width: 44px; height: 44px; margin-bottom: 12px; color: var(--color-text-tertiary);" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+          </svg>
+          <div style="font-weight: 600; font-size: var(--font-size-title); margin-bottom: 4px;">No active trip</div>
+          <div style="font-size: var(--font-size-sec);">Choose a parking lot on the map or search above to start a trip.</div>
+        </div>
+
+        <div id="trip-active-content" style="display: none; flex-direction: column; gap: 14px;">
+          <div class="contrast-card" style="padding: 14px;">
+            <div style="font-size: var(--font-size-sec); color: var(--color-text-secondary);">Navigating to</div>
+            <div id="trip-dest-name" style="font-size: var(--font-size-title); font-weight: 700;">UB City Garage</div>
+            <div style="display: flex; gap: 14px; margin-top: 10px; font-weight: 600;">
+              <div><span id="trip-rem-time" style="font-size: 20px; color: var(--accent-subtle);">4</span> min</div>
+              <div><span id="trip-rem-dist" style="font-size: 20px;">1.2</span> km</div>
+            </div>
+            <div style="margin-top: 6px; font-size: 11px; color: var(--color-text-tertiary);" id="trip-routing-badge">
+              Route: Mappls Driving API
+            </div>
+          </div>
+
+          <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--color-text-tertiary);">Turn-by-turn guidance</div>
+          <div id="trip-step-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
+
+          <button class="btn-pill-secondary" id="btn-end-trip" style="color: var(--status-full); border-color: rgba(239, 68, 68, 0.4);">
+            End Navigation
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Settings & Mappls API Configuration View -->
+      <div id="view-more">
+        <div class="setting-group">
+          <div class="setting-group-title">Mappls (MapmyIndia) REST API</div>
+          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; width: 100%;">
+              <span>Mappls REST Key</span>
+              <span id="mappls-key-status" style="font-size: 11px; color: var(--status-available);">Ready</span>
+            </div>
+            <div style="display: flex; width: 100%; gap: 6px;">
+              <input type="text" id="input-mappls-key" class="styled-input" placeholder="Enter Mappls REST API Key..." />
+              <button class="btn-pill-primary" id="btn-save-mappls-key" style="width: auto; padding: 6px 14px; font-size: 13px;">Save</button>
+            </div>
+            <div style="font-size: 11px; color: var(--color-text-tertiary);">
+              Uses <a href="https://github.com/mappls-api/mapmyindia-rest-api" target="_blank" style="color: var(--accent-subtle); text-decoration: underline;">mappls-api/mapmyindia-rest-api</a> for Search, AutoSuggest, and Driving Directions.
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">Map & Navigation Preferences</div>
+          <div class="setting-row">
+            <span>Voice navigation alerts</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-voice-alerts" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <span>MapLibre Vector Style</span>
+            <select id="select-map-style" class="styled-input" style="width: 100%;">
+              <option value="carto-dark">Carto Dark Matter (Default)</option>
+              <option value="carto-voyager">Carto Voyager (Daylight Navigation)</option>
+              <option value="carto-positron">Carto Positron (Clean Light)</option>
+              <option value="maplibre-demo">MapLibre Demo Tiles</option>
+              <option value="osm-standard">OpenStreetMap Standard</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-group">
+          <div class="setting-group-title">Traccar & Developer Tools</div>
+          <div class="setting-row">
+            <span>Simulate vehicle movement</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-sim-drive" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <span>Live telemetry HUD</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-hud" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <span>GPS Breadcrumb trail</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-breadcrumbs" checked />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <span>Refresh parking live feeds</span>
+            <button class="btn-pill-secondary" id="btn-refresh-lots" style="width: auto; padding: 6px 12px; font-size: 13px;">
+              Refresh Now
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </aside>
 
-  <!-- Arrival Alert Banner -->
-  <div id="arrival-banner" class="banner-notification" role="alert">
-    <span style="font-size: 24px;">🏁</span>
-    <div>
-      <div style="font-weight: 700; font-size: 13px;">Approaching Destination</div>
-      <div style="font-size: 11px; opacity: 0.9;">Parking bay entrance is in 150 meters on your left.</div>
+  <!-- Right Side Minimal Floating Map Controls -->
+  <div class="control-cluster glass-surface" role="toolbar" aria-label="Map navigation controls">
+    <button class="cluster-btn" id="btn-zoom-in" aria-label="Zoom in" title="Zoom in">
+      <svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="cluster-btn" id="btn-zoom-out" aria-label="Zoom out" title="Zoom out">
+      <svg class="svg-icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="cluster-btn" id="btn-my-location" aria-label="Center on my location" title="Toggle Real GPS Device Tracking">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+    </button>
+    <button class="cluster-btn" id="btn-compass-north" aria-label="Reset orientation north" title="Reset North">
+      <svg class="svg-icon" id="compass-icon" viewBox="0 0 24 24">
+        <polygon points="12 2 15 11 12 8 9 11 12 2" fill="currentColor"/>
+        <polygon points="12 22 9 13 12 16 15 13 12 22" fill="none"/>
+      </svg>
+    </button>
+    <button class="cluster-btn" id="btn-tilt-3d" aria-label="Toggle 3D tilt" title="Toggle 3D Pitch">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: -0.5px;">3D</span>
+    </button>
+  </div>
+
+  <!-- Bottom-Left Desktop Telemetry HUD -->
+  <div id="telemetry-hud" class="glass-surface active" aria-live="polite">
+    <div class="hud-title-bar">
+      <span>Traccar GPS Telemetry</span>
+      <span id="hud-status-badge" style="color: var(--status-available);">Stopped</span>
+    </div>
+    <div class="hud-grid">
+      <div class="hud-stat-box">
+        <div class="hud-stat-val" id="hud-speed">0 <span style="font-size: 11px; font-weight: 400;">km/h</span></div>
+        <div class="hud-stat-lbl">GPS Speed</div>
+      </div>
+      <div class="hud-stat-box">
+        <div class="hud-stat-val" id="hud-heading">0&deg; N</div>
+        <div class="hud-stat-lbl">Compass Bearing</div>
+      </div>
+      <div class="hud-stat-box">
+        <div class="hud-stat-val" id="hud-accuracy">&plusmn; 5m</div>
+        <div class="hud-stat-lbl">Accuracy</div>
+      </div>
+      <div class="hud-stat-box">
+        <div class="hud-stat-val" id="hud-altitude">920m</div>
+        <div class="hud-stat-lbl">Altitude</div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--color-text-secondary); padding-top: 2px;">
+      <span id="hud-battery">Battery: 95%</span>
+      <span id="hud-odometer">Trip: 0.0 km</span>
     </div>
   </div>
 
-  <!-- Smart Reroute Banner -->
-  <div id="reroute-banner" class="banner-notification" role="alert">
-    <span style="font-size: 24px;">⚠️</span>
-    <div style="flex:1;">
-      <div style="font-weight: 700; font-size: 13px;">Destination Lot Just Filled Up!</div>
-      <div style="font-size: 11px; opacity: 0.9;">UB City Garage is 300m away with 42 free slots.</div>
-    </div>
-    <button class="btn-glass active-gps" id="btn-accept-reroute" style="padding: 4px 8px; font-size: 11px;">Reroute</button>
-  </div>
-
-  <!-- 3. Floating Traccar GPS Telemetry HUD -->
-  <section id="telemetry-hud" class="glass-panel" aria-label="Traccar Telemetry HUD">
-    <div class="hud-header">
-      <div class="hud-title">
-        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--color-emerald); box-shadow:0 0 0 1px rgba(0,0,0,0.5);"></span>
-        Traccar GPS Telemetry
+  <!-- Report Status Modal Sheet -->
+  <div class="modal-backdrop" id="modal-report">
+    <div class="modal-sheet glass-surface">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 600; font-size: var(--font-size-title);">Report Lot Status</span>
+        <button id="modal-report-close" style="background:none; border:none; color:var(--color-text-secondary); cursor:pointer;">
+          <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
-      <button class="hud-toggle-btn" id="hud-minimize-btn" title="Minimize/Maximize HUD">▾</button>
-    </div>
-
-    <!-- Speedometer & Compass Dial -->
-    <div class="speed-compass-row">
-      <div class="speedometer-block">
-        <div class="speed-value-display" id="hud-speed">0</div>
-        <div class="speed-unit">KM/H SPEED</div>
-        <div class="motion-badge" id="hud-motion-status">🔴 Stopped</div>
-      </div>
-
-      <div class="compass-container">
-        <div class="compass-cardinals">
-          <span class="cardinal-n">N</span>
-          <span class="cardinal-e">E</span>
-          <span class="cardinal-s">S</span>
-          <span class="cardinal-w">W</span>
-        </div>
-        <div class="compass-needle" id="compass-needle"></div>
-        <div class="compass-heading-text" id="compass-heading-val">0° N</div>
-      </div>
-    </div>
-
-    <!-- Telemetry Metric Cells -->
-    <div class="telemetry-grid">
-      <div class="telemetry-cell">
-        <div class="telemetry-cell-label">Altitude</div>
-        <div class="telemetry-cell-val" id="hud-altitude">920 m</div>
-      </div>
-      <div class="telemetry-cell">
-        <div class="telemetry-cell-label">GPS Precision</div>
-        <div class="telemetry-cell-val" id="hud-accuracy">±1.8 m</div>
-      </div>
-      <div class="telemetry-cell">
-        <div class="telemetry-cell-label">Device Battery</div>
-        <div class="telemetry-cell-val" id="hud-battery">--%</div>
-      </div>
-      <div class="telemetry-cell">
-        <div class="telemetry-cell-label">Odometer</div>
-        <div class="telemetry-cell-val" id="hud-odometer">12.4 km</div>
-      </div>
-    </div>
-
-    <!-- Breadcrumb Line Trail Switch -->
-    <div class="breadcrumbs-toggle-row">
-      <span>Live GPS Breadcrumbs Trail</span>
-      <label class="switch">
-        <input type="checkbox" id="toggle-breadcrumbs" checked />
-        <span class="slider"></span>
-      </label>
-    </div>
-  </section>
-
-  <!-- 4. Bottom Sheet Parking Lot Detail Card -->
-  <section id="lot-detail-sheet" class="glass-dense" aria-label="Selected Parking Lot Details">
-    <div class="sheet-handle" id="sheet-handle"></div>
-
-    <div class="sheet-header">
-      <div>
-        <div class="sheet-lot-name" id="sheet-lot-name">Prestige Falcon Parking</div>
-        <div class="sheet-lot-address" id="sheet-lot-address">MG Road, Central Business District</div>
-      </div>
-      <div class="sheet-pricing-pill" id="sheet-pricing">₹50/hr • 🏍️ ₹20/hr</div>
-    </div>
-
-    <!-- Dynamic Occupancy Progress Bar -->
-    <div class="occupancy-bar-container">
-      <div class="occupancy-labels">
-        <span>Capacity Occupancy</span>
-        <span id="sheet-occupancy-ratio">780 / 1200 occupied</span>
-      </div>
-      <div class="occupancy-track">
-        <div class="occupancy-fill" id="sheet-occupancy-fill" style="width: 65%; background-color: var(--color-amber);"></div>
-      </div>
-    </div>
-
-    <!-- 3-Column Quick Metrics -->
-    <div class="metrics-3col">
-      <div class="metric-card">
-        <div class="metric-num" id="sheet-free-spots" style="color: var(--color-emerald);">420</div>
-        <div class="metric-lbl">Available</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-num" id="sheet-total-capacity">1,200</div>
-        <div class="metric-lbl">Total Capacity</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-num" id="sheet-eta-dist">1.2 km</div>
-        <div class="metric-lbl">Est. ETA 4m</div>
-      </div>
-    </div>
-
-    <!-- IIoT Live Sensor Breakdown -->
-    <div class="sensor-subzones">
-      <div class="sensor-header">
-        <span>Live Ultrasonic & Vision Sensors</span>
-        <span style="color:var(--color-cyan);" id="sheet-iot-status">● Live Telemetry Stream</span>
-      </div>
-      <div class="zones-grid">
-        <div class="zone-badge">
-          <div class="zone-name">Zone A</div>
-          <div class="zone-count" id="sheet-zone-a">112</div>
-        </div>
-        <div class="zone-badge">
-          <div class="zone-name">Zone B</div>
-          <div class="zone-count" id="sheet-zone-b">88</div>
-        </div>
-        <div class="zone-badge">
-          <div class="zone-name">Zone C</div>
-          <div class="zone-count" id="sheet-zone-c">140</div>
-        </div>
-        <div class="zone-badge">
-          <div class="zone-name">Zone D</div>
-          <div class="zone-count" id="sheet-zone-d">80</div>
-        </div>
-      </div>
-      <div class="sensor-extras">
-        <span id="sheet-ev-spots">⚡ EV Fast Charging: <strong>8 free</strong></span>
-        <span id="sheet-pricing-mult">🏷️ <strong>1.0x</strong> Normal Rate</span>
-        <span id="sheet-traffic-level">🚗 Traffic: <strong>Moderate</strong></span>
-      </div>
-    </div>
-
-    <!-- Actions -->
-    <div class="sheet-actions">
-      <button class="btn-nav-primary" id="sheet-start-nav-btn">
-        <span>🚀</span> Start Turn-by-Turn Navigation
+      <div style="font-size: var(--font-size-sec); color: var(--color-text-secondary);">Help other drivers by sharing real conditions on the ground.</div>
+      <button class="modal-option-btn" data-report="got_spot">
+        <svg class="svg-icon" style="color: var(--status-available);" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Just got a spot
       </button>
-      <button class="btn-report-status" id="sheet-report-btn">
-        <span>📢</span> Report
+      <button class="modal-option-btn" data-report="has_space">
+        <svg class="svg-icon" style="color: var(--status-filling);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+        Has space available
+      </button>
+      <button class="modal-option-btn" data-report="full">
+        <svg class="svg-icon" style="color: var(--status-full);" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Lot is completely full
       </button>
     </div>
-  </section>
-
-  <!-- 5. MapLibre Basemap & Vector Style Switcher Modal -->
-  <div class="modal-overlay" id="modal-map-styles">
-    <div class="modal-card glass-dense">
-      <div class="modal-header">
-        <div class="modal-title">MapLibre Vector Basemap Settings</div>
-        <button class="modal-close" id="modal-map-styles-close">&times;</button>
-      </div>
-      <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">
-        OpenPark runs 100% on <a href="https://maplibre.org/maplibre-gl-js/docs/API/" target="_blank" style="color:var(--color-cyan); text-decoration:underline;">MapLibre GL JS</a>. High-definition vector cartography with zero proprietary tokens, zero tracking, and zero billing dependencies.
-      </p>
-
-      <label style="font-size:11px; text-transform:uppercase; color:var(--text-subtle); font-weight:600; display:block; margin-top:10px;">Select Vector Visual Style</label>
-      <select id="map-style-select" class="input-field" style="cursor:pointer;">
-        <option value="carto-dark">Carto Dark Matter (High-Contrast Night Vector - Default)</option>
-        <option value="carto-voyager">Carto Voyager (Detailed Daylight Navigation Vector)</option>
-        <option value="carto-positron">Carto Positron (Clean Minimalist Daylight Vector)</option>
-        <option value="maplibre-demo">MapLibre Demo Vector (Global Open Vector Tiles)</option>
-        <option value="osm-standard">OpenStreetMap Standard (Classic Global Cartography)</option>
-      </select>
-
-      <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:8px;">
-        <button class="btn-glass" id="btn-save-map-style" style="background:var(--color-cobalt); border-color:var(--color-cyan); color:white; padding:8px 16px;">
-          Apply Basemap
-        </button>
-      </div>
-    </div>
   </div>
 
-  <!-- 6. Crowdsource Status Modal -->
-  <div class="modal-overlay" id="modal-report">
-    <div class="modal-card glass-dense">
-      <div class="modal-header">
-        <div class="modal-title">Crowdsource Lot Update</div>
-        <button class="modal-close" id="modal-report-close">&times;</button>
-      </div>
-      <p style="font-size:12px; color:var(--text-muted);">
-        Help fellow drivers by verifying current conditions at <strong id="report-lot-name" style="color:white;">this parking lot</strong>.
-      </p>
+  <!-- Toast Notification Pill -->
+  <div id="toast" role="status">Report submitted. Thank you!</div>
 
-      <div class="report-options-grid">
-        <button class="report-btn" data-report="vacant" style="border-left: 4px solid var(--color-emerald);">
-          <span style="font-size:20px;">🟢</span>
-          <div>
-            <div>Plenty of Space Available</div>
-            <div style="font-size:10px; color:var(--text-muted);">More than 20 open slots nearby</div>
-          </div>
-        </button>
-        <button class="report-btn" data-report="filling" style="border-left: 4px solid var(--color-amber);">
-          <span style="font-size:20px;">🟡</span>
-          <div>
-            <div>Filling Up Fast / Queuing</div>
-            <div style="font-size:10px; color:var(--text-muted);">Spots are limited; slight waiting time</div>
-          </div>
-        </button>
-        <button class="report-btn" data-report="full" style="border-left: 4px solid var(--color-crimson);">
-          <span style="font-size:20px;">🔴</span>
-          <div>
-            <div>Lot Completely Full</div>
-            <div style="font-size:10px; color:var(--text-muted);">Gates closed or security redirecting</div>
-          </div>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ----------------------------------------------------
-       CORE APPLICATION JAVASCRIPT LOGIC
-       ---------------------------------------------------- -->
+  <!-- ==========================================================================
+       5. Modern Vanilla ES6 Application Logic & Mappls REST API Integration
+       ========================================================================== -->
   <script>
-    /**
-     * OpenPark Core Platform Engine
-     * Architecture: Spatial 3D Vector Map, GPS Geolocation, Traccar Ingestion,
-     * 60 FPS Sub-meter Nav Animation, Web Speech Audio, Fast API Fallbacks.
-     */
-    (function () {
+    (() => {
       'use strict';
 
-      // 1. CONFIGURATION & STATE MANAGEMENT
-      const APP_STATE = {
-        center: [77.5946, 12.9716], // Bengaluru CBD coords (Lon, Lat)
-        currentZoom: 15.5,
-        currentPitch: 42,
-        currentBearing: -15,
-        lots: [],
-        filteredLots: [],
-        activeFilter: 'all',
-        selectedLot: null,
-        activeNavigation: false,
-        voiceEnabled: true,
-        breadcrumbsEnabled: true,
-        userGPS: {
-          active: false,
-          watchId: null,
-          coords: [77.5946, 12.9716],
+      // --------------------------------------------------------------------------
+      // 5.1 Config & Constants
+      // --------------------------------------------------------------------------
+      const CONFIG = {
+        DEFAULT_COORDS: [77.5946, 12.9716], // Bengaluru Core (Mappls & OpenCity Hub)
+        INITIAL_ZOOM: 14.5,
+        PITCH_3D: 42,
+        RADIUS_METERS: 3500,
+        WS_RECONNECT_MS: 3000
+      };
+
+      // --------------------------------------------------------------------------
+      // 5.2 Application State
+      // --------------------------------------------------------------------------
+      const STATE = {
+        userLocation: {
+          lng: CONFIG.DEFAULT_COORDS[0],
+          lat: CONFIG.DEFAULT_COORDS[1],
           heading: 0,
           speed: 0,
           altitude: 920,
-          accuracy: 5.0,
-          odometer: 0
+          accuracy: 5
         },
-        simulation: {
-          running: false,
-          rafId: null,
-          routeCoordinates: [],
-          currentIndex: 0,
-          progress: 0, // 0 to 1 between two coordinates
-          speedKmh: 42
+        isTrackingLocation: false,
+        is3D: false,
+        activeFilter: 'all',
+        activeTab: 'explore',
+        lots: [],
+        selectedLot: null,
+        activeTrip: null,
+        breadcrumbs: [],
+        tripOdometerKm: 0,
+        config: {
+          voiceAlerts: true,
+          simulateDrive: true,
+          showHud: true,
+          showBreadcrumbs: true,
+          mapplsKey: localStorage.getItem('openpark_mappls_key') || '',
+          activeStyle: localStorage.getItem('openpark_map_style') || 'carto-dark'
         },
-        breadcrumbsTrail: [],
-        markersMap: new Map(),
-        vehicleMarker: null,
-        activeStyle: localStorage.getItem('openpark_map_style') || 'carto-dark'
+        watchId: null,
+        animationFrameId: null,
+        activeSockets: {}
       };
 
       // Clean up legacy tokens
       try { localStorage.removeItem('openpark_mapbox_token'); } catch (e) {}
 
-      // 2. MAPLIBRE GL JS VECTOR BASEMAP CONFIGURATIONS
-      // Powered exclusively by MapLibre GL JS (https://maplibre.org/maplibre-gl-js/docs/API/)
+      // --------------------------------------------------------------------------
+      // 5.3 MapLibre Styles Configuration
+      // --------------------------------------------------------------------------
       const MAP_STYLES = {
         'carto-dark': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
         'carto-voyager': 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
@@ -1345,970 +1485,1155 @@
         }
       };
 
-      // 3. INITIALIZE MAPLIBRE GL JS VECTOR MAP ENGINE
-      let map;
-      function initMap() {
-        const styleObj = MAP_STYLES[APP_STATE.activeStyle] || MAP_STYLES['carto-dark'];
-
-        map = new maplibregl.Map({
-          container: 'map',
-          style: styleObj,
-          center: APP_STATE.center,
-          zoom: APP_STATE.currentZoom,
-          pitch: APP_STATE.currentPitch,
-          bearing: APP_STATE.currentBearing,
-          antialias: true
-        });
-
-        map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
-
-        map.on('load', () => {
-          initBreadcrumbsLayer();
-          initVehicleMarker();
-          fetchNearbyLots(APP_STATE.center[1], APP_STATE.center[0]);
-          initTraccarWebSocket();
-        });
-
-        map.on('click', (e) => {
-          // If clicked directly on canvas outside any pin, dismiss bottom sheet if active
-          if (e.originalEvent.target.tagName.toLowerCase() === 'canvas' && !APP_STATE.activeNavigation) {
-            hideBottomSheet();
-          }
-        });
-      }
-
-      // Live Breadcrumb Line Source & Layer (Clean & Sharp)
-      function initBreadcrumbsLayer() {
-        if (!map.getSource('vehicle-breadcrumbs')) {
-          map.addSource('vehicle-breadcrumbs', {
-            type: 'geojson',
-            data: {
-              type: 'Feature',
-              geometry: { type: 'LineString', coordinates: [] }
-            }
-          });
-
-          map.addLayer({
-            id: 'vehicle-breadcrumbs-line',
-            type: 'line',
-            source: 'vehicle-breadcrumbs',
-            layout: {
-              'line-join': 'round',
-              'line-cap': 'round'
-            },
-            paint: {
-              'line-color': '#38bdf8',
-              'line-width': 4,
-              'line-opacity': 0.95
-            }
-          });
-        }
-      }
-
-      // 4. CUSTOM SVG 3D MAP PINS (EXACT BOTTOM ANCHORING)
-      function createLotMarkerElement(lot) {
-        const el = document.createElement('div');
-        el.className = 'lot-marker';
-
-        const vacancy = (lot.available_spots !== undefined && lot.available_spots !== null)
-          ? lot.available_spots
-          : (lot.free_spots !== undefined ? lot.free_spots : 0);
-        const total = (lot.total_capacity || lot.capacity) || 100;
-        const ratio = total > 0 ? (vacancy / total) : 0;
-
-        let primaryColor = '#10b981'; // Emerald
-        let statusClass = 'available';
-
-        if (ratio < 0.10 || vacancy <= 5) {
-          primaryColor = '#ef4444'; // Crimson
-          statusClass = 'full';
-        } else if (ratio < 0.30) {
-          primaryColor = '#f59e0b'; // Amber
-          statusClass = 'filling';
-        }
-
-        el.dataset.status = statusClass;
-        el.dataset.lotId = lot.id;
-        el.dataset.ev = (lot.ev_chargers > 0) ? 'true' : 'false';
-
-        // Precise SVG Pin with anchor at (17, 44) - crisp edges with no cloudy blur
-        el.innerHTML = `
-          <svg class="marker-svg" viewBox="0 0 34 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="grad-${lot.id}" x1="17" y1="0" x2="17" y2="44" gradientUnits="userSpaceOnUse">
-                <stop stop-color="${primaryColor}"/>
-                <stop offset="0.8" stop-color="${primaryColor}" stop-opacity="0.9"/>
-                <stop offset="1" stop-color="#0b1120"/>
-              </linearGradient>
-            </defs>
-            <!-- Pin teardrop body with tip exactly at x=17, y=44 -->
-            <path d="M17 44C17 44 32 27.5 32 16.5C32 7.3873 25.2843 0 17 0C8.71573 0 2 7.3873 2 16.5C2 27.5 17 44 17 44Z" 
-                  fill="url(#grad-${lot.id})" 
-                  stroke="rgba(255,255,255,0.5)" 
-                  stroke-width="1.2"/>
-            <!-- Inner dark pill circle -->
-            <circle cx="17" cy="16" r="11.5" fill="#0f172a" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-            <!-- Vacancy Count text inside -->
-            <text x="17" y="16.5" class="marker-count-text">${vacancy > 999 ? '999+' : vacancy}</text>
-          </svg>
-        `;
-
-        el.addEventListener('click', (e) => {
-          e.stopPropagation();
-          selectLot(lot);
-        });
-
-        return el;
-      }
-
-      function renderLotMarkers(lots) {
-        // Clear old markers
-        APP_STATE.markersMap.forEach(marker => marker.remove());
-        APP_STATE.markersMap.clear();
-
-        lots.forEach(lot => {
-          // Check active filter
-          if (!matchesFilter(lot, APP_STATE.activeFilter)) return;
-
-          const el = createLotMarkerElement(lot);
-
-          // EXACT tip anchoring: SVG pin anchor MUST lock at "bottom" with tip at (17, 44)
-          const marker = new maplibregl.Marker({
-            element: el,
-            anchor: 'bottom',
-            offset: [0, 0]
-          })
-            .setLngLat([lot.lon, lot.lat])
-            .addTo(map);
-
-          APP_STATE.markersMap.set(lot.id, marker);
-        });
-      }
-
-      function matchesFilter(lot, filter) {
-        if (filter === 'all') return true;
-        const ratio = lot.total_capacity > 0 ? (lot.available_spots / lot.total_capacity) : 0;
-        if (filter === 'available') return ratio >= 0.30;
-        if (filter === 'filling') return ratio >= 0.10 && ratio < 0.30;
-        if (filter === 'full') return ratio < 0.10 || lot.available_spots <= 5;
-        if (filter === 'ev') return lot.ev_chargers > 0;
-        return true;
-      }
-
-      // 5. VEHICLE DIRECTIONAL MARKER (AERODYNAMIC CHEVRON)
-      function initVehicleMarker() {
-        const el = document.createElement('div');
-        el.className = 'vehicle-marker-wrapper';
-        el.innerHTML = `
-          <div class="vehicle-accuracy-ring"></div>
-          <div class="vehicle-chevron" id="vehicle-chevron-svg">
-            <svg viewBox="0 0 36 36" fill="none" style="width:100%; height:100%;">
-              <path d="M18 2L32 31L18 24L4 31L18 2Z" fill="#38bdf8" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round"/>
-              <path d="M18 5L29 28L18 22.5L7 28L18 5Z" fill="#0284c7"/>
-            </svg>
-          </div>
-          <div class="vehicle-speed-badge" id="vehicle-marker-speed">0 km/h</div>
-        `;
-
-        APP_STATE.vehicleMarker = new maplibregl.Marker({
-          element: el,
-          anchor: 'center'
-        })
-          .setLngLat(APP_STATE.userGPS.coords)
-          .addTo(map);
-      }
-
-      function updateVehiclePosition(coords, heading, speedKmh, accuracyM) {
-        APP_STATE.userGPS.coords = coords;
-        APP_STATE.userGPS.heading = heading;
-        APP_STATE.userGPS.speed = speedKmh;
-        if (accuracyM) APP_STATE.userGPS.accuracy = accuracyM;
-
-        if (APP_STATE.vehicleMarker) {
-          APP_STATE.vehicleMarker.setLngLat(coords);
-
-          const chevron = document.getElementById('vehicle-chevron-svg');
-          if (chevron) {
-            chevron.style.transform = `rotate(${heading}deg)`;
-          }
-
-          const speedBadge = document.getElementById('vehicle-marker-speed');
-          if (speedBadge) {
-            speedBadge.textContent = `${Math.round(speedKmh)} km/h`;
-          }
-        }
-
-        // Add to breadcrumb trail
-        if (APP_STATE.breadcrumbsEnabled) {
-          const trail = APP_STATE.breadcrumbsTrail;
-          const lastCoord = trail[trail.length - 1];
-          if (!lastCoord || (Math.abs(lastCoord[0] - coords[0]) > 0.00005 || Math.abs(lastCoord[1] - coords[1]) > 0.00005)) {
-            trail.push(coords);
-            if (trail.length > 500) trail.shift();
-            const source = map.getSource('vehicle-breadcrumbs');
-            if (source) {
-              source.setData({
-                type: 'Feature',
-                geometry: { type: 'LineString', coordinates: trail }
-              });
-            }
-          }
-        }
-
-        // Update HUD Speedometer & Compass
-        updateTelemetryHUD(speedKmh, heading, APP_STATE.userGPS.altitude, APP_STATE.userGPS.accuracy);
-
-        // Turn-by-Turn check if active navigation is ongoing
-        if (APP_STATE.activeNavigation && APP_STATE.selectedLot) {
-          evaluateNavProgress(coords);
-        }
-      }
-
-      // Shortest-arc circular bearing interpolation helper
-      function getShortestBearingDelta(current, target) {
-        return ((target - current + 540) % 360) - 180;
-      }
-
-      // 6. TELEMETRY HUD & COMPASS LOGIC
-      function updateTelemetryHUD(speed, heading, altitude, accuracy) {
-        const speedEl = document.getElementById('hud-speed');
-        const motionEl = document.getElementById('hud-motion-status');
-        const needleEl = document.getElementById('compass-needle');
-        const headingEl = document.getElementById('compass-heading-val');
-        const altEl = document.getElementById('hud-altitude');
-        const accEl = document.getElementById('hud-accuracy');
-
-        if (speedEl) speedEl.textContent = Math.round(speed);
-
-        if (motionEl) {
-          if (speed > 5) {
-            motionEl.className = 'motion-badge';
-            motionEl.style.color = 'var(--color-emerald)';
-            motionEl.style.borderColor = 'rgba(16, 185, 129, 0.3)';
-            motionEl.innerHTML = '🟢 Moving';
-          } else if (speed > 0.5) {
-            motionEl.className = 'motion-badge';
-            motionEl.style.color = 'var(--color-amber)';
-            motionEl.style.borderColor = 'rgba(245, 158, 11, 0.3)';
-            motionEl.innerHTML = '🟡 Idling';
-          } else {
-            motionEl.className = 'motion-badge';
-            motionEl.style.color = 'var(--color-crimson)';
-            motionEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
-            motionEl.innerHTML = '🔴 Stopped';
-          }
-        }
-
-        if (needleEl) needleEl.style.transform = `rotate(${heading}deg)`;
-        if (headingEl) {
-          const cardinals = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW', 'N'];
-          const norm = (heading % 360 + 360) % 360;
-          const cardIdx = Math.round(norm / 45);
-          headingEl.textContent = `${Math.round(norm)}° ${cardinals[cardIdx]}`;
-        }
-
-        if (altEl && altitude !== undefined) altEl.textContent = `${Math.round(altitude)} m`;
-        if (accEl && accuracy !== undefined) accEl.textContent = `±${accuracy.toFixed(1)} m`;
-      }
-
-      // Battery API Integration
-      if ('getBattery' in navigator) {
-        navigator.getBattery().then(battery => {
-          function updateBatt() {
-            const el = document.getElementById('hud-battery');
-            if (el) {
-              const level = Math.round(battery.level * 100);
-              el.textContent = `${level}% ${battery.charging ? '⚡' : ''}`;
-            }
-          }
-          updateBatt();
-          battery.addEventListener('levelchange', updateBatt);
-          battery.addEventListener('chargingchange', updateBatt);
-        }).catch(() => {});
-      }
-
-      function normalizeLot(lot, idx = 0) {
-        const free = (lot.free_spots !== undefined && lot.free_spots !== null)
-          ? lot.free_spots
-          : (lot.available_spots !== undefined ? lot.available_spots : 35);
-        const total = lot.capacity || lot.total_capacity || 100;
-        return {
-          ...lot,
-          id: lot.id || `lot_${idx + 1}`,
-          name: lot.name,
-          address: lot.address || lot.city || "Bengaluru",
-          lat: lot.lat,
-          lon: lot.lon,
-          capacity: total,
-          total_capacity: total,
-          free_spots: free,
-          available_spots: free,
-          price_note: lot.price_note || "₹40/hr",
-          pricing_hourly_car: lot.pricing_hourly_car || 40,
-          pricing_hourly_bike: lot.pricing_hourly_bike || 15,
-          ev_chargers: lot.ev_chargers !== undefined ? lot.ev_chargers : (idx % 2 === 0 ? 6 : 0),
-          dynamic_multiplier: lot.dynamic_multiplier || 1.0,
-          traffic_level: lot.traffic_level || (free < 10 ? "High" : free < 30 ? "Moderate" : "Low"),
-          zones: lot.zones || {
-            A: Math.max(1, Math.round(free * 0.35)),
-            B: Math.max(1, Math.round(free * 0.25)),
-            C: Math.max(1, Math.round(free * 0.22)),
-            D: Math.max(0, Math.round(free * 0.18))
-          }
-        };
-      }
-
-      // 7. DATA FETCHING & WEBSOCKET ENGINE (FastAPI Realtime)
-      async function fetchNearbyLots(lat, lon, radius = 5000) {
-        try {
-          const res = await fetch(`/lots/nearby?lat=${lat}&lon=${lon}&radius=${radius}`);
-          if (res.ok) {
+      // --------------------------------------------------------------------------
+      // 5.4 API Client (FastAPI Backend + Mappls REST API)
+      // --------------------------------------------------------------------------
+      const API = {
+        async getNearbyLots(lat, lon, radius = CONFIG.RADIUS_METERS) {
+          try {
+            const res = await fetch(`/lots/nearby?lat=${lat}&lon=${lon}&radius_m=${radius}`);
+            if (!res.ok) throw new Error("Backend nearby lots offline");
             const data = await res.json();
-            if (Array.isArray(data) && data.length > 0) {
-              APP_STATE.lots = data.map((l, i) => normalizeLot(l, i));
-            } else {
-              throw new Error('Empty lot response');
-            }
-          } else {
-            throw new Error('API offline, falling back to mock dataset');
+            return (data.lots || data).map(lot => API.normalizeLot(lot));
+          } catch (err) {
+            console.warn("OpenPark: Using seed dataset fallback", err);
+            return API.generateFallbackLots(lat, lon);
           }
-        } catch (err) {
-          // Robust high-fidelity mock dataset around Bengaluru CBD
-          APP_STATE.lots = generateRealisticLots(lat, lon).map((l, i) => normalizeLot(l, i));
-        }
-        updateLotsCounter(APP_STATE.lots.length);
-        renderLotMarkers(APP_STATE.lots);
-      }
+        },
 
-      function updateLotsCounter(count) {
-        const lbl = document.getElementById('city-lots-label');
-        if (lbl) lbl.textContent = `Bengaluru • ${count} Lots Nearby`;
-      }
-
-      function generateRealisticLots(centerLat, centerLon) {
-        const sampleNames = [
-          'UB City Sky Garage', 'Prestige Falcon Tower Deck', 'Brigade Road Smart Vault',
-          'Church Street Underground', 'Cubbon Automated Car Park', 'Indiranagar Hub Deck',
-          'Koramangala 80ft Bay', 'Residency Road Multi-Tier', 'MG Metro Surface Lot',
-          'Vittal Mallya Executive Deck', 'Cunningham Road RapidPark', 'Lavelle Road Smart Park'
-        ];
-
-        return sampleNames.map((name, i) => {
-          const angle = (i / sampleNames.length) * Math.PI * 2;
-          const dist = 0.005 + (i * 0.0016);
-          const total = 100 + (i * 85);
-          const ratio = (0.08 + (i * 0.08)) % 0.95;
-          const available = Math.round(total * ratio);
+        normalizeLot(raw) {
+          const id = raw.id;
+          const name = raw.name || `Parking Lot #${id}`;
+          const lat = parseFloat(raw.lat || (raw.coordinates ? raw.coordinates[1] : 12.9716));
+          const lon = parseFloat(raw.lon || (raw.coordinates ? raw.coordinates[0] : 77.5946));
+          const capacity = parseInt(raw.total_capacity || raw.capacity || 100, 10);
+          const free = parseInt(raw.available_spots !== undefined ? raw.available_spots : (raw.free_spots !== undefined ? raw.free_spots : Math.floor(capacity * 0.4)), 10);
+          
+          let status = 'Available';
+          const ratio = capacity > 0 ? (free / capacity) : 0;
+          if (free <= 5 || ratio < 0.10) status = 'Full';
+          else if (ratio < 0.30) status = 'Filling up';
 
           return {
-            id: `lot_${i + 1}`,
+            id: id,
             name: name,
-            address: `${10 + i * 4}, Central Avenue, Ward ${110 + i}`,
-            lat: centerLat + Math.sin(angle) * dist,
-            lon: centerLon + Math.cos(angle) * dist,
-            total_capacity: total,
-            available_spots: available,
-            pricing_hourly_car: 40 + (i % 3) * 20,
-            pricing_hourly_bike: 15 + (i % 2) * 10,
-            ev_chargers: (i % 2 === 0) ? (4 + i % 8) : 0,
-            dynamic_multiplier: 1.0 + (i % 3) * 0.25,
-            traffic_level: (ratio < 0.15) ? 'High' : (ratio < 0.35) ? 'Moderate' : 'Low',
-            zones: {
-              A: Math.round(available * 0.35),
-              B: Math.round(available * 0.25),
-              C: Math.round(available * 0.22),
-              D: Math.round(available * 0.18)
-            }
+            address: raw.address || raw.city || 'Bengaluru Metro Core',
+            lat: lat,
+            lon: lon,
+            capacity: capacity,
+            free_spots: free,
+            status: status,
+            price_car: raw.pricing_car || (raw.price_hourly ? `₹${raw.price_hourly}` : '₹40'),
+            price_bike: raw.pricing_bike || '₹15',
+            distance_km: raw.distance_m ? (raw.distance_m / 1000).toFixed(1) : (0.4 + (id % 5) * 0.3).toFixed(1),
+            eta_mins: Math.ceil(2 + (id % 4) * 2),
+            updated_mins: 1 + (id % 6),
+            ev_chargers: raw.ev_chargers || 0
           };
-        });
-      }
+        },
 
-      // Traccar / Vehicle WebSocket Stream
-      let vehicleWs;
-      function initTraccarWebSocket() {
-        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${proto}//${location.host}/ws/vehicle`;
+        async getTelemetry(lotId) {
+          try {
+            const res = await fetch(`/lots/${lotId}/telemetry`);
+            if (!res.ok) throw new Error("Telemetry offline");
+            return await res.json();
+          } catch {
+            return {
+              zones: [{ id: 'A', free: 14 }, { id: 'B', free: 6 }, { id: 'C', free: 2 }],
+              ev_chargers_free: 4,
+              pricing_multiplier: "1.0x",
+              traffic_level: "Optimal"
+            };
+          }
+        },
 
-        try {
-          vehicleWs = new WebSocket(wsUrl);
-          vehicleWs.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data && data.lat && data.lon) {
-              updateVehiclePosition(
-                [data.lon, data.lat],
-                data.heading || 0,
-                data.speed || 0,
-                data.accuracy || 2.0
-              );
+        async submitReport(lotId, reportType) {
+          try {
+            await fetch(`/lots/${lotId}/reports`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: reportType, timestamp: Date.now() })
+            });
+          } catch (e) {
+            console.info("OpenPark: Simulated local report submission", reportType);
+          }
+        },
+
+        // Mappls REST API: AutoSuggest (https://github.com/mappls-api/mapmyindia-rest-api)
+        async searchMappls(query, lat, lon) {
+          try {
+            const res = await fetch(`/api/mappls/autosuggest?query=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}`);
+            if (res.ok) {
+              const data = await res.json();
+              return data.results || [];
             }
-          };
-          vehicleWs.onerror = () => { /* gracefully handle offline WS */ };
-        } catch (e) {
-          // Backend WS optional in standalone preview
-        }
-      }
+          } catch (e) {
+            console.warn("Mappls AutoSuggest proxy error", e);
+          }
+          return [];
+        },
 
-      // Lot Telemetry WebSocket for dynamic spots
-      let lotWs;
-      function listenToLotTelemetry(lotId) {
-        if (lotWs) lotWs.close();
-        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        try {
-          lotWs = new WebSocket(`${proto}//${location.host}/ws/lots/${lotId}`);
-          lotWs.onmessage = (evt) => {
-            const update = JSON.parse(evt.data);
-            if (APP_STATE.selectedLot && APP_STATE.selectedLot.id === lotId) {
-              Object.assign(APP_STATE.selectedLot, update);
-              updateBottomSheetUI(APP_STATE.selectedLot);
-              // Check if lot just filled up during navigation
-              if (APP_STATE.activeNavigation && APP_STATE.selectedLot.available_spots <= 1) {
-                triggerSmartReroute();
+        // Mappls REST API: Driving Directions Route (https://github.com/mappls-api/mapmyindia-rest-api)
+        async getMapplsRoute(startLat, startLon, destLat, destLon) {
+          try {
+            const res = await fetch(`/api/mappls/route?start_lat=${startLat}&start_lon=${startLon}&dest_lat=${destLat}&dest_lon=${destLon}`);
+            if (res.ok) {
+              return await res.json();
+            }
+          } catch (e) {
+            console.warn("Mappls Route API error, using internal spline fallback", e);
+          }
+          return null;
+        },
+
+        async saveMapplsKey(key) {
+          try {
+            const res = await fetch('/config/mappls', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ mappls_rest_key: key })
+            });
+            if (res.ok) {
+              STATE.config.mapplsKey = key;
+              localStorage.setItem('openpark_mappls_key', key);
+              return true;
+            }
+          } catch (e) {
+            STATE.config.mapplsKey = key;
+            localStorage.setItem('openpark_mappls_key', key);
+          }
+          return true;
+        },
+
+        async loadMapplsConfig() {
+          try {
+            const res = await fetch('/config/mappls');
+            if (res.ok) {
+              const data = await res.json();
+              if (data.has_rest_key) {
+                document.getElementById('mappls-key-status').innerText = 'Connected';
+                document.getElementById('mappls-key-status').style.color = 'var(--status-available)';
+              } else {
+                document.getElementById('mappls-key-status').innerText = 'No Key (Fallback active)';
+                document.getElementById('mappls-key-status').style.color = 'var(--status-filling)';
               }
             }
-          };
-        } catch (e) {}
-      }
+          } catch {}
+        },
 
-      // 8. BOTTOM SHEET SELECTION & SENSOR DISPLAY
-      async function selectLot(lot) {
-        APP_STATE.selectedLot = lot;
-        listenToLotTelemetry(lot.id);
-        updateBottomSheetUI(lot);
+        initWebSocket(lotId, onUpdate) {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${protocol}//${window.location.host}/ws/lots/${lotId}`;
+          let ws;
 
-        try {
-          const res = await fetch(`/lots/${lot.id}/telemetry`);
-          if (res.ok) {
-            const tel = await res.json();
-            if (tel.zones) {
-              lot.zones = {
-                A: tel.zones["Zone A"]?.free ?? lot.zones.A,
-                B: tel.zones["Zone B"]?.free ?? lot.zones.B,
-                C: tel.zones["Zone C"]?.free ?? lot.zones.C,
-                D: tel.zones["Zone D"]?.free ?? lot.zones.D,
-              };
-            }
-            if (tel.ev_charging) lot.ev_chargers = tel.ev_charging.free;
-            if (tel.dynamic_pricing) lot.dynamic_multiplier = tel.dynamic_pricing.factor;
-            if (tel.traffic_level) lot.traffic_level = tel.traffic_level;
-            updateBottomSheetUI(lot);
-          }
-        } catch (e) {}
+          try {
+            ws = new WebSocket(wsUrl);
+            ws.onmessage = (e) => onUpdate(JSON.parse(e.data));
+            ws.onerror = () => ws.close();
+            ws.onclose = () => {
+              setTimeout(() => {
+                if (STATE.selectedLot && STATE.selectedLot.id === lotId) {
+                  API.initWebSocket(lotId, onUpdate);
+                }
+              }, CONFIG.WS_RECONNECT_MS);
+            };
+            STATE.activeSockets[lotId] = ws;
+          } catch {}
+        },
 
-        const sheet = document.getElementById('lot-detail-sheet');
-        sheet.classList.add('visible');
+        initVehicleWebSocket() {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const wsUrl = `${protocol}//${window.location.host}/ws/vehicle`;
+          try {
+            const ws = new WebSocket(wsUrl);
+            ws.onmessage = (e) => {
+              try {
+                const data = JSON.parse(e.data);
+                if (data.latitude && data.longitude) {
+                  STATE.userLocation = {
+                    lng: data.longitude,
+                    lat: data.latitude,
+                    heading: data.bearing || 0,
+                    speed: data.speed || 0,
+                    altitude: data.altitude || 920,
+                    accuracy: data.accuracy || 5
+                  };
+                  MapEngine.updateVehicle(STATE.userLocation);
+                  TelemetryController.update(STATE.userLocation);
+                }
+              } catch {}
+            };
+          } catch {}
+        },
 
-        // Smooth camera fly-to centering the lot & vehicle nicely
-        map.flyTo({
-          center: [lot.lon, lot.lat],
-          zoom: 16.5,
-          pitch: 50,
-          speed: 1.2,
-          curve: 1.4
-        });
-      }
+        sendTraccarPing(pos) {
+          try {
+            fetch(`/api/traccar?id=OP-TRACKER-01&lat=${pos.lat}&lon=${pos.lng}&speed=${pos.speed}&bearing=${pos.heading}&altitude=${pos.altitude}&batt=95`)
+              .catch(() => {});
+          } catch {}
+        },
 
-      function hideBottomSheet() {
-        const sheet = document.getElementById('lot-detail-sheet');
-        sheet.classList.remove('visible');
-      }
+        generateFallbackLots(centerLat, centerLon) {
+          const sampleNames = [
+            "UB City Underground Garage", "Brigade Road Multi-Level Deck", "Garuda Mall Parking Complex",
+            "MG Road Metro Parking Hub", "Church Street Smart Garage", "Commercial Street Surface Lot",
+            "Forum Mall Parking Plaza", "Indiranagar 100ft Rd Automated Lot"
+          ];
+          return sampleNames.map((name, i) => {
+            const latOffset = (Math.sin(i * 1.5) * 0.012);
+            const lonOffset = (Math.cos(i * 1.5) * 0.016);
+            const capacity = 100 + i * 35;
+            const free = Math.max(2, Math.floor(capacity * (0.15 + (i * 0.12) % 0.7)));
+            let status = 'Available';
+            if (free <= 5) status = 'Full';
+            else if (free < capacity * 0.25) status = 'Filling up';
 
-      function updateBottomSheetUI(lot) {
-        const ratio = lot.total_capacity > 0 ? (lot.available_spots / lot.total_capacity) : 0;
-        const occupied = lot.total_capacity - lot.available_spots;
-
-        document.getElementById('sheet-lot-name').textContent = lot.name;
-        document.getElementById('sheet-lot-address').textContent = lot.address;
-        document.getElementById('sheet-pricing').textContent = `₹${lot.pricing_hourly_car}/hr • 🏍️ ₹${lot.pricing_hourly_bike}/hr`;
-        document.getElementById('sheet-occupancy-ratio').textContent = `${occupied} / ${lot.total_capacity} occupied`;
-
-        const fillEl = document.getElementById('sheet-occupancy-fill');
-        const pct = Math.min(100, Math.max(0, (occupied / lot.total_capacity) * 100));
-        fillEl.style.width = `${pct}%`;
-
-        let color = 'var(--color-emerald)';
-        if (ratio < 0.10) color = 'var(--color-crimson)';
-        else if (ratio < 0.30) color = 'var(--color-amber)';
-        fillEl.style.backgroundColor = color;
-
-        const freeSpotsEl = document.getElementById('sheet-free-spots');
-        freeSpotsEl.textContent = lot.available_spots;
-        freeSpotsEl.style.color = color;
-
-        document.getElementById('sheet-total-capacity').textContent = lot.total_capacity.toLocaleString();
-
-        // Calculate approximate distance
-        const dKm = computeHaversineKm(APP_STATE.userGPS.coords, [lot.lon, lot.lat]);
-        const etaMins = Math.max(1, Math.round((dKm / 35) * 60));
-        document.getElementById('sheet-eta-dist').textContent = `${dKm.toFixed(1)} km`;
-        document.getElementById('sheet-eta-dist').nextElementSibling.textContent = `Est. ETA ${etaMins}m`;
-
-        // IIoT Subzones
-        if (lot.zones) {
-          document.getElementById('sheet-zone-a').textContent = lot.zones.A;
-          document.getElementById('sheet-zone-b').textContent = lot.zones.B;
-          document.getElementById('sheet-zone-c').textContent = lot.zones.C;
-          document.getElementById('sheet-zone-d').textContent = lot.zones.D;
-        }
-
-        document.getElementById('sheet-ev-spots').innerHTML = `⚡ EV Charging: <strong>${lot.ev_chargers > 0 ? lot.ev_chargers + ' free' : 'None'}</strong>`;
-        document.getElementById('sheet-pricing-mult').innerHTML = `🏷️ <strong>${lot.dynamic_multiplier.toFixed(1)}x</strong> Rate`;
-        document.getElementById('sheet-traffic-level').innerHTML = `🚗 Traffic: <strong>${lot.traffic_level}</strong>`;
-      }
-
-      function computeHaversineKm(c1, c2) {
-        const R = 6371;
-        const dLat = (c2[1] - c1[1]) * Math.PI / 180;
-        const dLon = (c2[0] - c1[0]) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(c1[1] * Math.PI / 180) * Math.cos(c2[1] * Math.PI / 180) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-      }
-
-      // 9. TURN-BY-TURN NAVIGATION & 60 FPS SIMULATION ENGINE
-      let currentNavStepDist = 450;
-      let arrivalAnnounced = false;
-
-      function startNavigation(lot) {
-        APP_STATE.activeNavigation = true;
-        arrivalAnnounced = false;
-        hideBottomSheet();
-
-        // Reveal Dynamic Island HUD
-        const island = document.getElementById('active-nav-island');
-        island.classList.add('visible');
-        document.getElementById('island-destination').textContent = `Navigating to ${lot.name}`;
-
-        speakAudio(`Starting guidance to ${lot.name}. Follow highlighted route.`);
-
-        // Build route coordinates from current GPS position to lot
-        buildRouteAndSimulate(APP_STATE.userGPS.coords, [lot.lon, lot.lat]);
-      }
-
-      function cancelNavigation() {
-        APP_STATE.activeNavigation = false;
-        stopSimulation();
-        document.getElementById('active-nav-island').classList.remove('visible');
-        document.getElementById('arrival-banner').classList.remove('visible');
-        document.getElementById('reroute-banner').classList.remove('visible');
-        speakAudio('Navigation canceled.');
-      }
-
-      async function buildRouteAndSimulate(startCoord, endCoord) {
-        let coords = null;
-        const startStr = `${startCoord[0]},${startCoord[1]}`;
-        const endStr = `${endCoord[0]},${endCoord[1]}`;
-
-        try {
-          const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${startStr};${endStr}?overview=full&geometries=geojson`, {
-            signal: AbortSignal.timeout(3000)
+            return {
+              id: i + 1,
+              name: name,
+              address: `${10 + i * 14} Central Core, Bengaluru`,
+              lat: centerLat + latOffset,
+              lon: centerLon + lonOffset,
+              capacity: capacity,
+              free_spots: free,
+              status: status,
+              price_car: "₹40",
+              price_bike: "₹15",
+              distance_km: (0.5 + i * 0.4).toFixed(1),
+              eta_mins: Math.ceil(3 + i * 2),
+              updated_mins: 1 + (i % 5),
+              ev_chargers: (i % 2 === 0 ? 4 : 0)
+            };
           });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.routes && data.routes.length > 0) {
-              coords = data.routes[0].geometry.coordinates;
-            }
-          }
-        } catch (e) {}
-
-        if (!coords || coords.length < 2) {
-          // Fallback to geometric dogleg street waypoints
-          coords = [startCoord];
-          const midLon = startCoord[0] + (endCoord[0] - startCoord[0]) * 0.45;
-          const midLat = startCoord[1];
-          coords.push([midLon, midLat]);
-
-          const midLon2 = midLon;
-          const midLat2 = endCoord[1];
-          coords.push([midLon2, midLat2]);
-          coords.push(endCoord);
         }
+      };
 
-        // Subdivide into fine-grained 60fps road nodes
-        const densePath = [];
-        for (let i = 0; i < coords.length - 1; i++) {
-          const p1 = coords[i];
-          const p2 = coords[i + 1];
-          const dM = computeHaversineKm(p1, p2) * 1000;
-          const steps = Math.max(6, Math.min(120, Math.round(dM / 2.2)));
-          for (let s = 0; s < steps; s++) {
-            const t = s / steps;
-            densePath.push([
-              p1[0] + (p2[0] - p1[0]) * t,
-              p1[1] + (p2[1] - p1[1]) * t
-            ]);
-          }
-        }
-        densePath.push(endCoord);
+      // --------------------------------------------------------------------------
+      // 5.5 Map Controller (MapLibre GL JS Engine)
+      // --------------------------------------------------------------------------
+      const MapEngine = {
+        map: null,
+        markers: new Map(),
+        vehicleMarker: null,
+        vehicleEl: null,
 
-        APP_STATE.simulation.routeCoordinates = densePath;
-        APP_STATE.simulation.currentIndex = 0;
-        APP_STATE.simulation.running = true;
+        init() {
+          const styleUrl = MAP_STYLES[STATE.config.activeStyle] || MAP_STYLES['carto-dark'];
 
-        const simBtn = document.getElementById('btn-simulate-nav');
-        if (simBtn) simBtn.classList.add('active-sim');
+          this.map = new maplibregl.Map({
+            container: 'map-viewport',
+            style: styleUrl,
+            center: CONFIG.DEFAULT_COORDS,
+            zoom: CONFIG.INITIAL_ZOOM,
+            pitch: 0,
+            bearing: 0,
+            antialias: true,
+            attributionControl: false
+          });
 
-        // Draw Route Polyline
-        renderNavigationRouteLayer(coords);
+          this.map.on('load', () => {
+            this.setupRouteSource();
+            this.createVehicleMarker();
+            ParkingApp.loadNearbyLots();
+            API.initVehicleWebSocket();
+          });
 
-        // Launch requestAnimationFrame 60 FPS motion loop
-        lastFrameTime = performance.now();
-        if (APP_STATE.simulation.rafId) cancelAnimationFrame(APP_STATE.simulation.rafId);
-        APP_STATE.simulation.rafId = requestAnimationFrame(simulationAnimationLoop);
-      }
+          this.map.on('rotate', () => {
+            const bearing = this.map.getBearing();
+            document.getElementById('compass-icon').style.transform = `rotate(${-bearing}deg)`;
+          });
+        },
 
-      function renderNavigationRouteLayer(coords) {
-        if (!map.getSource('nav-active-route')) {
-          map.addSource('nav-active-route', {
+        setupRouteSource() {
+          this.map.addSource('route', {
             type: 'geojson',
-            data: {
-              type: 'Feature',
-              geometry: { type: 'LineString', coordinates: coords }
-            }
+            data: { type: 'FeatureCollection', features: [] }
           });
 
-          map.addLayer({
-            id: 'nav-route-casing',
+          this.map.addLayer({
+            id: 'route-casing',
             type: 'line',
-            source: 'nav-active-route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': '#1d4ed8',
-              'line-width': 9,
-              'line-opacity': 0.7
-            }
-          });
-
-          map.addLayer({
-            id: 'nav-route-line',
-            type: 'line',
-            source: 'nav-active-route',
+            source: 'route',
             layout: { 'line-join': 'round', 'line-cap': 'round' },
             paint: {
               'line-color': '#38bdf8',
+              'line-width': 8,
+              'line-opacity': 0.5
+            }
+          });
+
+          this.map.addLayer({
+            id: 'route-line',
+            type: 'line',
+            source: 'route',
+            layout: { 'line-join': 'round', 'line-cap': 'round' },
+            paint: {
+              'line-color': '#2563eb',
               'line-width': 5,
               'line-opacity': 0.95
             }
           });
-        } else {
-          map.getSource('nav-active-route').setData({
-            type: 'Feature',
-            geometry: { type: 'LineString', coordinates: coords }
+
+          // Breadcrumb Trail Layer
+          this.map.addSource('breadcrumbs', {
+            type: 'geojson',
+            data: { type: 'FeatureCollection', features: [] }
+          });
+          this.map.addLayer({
+            id: 'breadcrumb-line',
+            type: 'line',
+            source: 'breadcrumbs',
+            paint: {
+              'line-color': '#38bdf8',
+              'line-width': 3,
+              'line-opacity': 0.85
+            }
+          });
+        },
+
+        createVehicleMarker() {
+          this.vehicleEl = document.createElement('div');
+          this.vehicleEl.className = 'vehicle-marker-root';
+          this.vehicleEl.innerHTML = `
+            <div class="vehicle-cone" id="v-cone"></div>
+            <div class="vehicle-accuracy-ring"></div>
+            <div class="vehicle-core-dot"></div>
+          `;
+
+          this.vehicleMarker = new maplibregl.Marker({
+            element: this.vehicleEl,
+            anchor: 'center'
+          })
+            .setLngLat(CONFIG.DEFAULT_COORDS)
+            .addTo(this.map);
+        },
+
+        updateVehicle(pos) {
+          if (this.vehicleMarker) {
+            this.vehicleMarker.setLngLat([pos.lng, pos.lat]);
+            const cone = this.vehicleEl.querySelector('#v-cone');
+            if (cone) {
+              cone.style.transform = `rotate(${pos.heading || 0}deg)`;
+            }
+          }
+        },
+
+        renderLotMarkers(lots) {
+          // Clear old markers
+          this.markers.forEach(m => m.marker.remove());
+          this.markers.clear();
+
+          lots.forEach(lot => {
+            const el = document.createElement('div');
+            el.className = 'openpark-pin';
+            el.setAttribute('role', 'button');
+            el.setAttribute('aria-label', `${lot.name}: ${lot.free_spots} spots available`);
+            
+            let color = '#10b981'; // Emerald
+            if (lot.status === 'Filling up') color = '#f59e0b';
+            if (lot.status === 'Full') color = '#ef4444';
+            if (lot.status === 'Unknown') color = '#94a3b8';
+
+            // Precise SVG Pin with anchor strictly at bottom tip (17, 44)
+            el.innerHTML = `
+              <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
+                <path d="M17 43.5 C17 43.5 3 27 3 17 A14 14 0 1 1 31 17 C31 27 17 43.5 17 43.5 Z" fill="${color}" stroke="#ffffff" stroke-width="1.8"/>
+                <circle cx="17" cy="17" r="10.5" fill="#0f172a" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+                <text x="17" y="21" fill="#ffffff" font-size="11" font-family="-apple-system, sans-serif" font-weight="700" text-anchor="middle">${lot.free_spots > 999 ? '999+' : lot.free_spots}</text>
+              </svg>
+            `;
+
+            el.addEventListener('click', (e) => {
+              e.stopPropagation();
+              ParkingApp.selectLot(lot.id);
+            });
+
+            const marker = new maplibregl.Marker({
+              element: el,
+              anchor: 'bottom',
+              offset: [0, 0]
+            })
+              .setLngLat([lot.lon, lot.lat])
+              .addTo(this.map);
+
+            this.markers.set(lot.id, { marker, element: el });
+          });
+        },
+
+        highlightMarker(lotId) {
+          this.markers.forEach((item, id) => {
+            if (id === lotId) {
+              item.element.classList.add('is-selected');
+            } else {
+              item.element.classList.remove('is-selected');
+            }
           });
         }
-      }
+      };
 
-      let lastFrameTime = 0;
-      function simulationAnimationLoop(timestamp) {
-        if (!APP_STATE.simulation.running) return;
+      // --------------------------------------------------------------------------
+      // 5.6 Sidebar, List, Filter & Detail Views Controller
+      // --------------------------------------------------------------------------
+      const UIController = {
+        init() {
+          this.bindEvents();
+        },
 
-        const sim = APP_STATE.simulation;
-        const path = sim.routeCoordinates;
+        bindEvents() {
+          // Tab Switching
+          document.getElementById('tab-explore').onclick = () => this.switchTab('explore');
+          document.getElementById('tab-trip').onclick = () => this.switchTab('trip');
+          document.getElementById('tab-more').onclick = () => this.switchTab('more');
 
-        if (sim.currentIndex < path.length - 1) {
-          const currentPt = path[sim.currentIndex];
-          const nextPt = path[sim.currentIndex + 1];
+          // Back from detail
+          document.getElementById('btn-back-to-list').onclick = () => {
+            ParkingApp.showListView();
+          };
 
-          // Compute bearing between points
-          const dLon = (nextPt[0] - currentPt[0]) * Math.PI / 180;
-          const lat1 = currentPt[1] * Math.PI / 180;
-          const lat2 = nextPt[1] * Math.PI / 180;
-          const y = Math.sin(dLon) * Math.cos(lat2);
-          const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-          let targetBearing = Math.atan2(y, x) * 180 / Math.PI;
-          targetBearing = (targetBearing + 360) % 360;
-
-          // Shortest-arc circular bearing interpolation
-          const curBearing = APP_STATE.userGPS.heading;
-          const delta = getShortestBearingDelta(curBearing, targetBearing);
-          const smoothHeading = curBearing + delta * 0.18;
-
-          // Speed jitter around 40-48 km/h
-          const speed = 44 + Math.sin(sim.currentIndex * 0.1) * 6;
-
-          // Update Vehicle State
-          updateVehiclePosition(currentPt, smoothHeading, speed, 1.2);
-
-          // Camera smooth lock follow in 3D pitch
-          map.easeTo({
-            center: currentPt,
-            bearing: smoothHeading,
-            pitch: 52,
-            zoom: 17.5,
-            duration: 90,
-            easing: (t) => t
+          // Filter chips
+          document.querySelectorAll('.filter-chip-row .chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              document.querySelectorAll('.filter-chip-row .chip-btn').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+              STATE.activeFilter = btn.dataset.filter;
+              this.renderLotList(STATE.lots);
+            });
           });
 
-          sim.currentIndex++;
-          APP_STATE.simulation.rafId = requestAnimationFrame(simulationAnimationLoop);
-        } else {
-          // Finished route
-          stopSimulation();
-          speakAudio('You have arrived at your parking destination.');
-          const arrival = document.getElementById('arrival-banner');
-          arrival.classList.add('visible');
-          setTimeout(() => arrival.classList.remove('visible'), 8000);
-        }
-      }
+          // Sidebar Desktop Collapse
+          const sidebar = document.getElementById('sidebar');
+          const toggleBtn = document.getElementById('btn-toggle-sidebar');
+          toggleBtn.onclick = () => {
+            sidebar.classList.toggle('is-collapsed');
+            const isCollapsed = sidebar.classList.contains('is-collapsed');
+            toggleBtn.innerHTML = isCollapsed 
+              ? '<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>'
+              : '<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>';
+          };
 
-      function stopSimulation() {
-        APP_STATE.simulation.running = false;
-        if (APP_STATE.simulation.rafId) {
-          cancelAnimationFrame(APP_STATE.simulation.rafId);
-          APP_STATE.simulation.rafId = null;
-        }
-        const simBtn = document.getElementById('btn-simulate-nav');
-        if (simBtn) simBtn.classList.remove('active-sim');
-        updateTelemetryHUD(0, APP_STATE.userGPS.heading, APP_STATE.userGPS.altitude, 1.0);
-      }
+          // Mobile Sheet Drag Handler
+          const dragHandle = document.getElementById('sheet-drag-handle');
+          let startY = 0, currentY = 0;
+          dragHandle.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+          }, { passive: true });
 
-      // Check distance & trigger Dynamic Island turns or smart reroutes
-      function evaluateNavProgress(currentCoords) {
-        if (!APP_STATE.selectedLot) return;
-        const dest = [APP_STATE.selectedLot.lon, APP_STATE.selectedLot.lat];
-        const distKm = computeHaversineKm(currentCoords, dest);
-        const distM = Math.round(distKm * 1000);
+          dragHandle.addEventListener('touchmove', (e) => {
+            currentY = e.touches[0].clientY;
+            const diff = currentY - startY;
+            if (diff > 50) {
+              sidebar.style.transform = 'translateY(calc(100% - 130px))'; // Peek
+            } else if (diff < -50) {
+              sidebar.style.transform = 'translateY(0)'; // Full
+            }
+          }, { passive: true });
 
-        const distEl = document.getElementById('island-dist');
-        const timeEl = document.getElementById('island-time');
-        const arrowEl = document.getElementById('island-arrow');
+          // Map Control Cluster Handlers
+          document.getElementById('btn-zoom-in').onclick = () => MapEngine.map.zoomIn({ duration: 250 });
+          document.getElementById('btn-zoom-out').onclick = () => MapEngine.map.zoomOut({ duration: 250 });
+          
+          document.getElementById('btn-compass-north').onclick = () => {
+            MapEngine.map.easeTo({ bearing: 0, pitch: STATE.is3D ? CONFIG.PITCH_3D : 0, duration: 400 });
+          };
 
-        if (distEl) distEl.textContent = distM > 1000 ? `${distKm.toFixed(1)} km` : `${distM} m`;
-        if (timeEl) {
-          const m = Math.max(1, Math.round((distKm / 35) * 60));
-          timeEl.textContent = `${m} min`;
-        }
+          document.getElementById('btn-tilt-3d').onclick = () => {
+            STATE.is3D = !STATE.is3D;
+            MapEngine.map.easeTo({
+              pitch: STATE.is3D ? CONFIG.PITCH_3D : 0,
+              duration: 400
+            });
+            document.getElementById('btn-tilt-3d').classList.toggle('active-blue', STATE.is3D);
+          };
 
-        // Change turn arrow based on progress
-        if (distM > 600) {
-          arrowEl.textContent = '↱';
-        } else if (distM > 250) {
-          arrowEl.textContent = '↰';
-        } else {
-          arrowEl.textContent = '⇡';
-        }
+          document.getElementById('btn-my-location').onclick = () => {
+            ParkingApp.toggleLiveLocation();
+          };
 
-        // Arrival alert trigger (< 500m)
-        if (distM < 500 && !arrivalAnnounced) {
-          arrivalAnnounced = true;
-          const arrival = document.getElementById('arrival-banner');
-          arrival.classList.add('visible');
-          speakAudio('Approaching destination. Parking entrance is 400 meters ahead.');
-          setTimeout(() => arrival.classList.remove('visible'), 5000);
-        }
-      }
+          // Detail Actions
+          document.getElementById('btn-start-nav').onclick = () => {
+            if (STATE.selectedLot) {
+              NavigationEngine.startTrip(STATE.selectedLot);
+            }
+          };
 
-      function triggerSmartReroute() {
-        const rerouteBanner = document.getElementById('reroute-banner');
-        rerouteBanner.classList.add('visible');
-        speakAudio('Notice: destination parking lot is now fully occupied. Alternative route suggested.');
-      }
+          document.getElementById('btn-report-status').onclick = () => {
+            document.getElementById('modal-report').classList.add('active');
+          };
 
-      // 10. REAL DEVICE GPS HARDWARE HOOK
-      function toggleDeviceGPS() {
-        const btn = document.getElementById('btn-live-gps');
-        if (!APP_STATE.userGPS.active) {
-          if (!('geolocation' in navigator)) {
-            alert('Geolocation API not supported on this device.');
+          document.getElementById('modal-report-close').onclick = () => {
+            document.getElementById('modal-report').classList.remove('active');
+          };
+
+          document.querySelectorAll('.modal-option-btn').forEach(btn => {
+            btn.onclick = () => {
+              const report = btn.dataset.report;
+              if (STATE.selectedLot) {
+                API.submitReport(STATE.selectedLot.id, report);
+                document.getElementById('modal-report').classList.remove('active');
+                ParkingApp.showToast("Report submitted. Thank you!");
+              }
+            };
+          });
+
+          // Settings / More handlers
+          document.getElementById('toggle-voice-alerts').onchange = (e) => {
+            STATE.config.voiceAlerts = e.target.checked;
+          };
+
+          document.getElementById('toggle-sim-drive').onchange = (e) => {
+            STATE.config.simulateDrive = e.target.checked;
+            if (e.target.checked && STATE.activeTrip) {
+              NavigationEngine.startSimulation();
+            }
+          };
+
+          document.getElementById('toggle-hud').onchange = (e) => {
+            document.getElementById('telemetry-hud').classList.toggle('active', e.target.checked);
+          };
+
+          document.getElementById('toggle-breadcrumbs').onchange = (e) => {
+            STATE.config.showBreadcrumbs = e.target.checked;
+            if (!e.target.checked) {
+              STATE.breadcrumbs = [];
+              MapEngine.map.getSource('breadcrumbs').setData({ type: 'FeatureCollection', features: [] });
+            }
+          };
+
+          document.getElementById('select-map-style').onchange = (e) => {
+            const style = e.target.value;
+            STATE.config.activeStyle = style;
+            localStorage.setItem('openpark_map_style', style);
+            MapEngine.map.remove();
+            MapEngine.init();
+          };
+
+          // Save Mappls REST API Key
+          document.getElementById('btn-save-mappls-key').onclick = async () => {
+            const key = document.getElementById('input-mappls-key').value.trim();
+            if (key) {
+              await API.saveMapplsKey(key);
+              ParkingApp.showToast("Mappls REST Key saved successfully!");
+              API.loadMapplsConfig();
+            }
+          };
+
+          document.getElementById('btn-refresh-lots').onclick = () => {
+            ParkingApp.loadNearbyLots();
+            ParkingApp.showToast("Parking data refreshed");
+          };
+
+          document.getElementById('btn-refresh-top').onclick = () => {
+            ParkingApp.loadNearbyLots();
+            ParkingApp.showToast("Parking occupancy updated");
+          };
+
+          document.getElementById('btn-end-trip').onclick = () => {
+            NavigationEngine.endTrip();
+          };
+        },
+
+        switchTab(tabId) {
+          STATE.activeTab = tabId;
+          document.querySelectorAll('.segment-tab').forEach(t => t.classList.remove('active'));
+          document.getElementById(`tab-${tabId}`).classList.add('active');
+
+          // Hide all views
+          document.getElementById('view-explore').style.display = 'none';
+          document.getElementById('view-detail').style.display = 'none';
+          document.getElementById('view-trip').style.display = 'none';
+          document.getElementById('view-more').style.display = 'none';
+
+          if (tabId === 'explore') {
+            if (STATE.selectedLot) {
+              document.getElementById('view-detail').style.display = 'flex';
+            } else {
+              document.getElementById('view-explore').style.display = 'flex';
+            }
+          } else if (tabId === 'trip') {
+            document.getElementById('view-trip').style.display = 'flex';
+          } else if (tabId === 'more') {
+            document.getElementById('view-more').style.display = 'flex';
+          }
+        },
+
+        renderLotList(lots) {
+          const container = document.getElementById('view-explore');
+          container.innerHTML = '';
+
+          const filtered = lots.filter(lot => {
+            if (STATE.activeFilter === 'all') return true;
+            return lot.status === STATE.activeFilter;
+          });
+
+          document.getElementById('total-lots-count').innerText = lots.length;
+
+          if (filtered.length === 0) {
+            container.innerHTML = `
+              <div style="text-align: center; padding: 40px 10px; color: var(--color-text-secondary);">
+                <svg class="svg-icon" style="width: 38px; height: 38px; margin-bottom: 8px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <div style="font-weight:600;">No parking found</div>
+                <div style="font-size:var(--font-size-sec);">Try a larger search area or change filter.</div>
+              </div>
+            `;
             return;
           }
 
-          APP_STATE.userGPS.active = true;
-          btn.classList.add('active-gps');
+          filtered.forEach(lot => {
+            const card = document.createElement('div');
+            card.className = 'lot-card contrast-card';
+            
+            let statusClass = 'status-available';
+            if (lot.status === 'Filling up') statusClass = 'status-filling';
+            if (lot.status === 'Full') statusClass = 'status-full';
+            if (lot.status === 'Unknown') statusClass = 'status-unknown';
 
-          APP_STATE.userGPS.watchId = navigator.geolocation.watchPosition(
-            (pos) => {
-              const coords = [pos.coords.longitude, pos.coords.latitude];
-              const heading = pos.coords.heading || APP_STATE.userGPS.heading || 0;
-              const speed = (pos.coords.speed || 0) * 3.6; // convert m/s to km/h
-              const alt = pos.coords.altitude || 920;
-              const acc = pos.coords.accuracy || 3.0;
+            card.innerHTML = `
+              <div class="lot-card-header">
+                <div class="lot-title">${lot.name}</div>
+                <div class="lot-dist">${lot.distance_km} km &bull; ${lot.eta_mins}m</div>
+              </div>
+              <div class="lot-meta-row">
+                <div class="status-pill ${statusClass}">
+                  <span class="status-dot"></span>
+                  <span>${lot.status} &bull; <strong>${lot.free_spots}</strong> free</span>
+                </div>
+                <div class="lot-price">${lot.price_car}/hr</div>
+              </div>
+              <div class="lot-footer-sub">Updated ${lot.updated_mins} min ago &bull; ${lot.address}</div>
+            `;
 
-              updateVehiclePosition(coords, heading, speed, acc);
-              APP_STATE.userGPS.altitude = alt;
+            card.onclick = () => ParkingApp.selectLot(lot.id);
+            container.appendChild(card);
+          });
+        },
 
-              // Send to FastAPI Traccar ingestion endpoint (OsmAnd protocol emulation)
-              sendTraccarPosition(coords[1], coords[0], speed, heading, alt);
-            },
-            (err) => {
-              console.warn('GPS watch error:', err.message);
-            },
-            { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
-          );
-        } else {
-          APP_STATE.userGPS.active = false;
-          btn.classList.remove('active-gps');
-          if (APP_STATE.userGPS.watchId !== null) {
-            navigator.geolocation.clearWatch(APP_STATE.userGPS.watchId);
-            APP_STATE.userGPS.watchId = null;
+        renderLotDetail(lot) {
+          document.getElementById('dt-name').innerText = lot.name;
+          document.getElementById('dt-address').innerText = lot.address;
+          document.getElementById('dt-status-txt').innerText = lot.status;
+          document.getElementById('dt-free-spots').innerText = lot.free_spots;
+          document.getElementById('dt-capacity').innerText = lot.capacity;
+          document.getElementById('dt-dist').innerText = `${lot.distance_km} km away`;
+          document.getElementById('dt-eta').innerText = `${lot.eta_mins} min`;
+          document.getElementById('dt-price-car').innerText = `Car: ${lot.price_car}/h`;
+          document.getElementById('dt-price-bike').innerText = `Bike: ${lot.price_bike}/h`;
+          document.getElementById('dt-updated-time').innerText = `Updated ${lot.updated_mins} min ago`;
+
+          const occPct = Math.min(100, Math.round(((lot.capacity - lot.free_spots) / lot.capacity) * 100));
+          const occFill = document.getElementById('dt-occ-fill');
+          occFill.style.width = `${occPct}%`;
+          document.getElementById('dt-occ-count').innerText = `${lot.capacity - lot.free_spots} of ${lot.capacity} occupied`;
+
+          // Style status pill & bar
+          const statusPill = document.getElementById('dt-status-pill');
+          statusPill.className = 'status-pill';
+          let barColor = 'var(--status-available)';
+          if (lot.status === 'Available') {
+            statusPill.classList.add('status-available');
+          } else if (lot.status === 'Filling up') {
+            statusPill.classList.add('status-filling');
+            barColor = 'var(--status-filling)';
+          } else if (lot.status === 'Full') {
+            statusPill.classList.add('status-full');
+            barColor = 'var(--status-full)';
+          } else {
+            statusPill.classList.add('status-unknown');
+            barColor = 'var(--status-unknown)';
+          }
+          occFill.style.background = barColor;
+
+          // Fetch live IIoT telemetry
+          API.getTelemetry(lot.id).then(telemetry => {
+            const sensorContainer = document.getElementById('dt-sensor-items');
+            sensorContainer.innerHTML = '';
+            if (telemetry.zones) {
+              telemetry.zones.forEach(z => {
+                sensorContainer.innerHTML += `
+                  <div class="sensor-item">
+                    <span>Zone ${z.id}</span>
+                    <strong>${z.free} open</strong>
+                  </div>
+                `;
+              });
+            }
+            if (telemetry.ev_chargers_free !== undefined) {
+              sensorContainer.innerHTML += `
+                <div class="sensor-item">
+                  <span>EV Charging</span>
+                  <strong style="color:var(--status-available);">${telemetry.ev_chargers_free} free</strong>
+                </div>
+              `;
+            }
+            if (telemetry.traffic_level) {
+              sensorContainer.innerHTML += `
+                <div class="sensor-item">
+                  <span>Gate Traffic</span>
+                  <strong>${telemetry.traffic_level}</strong>
+                </div>
+              `;
+            }
+          });
+
+          // Switch internal view
+          document.getElementById('view-explore').style.display = 'none';
+          document.getElementById('view-detail').style.display = 'flex';
+        }
+      };
+
+      // --------------------------------------------------------------------------
+      // 5.7 Place Search & Mappls AutoSuggest Engine
+      // --------------------------------------------------------------------------
+      const SearchEngine = {
+        debounceTimer: null,
+        selectedIndex: -1,
+        results: [],
+
+        init() {
+          const input = document.getElementById('search-input');
+          const clearBtn = document.getElementById('search-clear');
+          const list = document.getElementById('search-autocomplete-box');
+
+          input.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            clearBtn.classList.toggle('visible', query.length > 0);
+
+            clearTimeout(this.debounceTimer);
+            if (query.length < 2) {
+              list.classList.remove('open');
+              return;
+            }
+
+            this.debounceTimer = setTimeout(() => {
+              this.fetchSuggestions(query);
+            }, 250);
+          });
+
+          clearBtn.onclick = () => {
+            input.value = '';
+            clearBtn.classList.remove('visible');
+            list.classList.remove('open');
+            input.focus();
+          };
+
+          // Keyboard navigation
+          input.addEventListener('keydown', (e) => {
+            if (!list.classList.contains('open')) return;
+
+            if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              this.selectedIndex = Math.min(this.selectedIndex + 1, this.results.length - 1);
+              this.updateActiveItem();
+            } else if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              this.selectedIndex = Math.max(this.selectedIndex - 1, 0);
+              this.updateActiveItem();
+            } else if (e.key === 'Enter') {
+              e.preventDefault();
+              if (this.selectedIndex >= 0 && this.results[this.selectedIndex]) {
+                this.selectResult(this.results[this.selectedIndex]);
+              }
+            } else if (e.key === 'Escape') {
+              list.classList.remove('open');
+            }
+          });
+        },
+
+        async fetchSuggestions(query) {
+          const center = MapEngine.map.getCenter();
+          this.results = await API.searchMappls(query, center.lat, center.lng);
+          this.renderAutocomplete();
+        },
+
+        renderAutocomplete() {
+          const list = document.getElementById('search-autocomplete-box');
+          list.innerHTML = '';
+          this.selectedIndex = -1;
+
+          if (this.results.length === 0) {
+            list.classList.remove('open');
+            return;
+          }
+
+          this.results.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'autocomplete-item';
+            row.setAttribute('role', 'option');
+
+            row.innerHTML = `
+              <svg class="svg-icon" style="color:var(--accent-subtle); margin-top: 2px;" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <div class="autocomplete-item-text">
+                <div class="autocomplete-item-title">${item.name}</div>
+                <div class="autocomplete-item-sub">${item.address || 'Bengaluru Metro Area'}</div>
+              </div>
+            `;
+
+            row.onclick = () => this.selectResult(item);
+            list.appendChild(row);
+          });
+
+          list.classList.add('open');
+        },
+
+        updateActiveItem() {
+          const items = document.querySelectorAll('.autocomplete-item');
+          items.forEach((it, idx) => {
+            it.classList.toggle('active-item', idx === this.selectedIndex);
+          });
+        },
+
+        selectResult(item) {
+          document.getElementById('search-autocomplete-box').classList.remove('open');
+          MapEngine.map.flyTo({ center: [item.lon, item.lat], zoom: 15.5, duration: 800 });
+
+          ParkingApp.loadNearbyLots(item.lat, item.lon);
+          ParkingApp.showToast(`Showing parking near ${item.name}`);
+        }
+      };
+
+      // --------------------------------------------------------------------------
+      // 5.8 Navigation & Routing Engine (Mappls Driving Route API + 60 FPS Physics)
+      // --------------------------------------------------------------------------
+      const NavigationEngine = {
+        routePoints: [],
+        routeSteps: [],
+        currentStepIndex: 0,
+
+        async startTrip(lot) {
+          STATE.activeTrip = {
+            destination: lot,
+            startTime: Date.now()
+          };
+
+          // Switch view to trip
+          UIController.switchTab('trip');
+          document.getElementById('trip-idle-state').style.display = 'none';
+          document.getElementById('trip-active-content').style.display = 'flex';
+          document.getElementById('trip-dest-name').innerText = lot.name;
+
+          // Fetch route from Mappls REST API
+          await this.loadRoute(STATE.userLocation, lot);
+
+          // Show turn navigation banner top-center
+          document.getElementById('nav-turn-banner').style.display = 'flex';
+
+          // Connect real-time availability socket for reroute monitoring
+          API.initWebSocket(lot.id, (update) => {
+            if (update.free_spots_delta !== undefined) {
+              lot.free_spots = Math.max(0, lot.free_spots + update.free_spots_delta);
+              if (lot.free_spots === 0 && lot.status !== 'Full') {
+                lot.status = 'Full';
+                this.showRerouteBanner(lot);
+              }
+            }
+          });
+
+          if (STATE.config.simulateDrive) {
+            this.startSimulation();
+          }
+        },
+
+        async loadRoute(origin, destination) {
+          const mapplsRoute = await API.getMapplsRoute(origin.lat, origin.lng, destination.lat, destination.lon);
+
+          let coords = [];
+          let steps = [];
+
+          if (mapplsRoute && mapplsRoute.coordinates && mapplsRoute.coordinates.length > 1) {
+            coords = mapplsRoute.coordinates;
+            steps = mapplsRoute.steps || [];
+            document.getElementById('trip-routing-badge').innerText = `Route: ${mapplsRoute.source === 'mappls_rest_api' ? 'Mappls REST API' : 'High-Precision Road Network'}`;
+            if (mapplsRoute.distance_km) document.getElementById('trip-rem-dist').innerText = mapplsRoute.distance_km;
+            if (mapplsRoute.duration_min) document.getElementById('trip-rem-time').innerText = mapplsRoute.duration_min;
+          } else {
+            // Smooth natural curve fallback
+            const stepsCount = 80;
+            for (let i = 0; i <= stepsCount; i++) {
+              const t = i / stepsCount;
+              const lng = origin.lng + (destination.lon - origin.lng) * t + Math.sin(t * Math.PI) * 0.0015;
+              const lat = origin.lat + (destination.lat - origin.lat) * t + Math.cos(t * Math.PI * 2) * 0.001;
+              coords.push([lng, lat]);
+            }
+            steps = [
+              { instruction: "Head towards main corridor", dist: "350 m" },
+              { instruction: "Turn right onto Commercial Ave", dist: "650 m" },
+              { instruction: "Arrive at parking entrance", dist: "Destination on right" }
+            ];
+          }
+
+          this.routePoints = coords;
+          this.routeSteps = steps;
+
+          // Render Route GeoJSON Line on Map
+          const geojson = {
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: coords }
+          };
+          MapEngine.map.getSource('route').setData(geojson);
+
+          this.renderStepList();
+          if (this.routeSteps.length > 0) {
+            this.updateTurnBanner(this.routeSteps[0]);
+          }
+        },
+
+        renderStepList() {
+          const container = document.getElementById('trip-step-list');
+          container.innerHTML = '';
+          this.routeSteps.forEach((st, idx) => {
+            container.innerHTML += `
+              <div class="trip-turn-item ${idx < this.currentStepIndex ? 'passed' : ''}">
+                <svg class="svg-icon" style="color:var(--accent-subtle);" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                <div style="flex:1;">
+                  <div style="font-weight:600; font-size:var(--font-size-sec);">${st.instruction}</div>
+                  <div style="font-size:12px; color:var(--color-text-secondary);">${st.dist}</div>
+                </div>
+              </div>
+            `;
+          });
+        },
+
+        updateTurnBanner(step) {
+          document.getElementById('nav-turn-text').innerText = step.instruction;
+          document.getElementById('nav-turn-dist').innerText = step.dist;
+        },
+
+        startSimulation() {
+          cancelAnimationFrame(STATE.animationFrameId);
+          let index = 0;
+          let prevTime = performance.now();
+
+          const animate = (currentTime) => {
+            if (!STATE.activeTrip || index >= this.routePoints.length) {
+              this.handleArrival();
+              return;
+            }
+
+            const current = this.routePoints[index];
+            const next = this.routePoints[Math.min(index + 1, this.routePoints.length - 1)];
+            
+            // Calculate bearing
+            const dy = next[1] - current[1];
+            const dx = next[0] - current[0];
+            const heading = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+
+            // Physics speed simulation with turn slowdown
+            const turnAngle = Math.abs(heading - (STATE.userLocation.heading || 0));
+            const baseSpeed = turnAngle > 20 ? 22 : 42;
+
+            STATE.userLocation = {
+              lng: current[0],
+              lat: current[1],
+              heading: heading,
+              speed: baseSpeed + Math.floor(Math.sin(index / 8) * 4),
+              altitude: 920,
+              accuracy: 4
+            };
+
+            MapEngine.updateVehicle(STATE.userLocation);
+            TelemetryController.update(STATE.userLocation);
+
+            // Stream GPS to Traccar
+            if (index % 10 === 0) {
+              API.sendTraccarPing(STATE.userLocation);
+            }
+
+            // Breadcrumbs
+            if (STATE.config.showBreadcrumbs && index % 3 === 0) {
+              STATE.breadcrumbs.push(current);
+              MapEngine.map.getSource('breadcrumbs').setData({
+                type: 'Feature',
+                geometry: { type: 'LineString', coordinates: STATE.breadcrumbs }
+              });
+            }
+
+            // Step progression
+            const progressRatio = index / this.routePoints.length;
+            if (this.routeSteps.length >= 3) {
+              if (progressRatio > 0.3 && this.currentStepIndex === 0) {
+                this.currentStepIndex = 1;
+                this.updateTurnBanner(this.routeSteps[1]);
+                this.renderStepList();
+              } else if (progressRatio > 0.7 && this.currentStepIndex === 1) {
+                this.currentStepIndex = 2;
+                this.updateTurnBanner(this.routeSteps[2]);
+                this.renderStepList();
+              }
+            }
+
+            index++;
+            STATE.animationFrameId = requestAnimationFrame(animate);
+          };
+
+          STATE.animationFrameId = requestAnimationFrame(animate);
+        },
+
+        handleArrival() {
+          document.getElementById('nav-turn-banner').style.display = 'none';
+          ParkingApp.showToast("Arrived at your parking destination!");
+          
+          if (STATE.config.voiceAlerts && 'speechSynthesis' in window) {
+            const utterance = new SpeechSynthesisUtterance("Approaching destination. Parking entrance on your right.");
+            speechSynthesis.speak(utterance);
+          }
+        },
+
+        showRerouteBanner(fullLot) {
+          const banner = document.getElementById('nav-alert-banner');
+          document.getElementById('alert-banner-title').innerText = "Lot Just Filled Up";
+          document.getElementById('alert-banner-sub').innerText = `${fullLot.name} has 0 free spots.`;
+          
+          const actionBtn = document.getElementById('alert-action-btn');
+          actionBtn.innerText = "Switch to Open Lot";
+          banner.style.display = 'flex';
+
+          actionBtn.onclick = () => {
+            banner.style.display = 'none';
+            const altLot = STATE.lots.find(l => l.id !== fullLot.id && l.status === 'Available');
+            if (altLot) {
+              ParkingApp.selectLot(altLot.id);
+              this.startTrip(altLot);
+              ParkingApp.showToast(`Rerouted to ${altLot.name}`);
+            }
+          };
+        },
+
+        endTrip() {
+          STATE.activeTrip = null;
+          cancelAnimationFrame(STATE.animationFrameId);
+          MapEngine.map.getSource('route').setData({ type: 'FeatureCollection', features: [] });
+          document.getElementById('nav-turn-banner').style.display = 'none';
+          document.getElementById('nav-alert-banner').style.display = 'none';
+          document.getElementById('trip-active-content').style.display = 'none';
+          document.getElementById('trip-idle-state').style.display = 'block';
+          UIController.switchTab('explore');
+        }
+      };
+
+      // --------------------------------------------------------------------------
+      // 5.9 Telemetry Controller (Traccar GPS & Status HUD)
+      // --------------------------------------------------------------------------
+      const TelemetryController = {
+        update(pos) {
+          document.getElementById('hud-speed').innerHTML = `${Math.round(pos.speed || 0)} <span style="font-size: 11px; font-weight: 400;">km/h</span>`;
+          
+          const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+          const headingDeg = Math.round(pos.heading || 0);
+          const cardinal = cardinals[Math.round(headingDeg / 45) % 8];
+          document.getElementById('hud-heading').innerText = `${headingDeg}° ${cardinal}`;
+
+          document.getElementById('hud-accuracy').innerText = `± ${Math.round(pos.accuracy || 5)}m`;
+          document.getElementById('hud-altitude').innerText = `${Math.round(pos.altitude || 920)}m`;
+
+          const badge = document.getElementById('hud-status-badge');
+          if (pos.speed > 3) {
+            badge.innerText = "Moving";
+            badge.style.color = "var(--status-available)";
+          } else {
+            badge.innerText = "Stopped";
+            badge.style.color = "var(--color-text-secondary)";
+          }
+
+          // Native battery monitor
+          if ('getBattery' in navigator) {
+            navigator.getBattery().then(batt => {
+              const pct = Math.round(batt.level * 100);
+              const charging = batt.charging ? " ⚡" : "";
+              document.getElementById('hud-battery').innerText = `Battery: ${pct}%${charging}`;
+            });
           }
         }
-      }
+      };
 
-      async function sendTraccarPosition(lat, lon, speed, bearing, alt, acc = 3.0) {
-        try {
-          const batt = APP_STATE.userGPS.batteryLevel || 90;
-          const charge = APP_STATE.userGPS.isCharging ? 'true' : 'false';
-          await fetch(`/api/traccar?id=OP-TRACKER-01&lat=${lat}&lon=${lon}&speed=${Math.round(speed)}&bearing=${Math.round(bearing)}&altitude=${Math.round(alt)}&accuracy=${acc}&batt=${batt}&charge=${charge}`);
-        } catch(e) {}
-      }
+      // --------------------------------------------------------------------------
+      // 5.10 Main Application Orchestration
+      // --------------------------------------------------------------------------
+      const ParkingApp = {
+        async init() {
+          MapEngine.init();
+          UIController.init();
+          SearchEngine.init();
+          API.loadMapplsConfig();
+        },
 
-      // 11. WEB SPEECH AUDIO NAVIGATION SYNTHESIZER
-      function speakAudio(text) {
-        if (!APP_STATE.voiceEnabled || !('speechSynthesis' in window)) return;
-        window.speechSynthesis.cancel(); // clear queue
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1.05;
-        utterance.pitch = 1.0;
-        window.speechSynthesis.speak(utterance);
-      }
+        async loadNearbyLots(lat = CONFIG.DEFAULT_COORDS[1], lon = CONFIG.DEFAULT_COORDS[0]) {
+          STATE.lots = await API.getNearbyLots(lat, lon);
+          MapEngine.renderLotMarkers(STATE.lots);
+          UIController.renderLotList(STATE.lots);
+        },
 
-      // 12. EVENT LISTENERS & UI WIRING
-      function attachDOMEvents() {
-        // GPS Live Button
-        document.getElementById('btn-live-gps').addEventListener('click', toggleDeviceGPS);
+        selectLot(lotId) {
+          const lot = STATE.lots.find(l => l.id == lotId);
+          if (!lot) return;
 
-        // Telemetry HUD Toggle
-        document.getElementById('btn-telemetry-toggle').addEventListener('click', () => {
-          const hud = document.getElementById('telemetry-hud');
-          hud.classList.toggle('minimized');
-        });
+          STATE.selectedLot = lot;
+          MapEngine.highlightMarker(lotId);
+          MapEngine.map.easeTo({ center: [lot.lon, lot.lat], zoom: 16, duration: 500 });
+          UIController.renderLotDetail(lot);
 
-        document.getElementById('hud-minimize-btn').addEventListener('click', () => {
-          const hud = document.getElementById('telemetry-hud');
-          hud.classList.toggle('minimized');
-        });
-
-        // Breadcrumb Trail Switch
-        document.getElementById('toggle-breadcrumbs').addEventListener('change', (e) => {
-          APP_STATE.breadcrumbsEnabled = e.target.checked;
-          const vis = e.target.checked ? 'visible' : 'none';
-          if (map.getLayer('vehicle-breadcrumbs-line')) {
-            map.setLayoutProperty('vehicle-breadcrumbs-line', 'visibility', vis);
+          // Mobile sheet snap to half
+          const sidebar = document.getElementById('sidebar');
+          if (window.innerWidth < 900) {
+            sidebar.style.transform = 'translateY(calc(100% - 380px))';
           }
-        });
+        },
 
-        // Voice Navigation Toggle
-        const voiceBtn = document.getElementById('btn-voice-toggle');
-        voiceBtn.addEventListener('click', () => {
-          APP_STATE.voiceEnabled = !APP_STATE.voiceEnabled;
-          voiceBtn.classList.toggle('active-gps', APP_STATE.voiceEnabled);
-          voiceBtn.querySelector('.btn-text').textContent = APP_STATE.voiceEnabled ? 'Voice' : 'Muted';
-        });
+        showListView() {
+          STATE.selectedLot = null;
+          MapEngine.highlightMarker(null);
+          document.getElementById('view-detail').style.display = 'none';
+          document.getElementById('view-explore').style.display = 'flex';
+        },
 
-        // Simulation Button
-        document.getElementById('btn-simulate-nav').addEventListener('click', () => {
-          if (!APP_STATE.simulation.running) {
-            const targetLot = APP_STATE.selectedLot || APP_STATE.lots[0];
-            if (targetLot) {
-              startNavigation(targetLot);
-            }
+        toggleLiveLocation() {
+          const locBtn = document.getElementById('btn-my-location');
+          if (STATE.isTrackingLocation) {
+            if (STATE.watchId) navigator.geolocation.clearWatch(STATE.watchId);
+            STATE.isTrackingLocation = false;
+            locBtn.classList.remove('active-blue', 'active-pulse');
+            this.showToast("Live location paused");
           } else {
-            stopSimulation();
-          }
-        });
-
-        // Refresh Lots Button
-        document.getElementById('btn-refresh-lots').addEventListener('click', () => {
-          const btn = document.getElementById('btn-refresh-lots');
-          btn.style.transform = 'rotate(360deg)';
-          btn.style.transition = 'transform 0.5s ease';
-          setTimeout(() => { btn.style.transform = 'none'; btn.style.transition = 'none'; }, 550);
-          fetchNearbyLots(APP_STATE.center[1], APP_STATE.center[0]);
-        });
-
-        // Filter Chips
-        document.querySelectorAll('.filter-chip').forEach(chip => {
-          chip.addEventListener('click', () => {
-            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-            chip.classList.add('active');
-            APP_STATE.activeFilter = chip.dataset.filter;
-            renderLotMarkers(APP_STATE.lots);
-          });
-        });
-
-        // Bottom Sheet Handle / Drag Dismiss
-        document.getElementById('sheet-handle').addEventListener('click', hideBottomSheet);
-
-        // Start Navigation Primary Button
-        document.getElementById('sheet-start-nav-btn').addEventListener('click', () => {
-          if (APP_STATE.selectedLot) {
-            startNavigation(APP_STATE.selectedLot);
-          }
-        });
-
-        // Cancel Nav button on Island HUD
-        document.getElementById('island-cancel-btn').addEventListener('click', cancelNavigation);
-
-        // Crowdsource Report Button & Modal
-        const reportModal = document.getElementById('modal-report');
-        document.getElementById('sheet-report-btn').addEventListener('click', () => {
-          if (!APP_STATE.selectedLot) return;
-          document.getElementById('report-lot-name').textContent = APP_STATE.selectedLot.name;
-          reportModal.classList.add('open');
-        });
-
-        document.getElementById('modal-report-close').addEventListener('click', () => {
-          reportModal.classList.remove('open');
-        });
-
-        document.querySelectorAll('.report-btn').forEach(btn => {
-          btn.addEventListener('click', async () => {
-            const status = btn.dataset.report;
-            if (APP_STATE.selectedLot) {
-              const kindMap = { vacant: "has_space", filling: "got_spot", full: "lot_full" };
-              const kind = kindMap[status] || "has_space";
-              try {
-                await fetch(`/lots/${APP_STATE.selectedLot.id}/reports`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ kind: kind, reporter_id: "driver_web" })
-                });
-              } catch(e) {}
+            if ('geolocation' in navigator) {
+              locBtn.classList.add('active-blue', 'active-pulse');
+              STATE.watchId = navigator.geolocation.watchPosition(
+                (pos) => {
+                  STATE.isTrackingLocation = true;
+                  const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
+                  STATE.userLocation = {
+                    lng: longitude,
+                    lat: latitude,
+                    heading: heading || 0,
+                    speed: (speed || 0) * 3.6,
+                    altitude: altitude || 920,
+                    accuracy: accuracy || 5
+                  };
+                  MapEngine.updateVehicle(STATE.userLocation);
+                  TelemetryController.update(STATE.userLocation);
+                  API.sendTraccarPing(STATE.userLocation);
+                },
+                (err) => {
+                  locBtn.classList.remove('active-blue', 'active-pulse');
+                  this.showToast("Location access denied or unavailable");
+                },
+                { enableHighAccuracy: true, maximumAge: 1000 }
+              );
+              this.showToast("Streaming live GPS location");
+            } else {
+              this.showToast("Geolocation not supported on this device");
             }
-            reportModal.classList.remove('open');
-            speakAudio('Thank you for verifying lot conditions.');
-          });
-        });
-
-        // Smart Reroute Acceptance
-        document.getElementById('btn-accept-reroute').addEventListener('click', () => {
-          document.getElementById('reroute-banner').classList.remove('visible');
-          // Find alternative lot with highest vacancy
-          const altLot = APP_STATE.lots.find(l => l.id !== APP_STATE.selectedLot?.id && l.available_spots > 20);
-          if (altLot) {
-            selectLot(altLot);
-            startNavigation(altLot);
           }
-        });
+        },
 
-        // MapLibre Vector Styles Modal
-        const mapStylesModal = document.getElementById('modal-map-styles');
-        document.getElementById('btn-map-styles').addEventListener('click', () => {
-          document.getElementById('map-style-select').value = APP_STATE.activeStyle;
-          mapStylesModal.classList.add('open');
-        });
+        showToast(message) {
+          const toast = document.getElementById('toast');
+          toast.innerText = message;
+          toast.classList.add('show');
+          setTimeout(() => toast.classList.remove('show'), 2600);
+        }
+      };
 
-        document.getElementById('modal-map-styles-close').addEventListener('click', () => {
-          mapStylesModal.classList.remove('open');
-        });
-
-        document.getElementById('btn-save-map-style').addEventListener('click', () => {
-          const style = document.getElementById('map-style-select').value;
-          APP_STATE.activeStyle = style;
-          localStorage.setItem('openpark_map_style', style);
-          mapStylesModal.classList.remove('open');
-          // Re-initialize map with chosen MapLibre vector style
-          map.remove();
-          initMap();
-        });
-      }
-
-      // 13. BOOTSTRAP APPLICATION
+      // Bootstrap on DOM ready
       window.addEventListener('DOMContentLoaded', () => {
-        initMap();
-        attachDOMEvents();
+        ParkingApp.init();
       });
     })();
   </script>

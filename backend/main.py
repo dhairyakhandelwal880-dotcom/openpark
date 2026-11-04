@@ -52,6 +52,21 @@ except ImportError:
         get_position_history,
     )
 
+try:
+    from backend.mappls_service import (
+        get_mappls_config,
+        set_mappls_rest_key,
+        autosuggest as mappls_autosuggest_service,
+        get_directions as mappls_get_directions_service,
+    )
+except ImportError:
+    from mappls_service import (
+        get_mappls_config,
+        set_mappls_rest_key,
+        autosuggest as mappls_autosuggest_service,
+        get_directions as mappls_get_directions_service,
+    )
+
 API_KEY = os.getenv("OPENPARK_API_KEY", "dev-key")
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -349,6 +364,52 @@ def update_map_config(payload: MapStyleConfigPayload):
         "engine": "MapLibre GL JS",
         "requires_token": False
     }
+
+
+# --------------------------------------------------------------------------
+# Mappls (MapmyIndia) REST API (https://github.com/mappls-api/mapmyindia-rest-api)
+# --------------------------------------------------------------------------
+
+class MapplsConfigPayload(BaseModel):
+    mappls_rest_key: Optional[str] = None
+
+
+@app.get("/config/mappls")
+def get_mappls_config_endpoint():
+    return get_mappls_config()
+
+
+@app.post("/config/mappls")
+def update_mappls_config_endpoint(payload: MapplsConfigPayload):
+    if payload.mappls_rest_key is not None:
+        set_mappls_rest_key(payload.mappls_rest_key)
+    return get_mappls_config()
+
+
+@app.get("/api/mappls/autosuggest")
+async def mappls_autosuggest_endpoint(
+    query: str = Query(..., min_length=1),
+    lat: float = Query(12.9716),
+    lon: float = Query(77.5946)
+):
+    results = await mappls_autosuggest_service(query=query, lat=lat, lon=lon)
+    return {"status": "ok", "query": query, "results": results}
+
+
+@app.get("/api/mappls/route")
+async def mappls_route_endpoint(
+    start_lat: float = Query(...),
+    start_lon: float = Query(...),
+    dest_lat: float = Query(...),
+    dest_lon: float = Query(...)
+):
+    route = await mappls_get_directions_service(
+        start_lat=start_lat,
+        start_lon=start_lon,
+        dest_lat=dest_lat,
+        dest_lon=dest_lon
+    )
+    return route
 
 
 # --------------------------------------------------------------------------
