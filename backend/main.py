@@ -58,7 +58,6 @@ DATABASE_URL = os.getenv(
     "postgresql://openpark:openpark@localhost:5432/openpark"
 )
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-MAPBOX_ACCESS_TOKEN = os.getenv("MAPBOX_ACCESS_TOKEN", "").strip()
 
 
 @contextmanager
@@ -304,8 +303,12 @@ class LotEditPayload(BaseModel):
     city: Optional[str] = None
 
 
-class MapboxConfigPayload(BaseModel):
-    mapbox_access_token: Optional[str] = None
+# --------------------------------------------------------------------------
+# MapLibre GL JS Open-Source Vector Map Configuration (https://maplibre.org/maplibre-gl-js/docs/API/)
+# --------------------------------------------------------------------------
+
+class MapStyleConfigPayload(BaseModel):
+    default_style: Optional[str] = None
 
 
 # --------------------------------------------------------------------------
@@ -321,44 +324,30 @@ def health():
     }
 
 
-@app.get("/config/mapbox")
-def get_mapbox_config():
-    token = os.getenv("MAPBOX_ACCESS_TOKEN", MAPBOX_ACCESS_TOKEN).strip()
+@app.get("/config/map")
+def get_map_config():
     return {
-        "mapbox_access_token": token,
-        "has_token": bool(token)
+        "engine": "MapLibre GL JS",
+        "api_docs": "https://maplibre.org/maplibre-gl-js/docs/API/",
+        "requires_token": False,
+        "default_style": "carto-dark",
+        "supported_styles": [
+            "carto-dark",
+            "carto-voyager",
+            "carto-positron",
+            "maplibre-demo",
+            "osm-standard"
+        ]
     }
 
 
-@app.post("/config/mapbox")
-def update_mapbox_config(payload: MapboxConfigPayload):
-    global MAPBOX_ACCESS_TOKEN
-    if payload.mapbox_access_token is not None:
-        MAPBOX_ACCESS_TOKEN = payload.mapbox_access_token.strip()
-        os.environ["MAPBOX_ACCESS_TOKEN"] = MAPBOX_ACCESS_TOKEN
-        env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
-        if os.path.exists(env_path):
-            try:
-                with open(env_path, "r", encoding="utf-8") as f:
-                    lines = f.readlines()
-                found = False
-                new_lines = []
-                for line in lines:
-                    if line.startswith("MAPBOX_ACCESS_TOKEN="):
-                        new_lines.append(f"MAPBOX_ACCESS_TOKEN={MAPBOX_ACCESS_TOKEN}\n")
-                        found = True
-                    else:
-                        new_lines.append(line)
-                if not found:
-                    new_lines.append(f"MAPBOX_ACCESS_TOKEN={MAPBOX_ACCESS_TOKEN}\n")
-                with open(env_path, "w", encoding="utf-8") as f:
-                    f.writelines(new_lines)
-            except Exception as e:
-                print(f"Error persisting .env: {e}")
+@app.post("/config/map")
+def update_map_config(payload: MapStyleConfigPayload):
     return {
         "status": "ok",
-        "mapbox_access_token": MAPBOX_ACCESS_TOKEN,
-        "has_token": bool(MAPBOX_ACCESS_TOKEN)
+        "default_style": payload.default_style or "carto-dark",
+        "engine": "MapLibre GL JS",
+        "requires_token": False
     }
 
 
