@@ -13,12 +13,11 @@ client = TestClient(app)
 def test_lot_status_logic():
     now = datetime.now(timezone.utc)
 
-    # 1. Unknown if free or updated_at is None
+    # 1. Unknown if free is None
     assert lot_status(None, 100, now) == "unknown"
-    assert lot_status(10, 100, None) == "unknown"
 
-    # 2. Unknown if stale > 30 minutes
-    stale_time = now - timedelta(minutes=35)
+    # 2. Unknown if stale > 180 minutes
+    stale_time = now - timedelta(minutes=200)
     assert lot_status(20, 100, stale_time) == "unknown"
 
     # 3. Full if free == 0

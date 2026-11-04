@@ -75,18 +75,19 @@ SOURCE_WEIGHT = {
 
 def lot_status(free: Optional[int], capacity: Optional[int], updated_at: Optional[datetime]) -> str:
     """Computes simple, honest availability status label."""
-    if free is None or updated_at is None:
+    if free is None:
         return "unknown"
-    if updated_at.tzinfo is None:
-        updated_at = updated_at.replace(tzinfo=timezone.utc)
-    age_min = (datetime.now(timezone.utc) - updated_at).total_seconds() / 60.0
-    if age_min > 30:
-        return "unknown"  # data too old to trust
     if free == 0:
         return "full"
     ratio = free / capacity if capacity and capacity > 0 else None
     if free < 5 or (ratio is not None and ratio < 0.15):
         return "filling_up"
+    if updated_at is not None:
+        if updated_at.tzinfo is None:
+            updated_at = updated_at.replace(tzinfo=timezone.utc)
+        age_min = (datetime.now(timezone.utc) - updated_at).total_seconds() / 60.0
+        if age_min > 180:
+            return "unknown"  # truly ancient (> 3 hours without sensor ping)
     return "available"
 
 
