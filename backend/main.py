@@ -700,6 +700,62 @@ def osm_overpass_endpoint(
 
 
 # --------------------------------------------------------------------------
+# Viewport Places API — returns catalog POIs within a lat/lon bounding box
+# --------------------------------------------------------------------------
+
+@app.get("/api/places/viewport")
+def viewport_places_endpoint(
+    min_lat: float = Query(...),
+    max_lat: float = Query(...),
+    min_lon: float = Query(...),
+    max_lon: float = Query(...),
+    zoom: float = Query(13.0, description="Map zoom level — controls how many categories to include"),
+):
+    """
+    Returns all catalog places visible in the current map viewport.
+    At low zoom (< 13) returns only major landmarks, transit, and malls.
+    At mid zoom (13-15) adds hospitals, parks, hotels, tech parks.
+    At high zoom (> 15) also adds cafes, restaurants, fuel stations.
+    """
+    from traccar_service import BENGALURU_PLACES_CATALOG  # noqa
+
+    # Category tiers by zoom level
+    high_priority = {"Airport", "Metro", "Transit", "Landmark", "Mall & Parking", "Park", "Stadium"}
+    mid_priority  = high_priority | {"Hospital", "Tech Park", "Neighborhood", "Hotel", "Commercial"}
+    all_categories = mid_priority | {"Cafe", "Restaurant", "Fuel", "Fuel Station"}
+
+    if zoom >= 15.5:
+        allowed = all_categories
+    elif zoom >= 13.0:
+        allowed = mid_priority
+    else:
+        allowed = high_priority
+
+    results = []
+    for place in BENGALURU_PLACES_CATALOG:
+        lat = place.get("lat")
+        lon = place.get("lon")
+        cat = place.get("category", "")
+        if lat is None or lon is None:
+            continue
+        if not (min_lat <= lat <= max_lat and min_lon <= lon <= max_lon):
+            continue
+        if cat not in allowed:
+            continue
+        results.append({
+            "name": place.get("name", ""),
+            "category": cat,
+            "archetype": cat.lower().replace(" & ", "_").replace(" ", "_"),
+            "badge": place.get("badge", "📍"),
+            "lat": lat,
+            "lon": lon,
+            "address": place.get("address", ""),
+        })
+
+    return {"status": "ok", "count": len(results), "results": results}
+
+
+# --------------------------------------------------------------------------
 # Geofabrik OpenStreetMap Regional Extracts API (https://download.geofabrik.de/)
 # --------------------------------------------------------------------------
 
