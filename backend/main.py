@@ -89,6 +89,19 @@ except ImportError:
         get_directions as mappls_get_directions_service,
     )
 
+try:
+    from backend.geofabrik_service import (
+        list_geofabrik_regions,
+        get_region_details,
+        get_geofabrik_status,
+    )
+except ImportError:
+    from geofabrik_service import (
+        list_geofabrik_regions,
+        get_region_details,
+        get_geofabrik_status,
+    )
+
 API_KEY = os.getenv("OPENPARK_API_KEY", "dev-key")
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -684,6 +697,31 @@ def osm_overpass_endpoint(
     Coordinates are strictly formatted as [lon, lat] per GeoJSON specification.
     """
     return get_overpass_features(bbox=bbox, category=category)
+
+
+# --------------------------------------------------------------------------
+# Geofabrik OpenStreetMap Regional Extracts API (https://download.geofabrik.de/)
+# --------------------------------------------------------------------------
+
+@app.get("/api/geofabrik/status")
+def geofabrik_status_endpoint():
+    """Returns local cache status, provider details, and available datasets from Geofabrik."""
+    return get_geofabrik_status()
+
+
+@app.get("/api/geofabrik/regions")
+def geofabrik_regions_endpoint():
+    """Lists available Geofabrik OpenStreetMap extracts (Southern Zone / Karnataka, India, etc.)."""
+    return {"status": "ok", "regions": list_geofabrik_regions()}
+
+
+@app.get("/api/geofabrik/regions/{region_id}")
+def geofabrik_region_detail_endpoint(region_id: str):
+    """Returns details, download links, and boundary polygon GeoJSON for a specific Geofabrik extract."""
+    details = get_region_details(region_id)
+    if not details:
+        raise HTTPException(status_code=404, detail=f"Geofabrik region '{region_id}' not found")
+    return {"status": "ok", "region": details}
 
 
 # --------------------------------------------------------------------------

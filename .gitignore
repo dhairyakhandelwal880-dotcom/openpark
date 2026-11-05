@@ -21,3 +21,10 @@ venv/
 
 # Environment variables
 .env
+
+# Large GIS and Geofabrik extracts
+*.osm.pbf
+*.shp.zip
+*.gpkg.zip
+data/geofabrik/geofabrik_index.json
+

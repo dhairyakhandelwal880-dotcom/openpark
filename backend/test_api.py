@@ -300,4 +300,41 @@ def test_websocket_ping_pong():
         assert "time" in json_data
 
 
+def test_geofabrik_endpoints():
+    # 1. Test Geofabrik status endpoint
+    status_res = client.get("/api/geofabrik/status")
+    assert status_res.status_code == 200
+    status_data = status_res.json()
+    assert status_data["status"] == "available"
+    assert "Geofabrik" in status_data["provider"]
+    assert status_data["available_regions_count"] >= 2
+    assert len(status_data["local_files"]) >= 1
+
+    # 2. Test Geofabrik list regions
+    regions_res = client.get("/api/geofabrik/regions")
+    assert regions_res.status_code == 200
+    regions_data = regions_res.json()
+    assert regions_data["status"] == "ok"
+    regions = regions_data["regions"]
+    assert any(r["id"] == "southern-zone" for r in regions)
+    assert any(r["id"] == "india" for r in regions)
+
+    # 3. Test specific region details (Southern Zone - Karnataka / Bengaluru)
+    sz_res = client.get("/api/geofabrik/regions/southern-zone")
+    assert sz_res.status_code == 200
+    sz_data = sz_res.json()
+    assert sz_data["status"] == "ok"
+    reg = sz_data["region"]
+    assert reg["id"] == "southern-zone"
+    assert "urls" in reg
+    assert "pbf" in reg["urls"]
+    assert "poly_url" in reg
+    assert reg["has_local_poly"] is True
+
+    # 4. Test 404 for nonexistent region
+    not_found_res = client.get("/api/geofabrik/regions/nonexistent-region-xyz")
+    assert not_found_res.status_code == 404
+
+
+
 
