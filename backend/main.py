@@ -714,7 +714,16 @@ async def traccar_client_endpoint(
     raw_body = await request.body()
     body_str = raw_body.decode("utf-8", errors="replace")
     client_ip = request.client.host if request.client else "unknown"
-    logger.info("TRACCAR RAW [%s] client=%s query=%s body=%s", request.method, client_ip, request.url.query, body_str)
+    logger.info("[traccar] %s", json.dumps({
+        "t": datetime.now(timezone.utc).isoformat(),
+        "method": request.method,
+        "url": str(request.url),
+        "ip": client_ip,
+        "contentType": request.headers.get("content-type"),
+        "ua": request.headers.get("user-agent"),
+        "raw": body_str[:2000],
+        "status": 200
+    }))
 
     body_json = {}
     if body_str:
@@ -723,21 +732,32 @@ async def traccar_client_endpoint(
         except Exception:
             pass
 
-    dev_id = id or (payload.deviceId if payload else None) or (payload.id if payload else None) or body_json.get("deviceId") or body_json.get("id") or "OP-TRACKER-01"
+    src = dict(request.query_params)
+    if isinstance(body_json, dict):
+        src.update(body_json)
+    pos_obj = src.get("position") if isinstance(src.get("position"), dict) else (src.get("location") if isinstance(src.get("location"), dict) else {})
+    dev_obj = src.get("device") if isinstance(src.get("device"), dict) else {}
+
+    dev_id = id or (payload.deviceId if payload else None) or (payload.id if payload else None) or src.get("id") or src.get("deviceId") or src.get("deviceid") or dev_obj.get("uniqueId") or dev_obj.get("id") or "OP-TRACKER-01"
     
     latitude = lat if lat is not None else (payload.latitude if payload and payload.latitude is not None else (payload.lat if payload else None))
-    if latitude is None and body_json:
-        latitude = body_json.get("latitude", body_json.get("lat"))
+    if latitude is None:
+        latitude = src.get("lat") or src.get("latitude") or pos_obj.get("latitude") or pos_obj.get("lat")
 
     longitude = lon if lon is not None else (payload.longitude if payload and payload.longitude is not None else (payload.lon if payload else None))
-    if longitude is None and body_json:
-        longitude = body_json.get("longitude", body_json.get("lon"))
+    if longitude is None:
+        longitude = src.get("lon") or src.get("lng") or src.get("longitude") or pos_obj.get("longitude") or pos_obj.get("lon")
 
     if latitude is None or longitude is None:
         return {"status": "ok", "message": "Traccar listener active. Waiting for coordinates."}
 
     latitude = float(latitude)
     longitude = float(longitude)
+
+    if abs(latitude) > 90 or abs(longitude) > 180:
+        return {"status": "error", "message": "out-of-range (lat/lon swapped?)"}
+    if latitude == 0 and longitude == 0:
+        return {"status": "ok", "message": "null island discarded"}
 
     spd = speed if speed is not None else (payload.speed if payload else body_json.get("speed"))
     if spd is not None:
