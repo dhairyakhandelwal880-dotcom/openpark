@@ -1868,96 +1868,415 @@
       // --------------------------------------------------------------------------
       // 5.3.1 GPS Telemetry Filtering & Precision Smoothing Engine
       // --------------------------------------------------------------------------
-      const GPSFilter = {
-        lastTimestamp: 0,
-        lastRawPos: null,
-        smoothedPos: null,
-        alpha: 0.35,
+      const R_EARTH = 6371000; // earth radius, metres
+      const rad = (d) => (d * Math.PI) / 180;
+      const isFiniteNum = (v) => typeof v === 'number' && Number.isFinite(v);
+      const toNum = (v) => (v === undefined || v === null || v === '' ? NaN : Number(v));
 
+      function haversine(lat1, lon1, lat2, lon2) {
+        const dLat = rad(lat2 - lat1);
+        const dLon = rad(lon2 - lon1);
+        const a =
+          Math.sin(dLat / 2) ** 2 +
+          Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLon / 2) ** 2;
+        return 2 * R_EARTH * Math.asin(Math.sqrt(a));
+      }
+
+      function bearing(lat1, lon1, lat2, lon2) {
+        const y = Math.sin(rad(lon2 - lon1)) * Math.cos(rad(lat2));
+        const x =
+          Math.cos(rad(lat1)) * Math.sin(rad(lat2)) -
+          Math.sin(rad(lat1)) * Math.cos(rad(lat2)) * Math.cos(rad(lon2 - lon1));
+        return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+      }
+
+      class GpsFilter {
+        constructor(o = {}) {
+          this.maxAccuracy = o.maxAccuracy ?? 40; // metres: reject worse fixes
+          this.maxSpeed = o.maxSpeed ?? 70; // m/s (~250 km/h): faster implied = jump
+          this.minJumpDist = o.minJumpDist ?? 25; // metres: smaller moves are jitter, never a "jump"
+          this.alpha = o.alpha ?? 0.35; // EMA weight of the newest point (0..1)
+          this.minHeadingSpeed = o.minHeadingSpeed ?? 1; // m/s: below this heading is noise
+          this.maxConsecutiveJumps = o.maxConsecutiveJumps ?? 5; // then re-baseline
+          this.requireAccuracy = o.requireAccuracy ?? false; // reject fixes with no accuracy field
+          this.reset();
+        }
+
+        reset() {
+          this.last = null; // last accepted RAW point
+          this.smooth = null; // EMA state {lat, lon}
+          this.heading = null;
+          this.jumps = 0;
+        }
+
+        /** p = {lat, lon, ts (ms), accuracy?, speed? (m/s), heading? (deg)} */
+        update(p) {
+          if (!p || !isFiniteNum(p.lat) || !isFiniteNum(p.lon) || !isFiniteNum(p.ts)) return { ok: false, reason: 'invalid' };
+          if (Math.abs(p.lat) > 90 || Math.abs(p.lon) > 180) return { ok: false, reason: 'out-of-range (lat/lon swapped?)' };
+
+          if (isFiniteNum(p.accuracy)) {
+            if (p.accuracy >= this.maxAccuracy) return { ok: false, reason: `accuracy ${p.accuracy}m` };
+          } else if (this.requireAccuracy) {
+            return { ok: false, reason: 'no accuracy' };
+          }
+
+          let dist = 0;
+          let implied = 0;
+          if (this.last) {
+            if (p.ts <= this.last.ts) return { ok: false, reason: 'out-of-order' };
+            const dt = (p.ts - this.last.ts) / 1000;
+            dist = haversine(this.last.lat, this.last.lon, p.lat, p.lon);
+            implied = dist / dt;
+            if (dist > this.minJumpDist && implied > this.maxSpeed) {
+              if (++this.jumps < this.maxConsecutiveJumps) return { ok: false, reason: `jump ${Math.round(dist)}m` };
+              this.smooth = null;
+              this.heading = null;
+            }
+          }
+          this.jumps = 0;
+
+          // Exponential moving average on position.
+          if (!this.smooth) this.smooth = { lat: p.lat, lon: p.lon };
+          else {
+            this.smooth.lat += this.alpha * (p.lat - this.smooth.lat);
+            this.smooth.lon += this.alpha * (p.lon - this.smooth.lon);
+          }
+
+          // Speed: device value if present, otherwise derived.
+          const speed = isFiniteNum(p.speed) && p.speed >= 0 ? p.speed : implied;
+
+          // Heading: only trusted above minHeadingSpeed, otherwise keep the last good one.
+          if (speed > this.minHeadingSpeed) {
+            if (isFiniteNum(p.heading)) this.heading = ((p.heading % 360) + 360) % 360;
+            else if (this.last && dist > 2) this.heading = bearing(this.last.lat, this.last.lon, p.lat, p.lon);
+          }
+
+          this.last = { lat: p.lat, lon: p.lon, ts: p.ts };
+          return {
+            ok: true,
+            fix: {
+              lat: this.smooth.lat,
+              lon: this.smooth.lon,
+              heading: this.heading,
+              speed,
+              accuracy: p.accuracy ?? null,
+              ts: p.ts,
+            },
+          };
+        }
+      }
+
+      const activeGpsFilter = new GpsFilter({ maxAccuracy: 40, maxSpeed: 70, alpha: 0.35, minHeadingSpeed: 1 });
+
+      const GPSFilter = {
         filterFix(rawFix) {
           if (!rawFix) return null;
           const lat = Number(rawFix.lat !== undefined ? rawFix.lat : rawFix.latitude);
-          const lng = Number(rawFix.lng !== undefined ? rawFix.lng : (rawFix.lon !== undefined ? rawFix.lon : rawFix.longitude));
-          if (isNaN(lat) || isNaN(lng)) return null;
+          const lon = Number(rawFix.lng !== undefined ? rawFix.lng : (rawFix.lon !== undefined ? rawFix.lon : rawFix.longitude));
+          let ts = rawFix.timestamp || rawFix.time || rawFix.fixTime;
+          if (typeof ts === 'string') {
+            const parsed = new Date(ts).getTime();
+            if (!isNaN(parsed)) ts = parsed;
+          }
+          if (!ts || isNaN(ts)) ts = Date.now();
+          const speedMs = rawFix.speedMs !== undefined ? rawFix.speedMs : ((rawFix.speed || 0) / 3.6);
 
-          // 1. Accuracy Check: under 40 m (reject fixes >= 40 m or <= 0)
-          const accuracy = rawFix.accuracy !== undefined && rawFix.accuracy !== null ? Number(rawFix.accuracy) : null;
-          if (accuracy !== null && (accuracy >= 40 || accuracy <= 0)) {
-            console.warn(`[GPSFilter] Rejected fix: accuracy ${accuracy} m out of valid range (0, 40)`);
+          const res = activeGpsFilter.update({
+            lat,
+            lon,
+            ts,
+            accuracy: rawFix.accuracy,
+            speed: speedMs,
+            heading: rawFix.heading
+          });
+
+          if (!res.ok) {
+            console.debug('[GPSFilter] Rejected fix:', res.reason);
             return null;
-          }
-
-          // 2. Reject Out-of-Order Points (timestamp <= lastTimestamp)
-          let t = rawFix.timestamp || rawFix.time || rawFix.fixTime;
-          if (typeof t === 'string') {
-            const parsed = new Date(t).getTime();
-            if (!isNaN(parsed)) t = parsed;
-          }
-          if (!t || isNaN(t)) {
-            t = Date.now();
-          }
-          if (this.lastTimestamp > 0 && t <= this.lastTimestamp) {
-            console.warn(`[GPSFilter] Rejected out-of-order fix: ${t} <= ${this.lastTimestamp}`);
-            return null;
-          }
-
-          // 3. Reject Impossible Jumps (speed > 65 m/s or velocity > 65 m/s = 234 km/h)
-          let speedMs = Number(rawFix.speedMs !== undefined ? rawFix.speedMs : ((rawFix.speed || 0) / 3.6));
-          const dtSec = this.lastTimestamp > 0 ? (t - this.lastTimestamp) / 1000 : 0;
-          if (this.lastRawPos && dtSec > 0 && dtSec < 60) {
-            const distM = calculateDistanceMeters(this.lastRawPos.lat, this.lastRawPos.lng, lat, lng);
-            const calcSpeedMs = distM / dtSec;
-            if (calcSpeedMs > 65.0 || speedMs > 65.0) {
-              console.warn(`[GPSFilter] Rejected impossible jump: delta=${distM.toFixed(1)}m in ${dtSec.toFixed(1)}s (${calcSpeedMs.toFixed(1)} m/s > 65 m/s)`);
-              return null;
-            }
-          }
-
-          this.lastTimestamp = t;
-          this.lastRawPos = { lat, lng, t };
-
-          // 4. Exponential Moving Average (EMA) Smoothing
-          if (!this.smoothedPos) {
-            this.smoothedPos = {
-              lat: lat,
-              lng: lng,
-              speed: Number(rawFix.speed || 0),
-              heading: Number(rawFix.heading || 0),
-              altitude: Number(rawFix.altitude || 920),
-              accuracy: accuracy || 5
-            };
-          } else {
-            const a = this.alpha;
-            this.smoothedPos.lat = a * lat + (1 - a) * this.smoothedPos.lat;
-            this.smoothedPos.lng = a * lng + (1 - a) * this.smoothedPos.lng;
-            this.smoothedPos.speed = a * Number(rawFix.speed || 0) + (1 - a) * this.smoothedPos.speed;
-            this.smoothedPos.altitude = a * Number(rawFix.altitude || 920) + (1 - a) * this.smoothedPos.altitude;
-            if (accuracy !== null) {
-              this.smoothedPos.accuracy = accuracy;
-            }
-
-            // 5. Use Heading Only Above 1 m/s (3.6 km/h); freeze previous heading below 1 m/s
-            const currentSpeedMs = this.smoothedPos.speed / 3.6;
-            if (currentSpeedMs > 1.0) {
-              if (rawFix.heading !== undefined && rawFix.heading !== null && !isNaN(rawFix.heading)) {
-                const rawH = Number(rawFix.heading);
-                const hDiff = shortestAngleDiff(this.smoothedPos.heading, rawH);
-                this.smoothedPos.heading = (this.smoothedPos.heading + hDiff * a + 360) % 360;
-              }
-            }
           }
 
           return {
-            lat: this.smoothedPos.lat,
-            lng: this.smoothedPos.lng,
-            speed: this.smoothedPos.speed,
-            heading: Math.round(this.smoothedPos.heading),
-            altitude: this.smoothedPos.altitude,
-            accuracy: this.smoothedPos.accuracy,
-            timestamp: t
+            lat: res.fix.lat,
+            lng: res.fix.lon,
+            heading: Math.round(res.fix.heading || 0),
+            speed: (res.fix.speed || 0) * 3.6,
+            accuracy: res.fix.accuracy || 5,
+            altitude: rawFix.altitude || 920,
+            timestamp: res.fix.ts
           };
         }
       };
+
+      class VehicleTracker {
+        constructor(map, opts = {}) {
+          this.map = map;
+          this.o = {
+            wsUrl: opts.wsUrl ?? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/vehicle`,
+            deviceId: opts.deviceId ?? null,
+            pingMs: 15000,
+            staleMs: 10000,
+            minBackoff: 1000,
+            maxBackoff: 15000,
+            follow: true,
+            onStatus: null,
+            onFix: null,
+            ...opts,
+          };
+          this.filter = new GpsFilter(opts.filter);
+          this.status = null;
+          this.ws = null;
+          this.attempt = 0;
+          this.lastRx = 0;
+          this.lastFixAt = 0;
+          this.shown = null;
+          this.anim = null;
+          this.raf = 0;
+          this.prevFixAt = 0;
+          this.wake = null;
+          this.stopped = true;
+        }
+
+        start() {
+          if (!this.stopped) return;
+          this.stopped = false;
+          this.startedAt = Date.now();
+          this._makeMarker();
+          this._makeBanner();
+          this.map.on('dragstart', () => (this.o.follow = false));
+          this._onVis = () => {
+            if (document.visibilityState !== 'visible') return;
+            this._lockScreen();
+            if (!this.ws) this._connect(true);
+          };
+          this._onOnline = () => !this.ws && this._connect(true);
+          document.addEventListener('visibilitychange', this._onVis);
+          window.addEventListener('online', this._onOnline);
+          this.staleTimer = setInterval(() => this._emit(), 1000);
+          this._lockScreen();
+          this._connect();
+          this._emit();
+        }
+
+        stop() {
+          this.stopped = true;
+          clearInterval(this.staleTimer);
+          clearTimeout(this.retryTimer);
+          this._stopPing();
+          document.removeEventListener('visibilitychange', this._onVis);
+          window.removeEventListener('online', this._onOnline);
+          if (this.ws) { this._detach(this.ws); try { this.ws.close(); } catch {} this.ws = null; }
+          if (this.wake) { this.wake.release().catch(() => {}); this.wake = null; }
+          cancelAnimationFrame(this.raf);
+          this.raf = 0;
+          this.marker?.remove();
+          this.banner?.remove();
+        }
+
+        recenter() {
+          this.o.follow = true;
+          if (this.shown) this.map.easeTo({ center: [this.shown.lon, this.shown.lat] });
+        }
+
+        _connect(immediate = false) {
+          if (this.stopped) return;
+          clearTimeout(this.retryTimer);
+          if (immediate) this.attempt = 0;
+          let ws;
+          try { ws = new WebSocket(this.o.wsUrl); } catch { return this._scheduleReconnect(); }
+          this.ws = ws;
+          ws.onopen = () => {
+            this.attempt = 0;
+            this.lastRx = Date.now();
+            this._startPing();
+            this._emit();
+          };
+          ws.onmessage = (e) => {
+            this.lastRx = Date.now();
+            this._onMessage(e.data);
+          };
+          ws.onerror = () => { try { ws.close(); } catch {} };
+          ws.onclose = () => { if (this.ws === ws) this._dropSocket(); };
+          this._emit();
+        }
+
+        _detach(ws) { ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null; }
+
+        _dropSocket() {
+          const ws = this.ws;
+          this.ws = null;
+          this._stopPing();
+          if (ws) { this._detach(ws); try { ws.close(); } catch {} }
+          this._scheduleReconnect();
+          this._emit();
+        }
+
+        _scheduleReconnect() {
+          if (this.stopped) return;
+          const base = Math.min(this.o.maxBackoff, this.o.minBackoff * 2 ** this.attempt++);
+          const delay = base / 2 + Math.random() * (base / 2);
+          this.retryTimer = setTimeout(() => this._connect(), delay);
+        }
+
+        _startPing() {
+          this._stopPing();
+          this.pingTimer = setInterval(() => {
+            if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+            if (Date.now() - this.lastRx > this.o.pingMs * 2) return this._dropSocket();
+            this.ws.send(JSON.stringify({ type: 'ping', t: Date.now() }));
+          }, this.o.pingMs);
+        }
+        _stopPing() { clearInterval(this.pingTimer); }
+
+        _onMessage(raw) {
+          let m;
+          try { m = JSON.parse(raw); } catch { return; }
+          if (!m || m.type === 'pong') return;
+          const pos = (m.positions && m.positions[0]) || m.position || m;
+          const id = pos.id ?? pos.deviceId ?? m.id ?? m.deviceId;
+          if (this.o.deviceId && id !== undefined && String(id) !== String(this.o.deviceId)) return;
+
+          let ts = toNum(pos.ts ?? pos.timestamp ?? pos.fixTime ?? pos.deviceTime ?? m.ts);
+          if (!Number.isFinite(ts)) ts = Date.now();
+          else if (ts < 1e12) ts *= 1000;
+
+          const r = this.filter.update({
+            lat: toNum(pos.lat ?? pos.latitude),
+            lon: toNum(pos.lon ?? pos.lng ?? pos.longitude),
+            ts,
+            accuracy: toNum(pos.accuracy),
+            speed: toNum(pos.speed),
+            heading: toNum(pos.heading ?? pos.bearing ?? pos.course),
+          });
+          if (!r.ok) { console.debug('[tracker] rejected:', r.reason); return; }
+          this.lastFixAt = Date.now();
+          this._animateTo(r.fix);
+          this._emit();
+          this.o.onFix?.(r.fix);
+        }
+
+        async _lockScreen() {
+          if (!('wakeLock' in navigator) || document.visibilityState !== 'visible' || this.wake) return;
+          try {
+            this.wake = await navigator.wakeLock.request('screen');
+            this.wake.addEventListener('release', () => (this.wake = null));
+          } catch (err) {
+            console.warn('[tracker] wake lock unavailable:', err.name);
+          }
+        }
+
+        _emit() {
+          const gpsAge = Date.now() - (this.lastFixAt || this.startedAt);
+          let s;
+          if (gpsAge > this.o.staleMs) s = 'lost';
+          else if (this.ws?.readyState === WebSocket.OPEN) s = 'live';
+          else s = this.attempt > 0 ? 'reconnecting' : 'connecting';
+          if (s === this.status) return;
+          this.status = s;
+          if (this.el) {
+            this.el.style.opacity = s === 'lost' ? '0.45' : '1';
+            this.el.style.filter = s === 'lost' ? 'grayscale(1)' : 'none';
+          }
+          if (this.banner) {
+            this.banner.style.display = s === 'lost' ? 'block' : 'none';
+          }
+          this.o.onStatus?.(s);
+        }
+
+        _makeMarker() {
+          if (MapEngine.vehicleEl && MapEngine.vehicleMarker) {
+            this.el = MapEngine.vehicleEl;
+            this.marker = MapEngine.vehicleMarker;
+            return;
+          }
+          this.el = document.createElement('div');
+          this.el.className = 'vehicle-marker-root';
+          this.el.innerHTML =
+            '<div class="vehicle-accuracy-ring"></div>' +
+            '<div class="vehicle-heading-rotator" id="v-rotator">' +
+              '<svg viewBox="0 0 48 48" class="vehicle-chevron-svg">' +
+                '<defs>' +
+                  '<linearGradient id="navPuckGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                    '<stop offset="0%" stop-color="#38bdf8"/>' +
+                    '<stop offset="100%" stop-color="#1d4ed8"/>' +
+                  '</linearGradient>' +
+                '</defs>' +
+                '<circle cx="24" cy="24" r="22" fill="rgba(37, 99, 235, 0.15)"/>' +
+                '<path d="M24 4 L42 40 L24 31 L6 40 Z" fill="#ffffff"/>' +
+                '<path d="M24 7 L39 37 L24 29 L9 37 Z" fill="url(#navPuckGrad)"/>' +
+                '<circle cx="24" cy="23" r="3.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.5"/>' +
+              '</svg>' +
+            '</div>' +
+            '<div class="vehicle-speed-pill" id="v-speed-pill">Stopped</div>';
+          this.marker = new maplibregl.Marker({ element: this.el, anchor: 'center' });
+        }
+
+        _makeBanner() {
+          let existing = document.getElementById('gps-lost-banner');
+          if (existing) {
+            this.banner = existing;
+            return;
+          }
+          this.banner = document.createElement('div');
+          this.banner.id = 'gps-lost-banner';
+          this.banner.textContent = 'GPS signal lost';
+          Object.assign(this.banner.style, {
+            position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000,
+            padding: '8px 16px', borderRadius: '999px', background: '#d93025', color: '#fff',
+            font: '600 13px system-ui, -apple-system, sans-serif', display: 'none',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)', pointerEvents: 'none'
+          });
+          document.body.appendChild(this.banner);
+        }
+
+        _animateTo(fix) {
+          const now = performance.now();
+          const heading = fix.heading ?? this.shown?.heading ?? 0;
+          if (!this.shown) {
+            this.shown = { lat: fix.lat, lon: fix.lon, heading };
+            this.marker.setLngLat([fix.lon, fix.lat]).addTo(this.map);
+            this.map.jumpTo({ center: [fix.lon, fix.lat], zoom: Math.max(this.map.getZoom(), 16) });
+            this.prevFixAt = now;
+            return;
+          }
+          const dur = Math.min(2000, Math.max(250, now - this.prevFixAt));
+          this.prevFixAt = now;
+          this.anim = { from: { ...this.shown }, to: { lat: fix.lat, lon: fix.lon, heading }, start: now, dur };
+          if (!this.raf) this.raf = requestAnimationFrame(this._tick);
+        }
+
+        _tick = (t) => {
+          const a = this.anim;
+          if (!a) { this.raf = 0; return; }
+          const k = Math.min(1, Math.max(0, (t - a.start) / a.dur));
+          let dh = ((a.to.heading - a.from.heading + 540) % 360) - 180;
+          this.shown = {
+            lat: a.from.lat + (a.to.lat - a.from.lat) * k,
+            lon: a.from.lon + (a.to.lon - a.from.lon) * k,
+            heading: (a.from.heading + dh * k + 360) % 360,
+          };
+          this.marker.setLngLat([this.shown.lon, this.shown.lat]);
+          const rotator = this.el?.querySelector('#v-rotator');
+          if (rotator) {
+            const mapBearing = this.map ? this.map.getBearing() : 0;
+            const screenHeading = (this.shown.heading - mapBearing + 360) % 360;
+            rotator.style.transform = `rotate(${screenHeading}deg)`;
+          }
+          const speedPill = this.el?.querySelector('#v-speed-pill');
+          if (speedPill) {
+            const spd = Math.round(STATE.userLocation?.speed || 0);
+            speedPill.innerText = spd > 1 ? `${spd} km/h` : 'Stopped';
+          }
+          if (this.o.follow) {
+            if (STATE.activeTrip) {
+              this.map.jumpTo({ center: [this.shown.lon, this.shown.lat], bearing: this.shown.heading, pitch: 48 });
+            } else if (STATE.isTrackingLocation) {
+              this.map.jumpTo({ center: [this.shown.lon, this.shown.lat] });
+            }
+          }
+          if (k < 1) this.raf = requestAnimationFrame(this._tick);
+          else { this.anim = null; this.raf = 0; }
+        };
+      }
 
       // --------------------------------------------------------------------------
       // 5.3.2 Screen Wake Lock Controller
@@ -2464,6 +2783,7 @@
       // --------------------------------------------------------------------------
       const MapEngine = {
         map: null,
+        tracker: null,
         markers: new Map(),
         vehicleMarker: null,
         vehicleEl: null,
@@ -2490,6 +2810,31 @@
             this.createVehicleMarker();
             this.setupOverpassLayers();
             ParkingApp.loadNearbyLots();
+
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            this.tracker = new VehicleTracker(this.map, {
+              wsUrl: `${protocol}://${window.location.host}/ws/vehicle`,
+              deviceId: (STATE.config && STATE.config.traccarDeviceId) || 'OP-TRACKER-01',
+              follow: STATE.isCameraFollowing,
+              onStatus: (status) => {
+                if (status === 'lost') {
+                  GPSMonitor.setSignalLostState(true);
+                } else if (status === 'live') {
+                  GPSMonitor.setSignalLostState(false);
+                }
+              },
+              onFix: (fix) => {
+                GPSMonitor.onValidFix();
+                STATE.userLocation.lat = fix.lat;
+                STATE.userLocation.lng = fix.lon;
+                STATE.userLocation.heading = fix.heading || 0;
+                STATE.userLocation.speed = (fix.speed || 0) * 3.6;
+                STATE.userLocation.accuracy = fix.accuracy || 5;
+                TelemetryController.update(STATE.userLocation);
+              }
+            });
+            this.tracker.start();
+
             API.initVehicleWebSocket();
           });
 
@@ -3025,6 +3370,7 @@
             btnRecenter.onclick = () => {
               STATE.isCameraFollowing = true;
               btnRecenter.classList.remove('visible');
+              if (MapEngine.tracker) MapEngine.tracker.recenter();
               MapEngine.map.easeTo({
                 center: [STATE.userLocation.lng, STATE.userLocation.lat],
                 bearing: STATE.userLocation.heading,
@@ -3568,6 +3914,7 @@
           };
 
           WakeLockManager.acquire();
+          if (MapEngine.tracker) MapEngine.tracker.o.follow = STATE.isCameraFollowing;
 
           // Switch view to trip
           UIController.switchTab('trip');
@@ -3906,6 +4253,7 @@
           STATE.activeTrip = null;
           cancelAnimationFrame(STATE.animationFrameId);
           STATE.isCameraFollowing = true;
+          if (MapEngine.tracker) MapEngine.tracker.o.follow = true;
           const recenterBtn = document.getElementById('btn-recenter-nav');
           if (recenterBtn) recenterBtn.classList.remove('visible');
 
