@@ -743,18 +743,6 @@ def viewport_places_endpoint(
     """
     from traccar_service import BENGALURU_PLACES_CATALOG  # noqa
 
-    # Category tiers by zoom level
-    high_priority = {"Airport", "Metro", "Transit", "Landmark", "Mall & Parking", "Park", "Stadium"}
-    mid_priority  = high_priority | {"Hospital", "Tech Park", "Neighborhood", "Hotel", "Commercial"}
-    all_categories = mid_priority | {"Cafe", "Restaurant", "Fuel", "Fuel Station"}
-
-    if zoom >= 15.5:
-        allowed = all_categories
-    elif zoom >= 13.0:
-        allowed = mid_priority
-    else:
-        allowed = high_priority
-
     results = []
     for place in BENGALURU_PLACES_CATALOG:
         lat = place.get("lat")
@@ -763,8 +751,6 @@ def viewport_places_endpoint(
         if lat is None or lon is None:
             continue
         if not (min_lat <= lat <= max_lat and min_lon <= lon <= max_lon):
-            continue
-        if cat not in allowed:
             continue
         results.append({
             "name": place.get("name", ""),
