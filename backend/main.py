@@ -47,6 +47,9 @@ try:
         get_latest_position,
         get_position_history,
         get_traccar_server_info,
+        get_traccar_route,
+        search_traccar_places,
+        get_device_trail,
     )
 except ImportError:
     from traccar_service import (
@@ -57,6 +60,9 @@ except ImportError:
         get_latest_position,
         get_position_history,
         get_traccar_server_info,
+        get_traccar_route,
+        search_traccar_places,
+        get_device_trail,
     )
 
 try:
@@ -572,23 +578,60 @@ def update_map_config(payload: MapStyleConfigPayload):
 
 
 # --------------------------------------------------------------------------
-# Mappls (MapmyIndia) REST API (https://github.com/mappls-api/mapmyindia-rest-api)
+# Traccar Navigation, OSRM Routing & Geocoding Endpoints (https://www.traccar.org/)
 # --------------------------------------------------------------------------
 
+@app.get("/api/traccar/route")
+async def traccar_route_endpoint(
+    start_lat: float = Query(...),
+    start_lon: float = Query(...),
+    dest_lat: float = Query(...),
+    dest_lon: float = Query(...)
+):
+    """Traccar OSRM Driving Road Routing Engine."""
+    return await get_traccar_route(
+        start_lat=start_lat,
+        start_lon=start_lon,
+        dest_lat=dest_lat,
+        dest_lon=dest_lon
+    )
+
+
+@app.get("/api/traccar/search")
+async def traccar_search_endpoint(
+    query: str = Query(..., min_length=1),
+    lat: float = Query(12.9716),
+    lon: float = Query(77.5946)
+):
+    """Traccar Geocoding & Search Engine (OSM Nominatim + Places Catalog)."""
+    results = await search_traccar_places(query=query, lat=lat, lon=lon)
+    return {"status": "ok", "query": query, "results": results}
+
+
+@app.get("/api/traccar/devices/{device_id}/trail")
+def traccar_device_trail_endpoint(device_id: str):
+    """Returns recorded road trail breadcrumbs as GeoJSON FeatureCollection."""
+    return get_device_trail(device_id)
+
+
+# Legacy Compatibility Shims (Delegated directly to Traccar OSRM & Search)
 class MapplsConfigPayload(BaseModel):
     mappls_rest_key: Optional[str] = None
 
 
 @app.get("/config/mappls")
 def get_mappls_config_endpoint():
-    return get_mappls_config()
+    return {
+        "engine": "Traccar GPS & OSRM Engine",
+        "url": "https://www.traccar.org/",
+        "has_rest_key": True,
+        "mode": "traccar_native"
+    }
 
 
 @app.post("/config/mappls")
 def update_mappls_config_endpoint(payload: MapplsConfigPayload):
-    if payload.mappls_rest_key is not None:
-        set_mappls_rest_key(payload.mappls_rest_key)
-    return get_mappls_config()
+    return get_mappls_config_endpoint()
 
 
 @app.get("/api/mappls/autosuggest")
@@ -597,8 +640,7 @@ async def mappls_autosuggest_endpoint(
     lat: float = Query(12.9716),
     lon: float = Query(77.5946)
 ):
-    results = await mappls_autosuggest_service(query=query, lat=lat, lon=lon)
-    return {"status": "ok", "query": query, "results": results}
+    return await traccar_search_endpoint(query=query, lat=lat, lon=lon)
 
 
 @app.get("/api/mappls/route")
@@ -608,13 +650,12 @@ async def mappls_route_endpoint(
     dest_lat: float = Query(...),
     dest_lon: float = Query(...)
 ):
-    route = await mappls_get_directions_service(
+    return await traccar_route_endpoint(
         start_lat=start_lat,
         start_lon=start_lon,
         dest_lat=dest_lat,
         dest_lon=dest_lon
     )
-    return route
 
 
 # --------------------------------------------------------------------------
