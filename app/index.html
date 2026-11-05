@@ -1301,19 +1301,29 @@
       top: 34px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.9);
-      color: #f8fafc;
-      padding: 1.5px 6px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #0f172a;
+      padding: 1.5px 7px;
       border-radius: 4px;
-      font-size: 10px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       white-space: nowrap;
-      max-width: 130px;
+      max-width: 160px;
       overflow: hidden;
       text-overflow: ellipsis;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.35);
-      border: 0.5px solid rgba(255,255,255,0.2);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.28);
+      border: 1px solid rgba(0,0,0,0.1);
       pointer-events: none;
+      letter-spacing: -0.2px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .gmap-poi-label {
+        background: rgba(15, 23, 42, 0.94);
+        color: #f8fafc;
+        border-color: rgba(255,255,255,0.2);
+        box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+      }
     }
     /* POI category thematic backgrounds matching Google Maps */
     .gmap-poi-hospital  { background: #ef4444; }
@@ -3555,8 +3565,8 @@
         async loadViewportPois() {
           if (!this.map) return;
           const zoom = this.map.getZoom();
-          // Don't clutter map at very low zoom; hide all POIs below zoom 11
-          if (zoom < 11) {
+          // Hide all POIs only at extreme regional zoom below 9
+          if (zoom < 9) {
             this.clearPoiMarkers();
             return;
           }
@@ -3642,8 +3652,7 @@
         renderPoiMarkers(places) {
           this.clearPoiMarkers();
           if (!this.map || !places || !places.length) return;
-          const zoom = this.map.getZoom();
-          const showLabel = zoom >= 13.5;
+          const showLabel = true; // Always display name on map without clicking
 
           places.forEach((place) => {
             if (!place.lat || !place.lon) return;
@@ -4802,6 +4811,13 @@
           });
 
           UIController.showPlaceView();
+          const sidebar = document.getElementById('sidebar');
+          if (sidebar) {
+            sidebar.classList.remove('is-collapsed');
+            if (window.innerWidth < 900) {
+              sidebar.style.transform = 'translateY(calc(100% - 380px))';
+            }
+          }
           ParkingApp.showToast(`Selected ${item.name}`);
         }
       };
