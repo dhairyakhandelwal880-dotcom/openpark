@@ -135,6 +135,14 @@ def test_maplibre_config_endpoints():
     assert style_data["version"] == 8
     assert len(style_data["layers"]) > 50
 
+    # Test reverse building lookup endpoint
+    lookup_res = client.get("/api/places/lookup?lat=12.9716&lon=77.5946")
+    assert lookup_res.status_code == 200
+    lookup_data = lookup_res.json()
+    assert lookup_data["status"] == "ok"
+    assert "place" in lookup_data
+    assert "name" in lookup_data["place"]
+
 
 def test_mappls_rest_api_endpoints():
     # 1. Test Mappls config endpoint (delegated to Traccar)
