@@ -336,5 +336,63 @@ def test_geofabrik_endpoints():
     assert not_found_res.status_code == 404
 
 
+def test_google_maps_place_details_enrichment():
+    from traccar_service import enrich_place_details
+
+    # 1. Hospital archetype enrichment
+    hosp_raw = {"name": "Apollo Speciality Hospital", "category": "Hospital", "badge": "🏥", "lat": 12.895, "lon": 77.598}
+    hosp = enrich_place_details(hosp_raw)
+    assert hosp["archetype"] == "hospital"
+    assert hosp["rating"] >= 4.0 and hosp["rating"] <= 5.0
+    assert hosp["reviews_count"] >= 300
+    assert "24 hours" in hosp["open_status"].lower()
+    assert hosp["is_open"] is True
+    assert any("emergency" in a.lower() for a in hosp["amenities"])
+    assert any("pharmacy" in a.lower() for a in hosp["amenities"])
+    assert hosp["phone"].startswith("+91")
+    assert "unsplash" in hosp["banner_url"]
+    assert len(hosp["reviews"]) >= 2
+
+    # 2. Cafe archetype enrichment
+    cafe_raw = {"name": "Starbucks Coffee", "category": "Cafe", "badge": "☕", "lat": 12.971, "lon": 77.640}
+    cafe = enrich_place_details(cafe_raw)
+    assert cafe["archetype"] == "cafe"
+    assert cafe["rating"] >= 4.0
+    assert "₹" in cafe["price_tier"]
+    assert any("coffee" in a.lower() for a in cafe["amenities"])
+    assert any("wi-fi" in a.lower() for a in cafe["amenities"])
+    assert "starbucks" in cafe["website"]
+    assert len(cafe["reviews"]) >= 2
+
+    # 3. Restaurant archetype enrichment
+    rest_raw = {"name": "Truffles", "category": "Restaurant", "badge": "🍔", "lat": 12.935, "lon": 77.624}
+    rest = enrich_place_details(rest_raw)
+    assert rest["archetype"] == "restaurant"
+    assert any("dine-in" in a.lower() for a in rest["amenities"])
+    assert any("delivery" in a.lower() for a in rest["amenities"])
+
+    # 4. Fuel Station archetype enrichment
+    fuel_raw = {"name": "Shell Petrol Bunk", "category": "Fuel", "badge": "⛽", "lat": 12.920, "lon": 77.610}
+    fuel = enrich_place_details(fuel_raw)
+    assert fuel["archetype"] == "fuel"
+    assert "24 hours" in fuel["open_status"].lower()
+    assert any("ev charging" in a.lower() for a in fuel["amenities"])
+
+    # 5. Verify /api/traccar/search returns fully enriched Google Maps payload
+    res = client.get("/api/traccar/search?query=Apollo&lat=12.9716&lon=77.5946")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ok"
+    assert len(data["results"]) > 0
+    first = data["results"][0]
+    assert "rating" in first
+    assert "reviews_count" in first
+    assert "open_status" in first
+    assert "amenities" in first
+    assert "banner_url" in first
+    assert "reviews" in first
+
+
+
 
 
