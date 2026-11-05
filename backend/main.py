@@ -27,11 +27,20 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import redis.asyncio as aioredis
 import urllib.parse
-from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect, status, Query
+import logging
+from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, PlainTextResponse
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger("traccar")
+logging.basicConfig(level=logging.INFO)
+
+try:
+    from backend.overpass_service import get_overpass_features
+except ImportError:
+    from overpass_service import get_overpass_features
 
 try:
     from backend.iiot_service import get_lot_telemetry
@@ -659,12 +668,32 @@ async def mappls_route_endpoint(
 
 
 # --------------------------------------------------------------------------
+# OSM Overpass REST API (Parking Outlines, Fuel Stations, Toll Plazas)
+# --------------------------------------------------------------------------
+
+@app.get("/api/osm/overpass")
+def osm_overpass_endpoint(
+    bbox: Optional[str] = Query(None, description="Bounding box min_lon,min_lat,max_lon,max_lat"),
+    category: Optional[str] = Query(None, description="Filter: parking, fuel, toll")
+):
+    """
+    Returns OSM Overpass GeoJSON features:
+    - Parking lot outlines (polygons with amenity=parking)
+    - Fuel stations (points with amenity=fuel)
+    - Toll plazas (points with barrier=toll_booth / highway=toll_gantry)
+    Coordinates are strictly formatted as [lon, lat] per GeoJSON specification.
+    """
+    return get_overpass_features(bbox=bbox, category=category)
+
+
+# --------------------------------------------------------------------------
 # Traccar GPS Tracking Protocol & REST API (https://www.traccar.org/)
 # --------------------------------------------------------------------------
 
 @app.get("/api/traccar")
 @app.post("/api/traccar")
 async def traccar_client_endpoint(
+    request: Request,
     id: Optional[str] = Query(None, description="Traccar device ID"),
     lat: Optional[float] = Query(None),
     lon: Optional[float] = Query(None),
@@ -679,27 +708,65 @@ async def traccar_client_endpoint(
 ):
     """
     Standard Traccar Client / OsmAnd Protocol Ingestion.
+    Accepts GET and POST requests and logs the raw incoming request.
     Supports official Traccar Client Android/iOS apps and hardware GPS trackers.
     """
-    dev_id = id or (payload.deviceId if payload else None) or (payload.id if payload else None) or "OP-TRACKER-01"
+    raw_body = await request.body()
+    body_str = raw_body.decode("utf-8", errors="replace")
+    client_ip = request.client.host if request.client else "unknown"
+    logger.info("TRACCAR RAW [%s] client=%s query=%s body=%s", request.method, client_ip, request.url.query, body_str)
+
+    body_json = {}
+    if body_str:
+        try:
+            body_json = json.loads(body_str)
+        except Exception:
+            pass
+
+    dev_id = id or (payload.deviceId if payload else None) or (payload.id if payload else None) or body_json.get("deviceId") or body_json.get("id") or "OP-TRACKER-01"
+    
     latitude = lat if lat is not None else (payload.latitude if payload and payload.latitude is not None else (payload.lat if payload else None))
+    if latitude is None and body_json:
+        latitude = body_json.get("latitude", body_json.get("lat"))
+
     longitude = lon if lon is not None else (payload.longitude if payload and payload.longitude is not None else (payload.lon if payload else None))
+    if longitude is None and body_json:
+        longitude = body_json.get("longitude", body_json.get("lon"))
 
     if latitude is None or longitude is None:
         return {"status": "ok", "message": "Traccar listener active. Waiting for coordinates."}
 
-    spd = speed if speed is not None else (payload.speed if payload else None)
-    course_val = bearing if bearing is not None else (payload.course if payload and payload.course is not None else (payload.bearing if payload else None))
-    alt = altitude if altitude is not None else (payload.altitude if payload else None)
-    acc = accuracy if accuracy is not None else (payload.accuracy if payload else None)
-    battery_val = batt if batt is not None else (payload.battery if payload and payload.battery is not None else (payload.batt if payload else None))
-    is_charging = charge if charge is not None else (payload.charge if payload else None)
+    latitude = float(latitude)
+    longitude = float(longitude)
+
+    spd = speed if speed is not None else (payload.speed if payload else body_json.get("speed"))
+    if spd is not None:
+        spd = float(spd)
+
+    course_val = bearing if bearing is not None else (payload.course if payload and payload.course is not None else (payload.bearing if payload else body_json.get("course", body_json.get("bearing"))))
+    if course_val is not None:
+        course_val = float(course_val)
+
+    alt = altitude if altitude is not None else (payload.altitude if payload else body_json.get("altitude"))
+    if alt is not None:
+        alt = float(alt)
+
+    acc = accuracy if accuracy is not None else (payload.accuracy if payload else body_json.get("accuracy"))
+    if acc is not None:
+        acc = float(acc)
+
+    battery_val = batt if batt is not None else (payload.battery if payload and payload.battery is not None else (payload.batt if payload else body_json.get("battery", body_json.get("batt"))))
+    if battery_val is not None:
+        battery_val = float(battery_val)
+
+    is_charging = charge if charge is not None else (payload.charge if payload else body_json.get("charge"))
+    ts = timestamp or (payload.timestamp if payload else body_json.get("timestamp"))
 
     pos = process_traccar_ping(
         device_id=dev_id,
         lat=latitude,
         lon=longitude,
-        timestamp=timestamp or (payload.timestamp if payload else None),
+        timestamp=ts,
         speed=spd,
         bearing=course_val,
         altitude=alt,
@@ -791,6 +858,13 @@ async def websocket_traccar_standard_socket(websocket: WebSocket):
             data = await websocket.receive_text()
             if data == "ping":
                 await websocket.send_text("pong")
+                continue
+            try:
+                payload = json.loads(data)
+                if payload.get("type") == "ping" or payload.get("action") == "ping":
+                    await websocket.send_json({"type": "pong", "time": datetime.now(timezone.utc).isoformat()})
+            except Exception:
+                pass
     except WebSocketDisconnect:
         manager.disconnect_vehicle(websocket)
     except Exception:
@@ -1379,7 +1453,19 @@ async def websocket_vehicle_tracking(websocket: WebSocket):
 
     try:
         while True:
-            message = await websocket.receive_json()
+            raw_msg = await websocket.receive_text()
+            if raw_msg == "ping":
+                await websocket.send_text("pong")
+                continue
+            try:
+                message = json.loads(raw_msg)
+            except Exception:
+                continue
+
+            if message.get("type") == "ping" or message.get("action") == "ping":
+                await websocket.send_json({"type": "pong", "time": datetime.now(timezone.utc).isoformat()})
+                continue
+
             lat = message.get("lat")
             lon = message.get("lon")
             dest_lot_id = message.get("destination_lot_id")
