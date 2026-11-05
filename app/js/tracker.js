@@ -142,7 +142,7 @@ export class VehicleTracker {
     if (!Number.isFinite(ts)) ts = Date.now();
     else if (ts < 1e12) ts *= 1000; // seconds -> ms
 
-    const r = this.filter.update({
+    this.feedFix({
       lat: toNum(pos.lat ?? pos.latitude),
       lon: toNum(pos.lon ?? pos.lng ?? pos.longitude),
       ts,
@@ -150,8 +150,30 @@ export class VehicleTracker {
       speed: toNum(pos.speed), // m/s
       heading: toNum(pos.heading ?? pos.bearing ?? pos.course),
     });
+  }
+
+  // Allow external sources (device GPS, simulator, etc.) to feed fixes directly
+  feedFix(pos) {
+    if (!pos) return;
+    const lat = toNum(pos.lat ?? pos.latitude);
+    const lon = toNum(pos.lon ?? pos.lng ?? pos.longitude);
+    let ts = toNum(pos.ts ?? pos.timestamp ?? pos.fixTime);
+    if (!Number.isFinite(ts)) ts = Date.now();
+    else if (ts < 1e12) ts *= 1000;
+
+    let speed = toNum(pos.speed ?? pos.speedMs);
+    if (speed > 40) speed /= 3.6; // convert km/h to m/s if passed in km/h
+
+    const r = this.filter.update({
+      lat,
+      lon,
+      ts,
+      accuracy: toNum(pos.accuracy),
+      speed,
+      heading: toNum(pos.heading ?? pos.bearing ?? pos.course),
+    });
     if (!r.ok) { console.debug('[tracker] rejected:', r.reason); return; }
-    this.lastFixAt = Date.now(); // local clock on purpose: immune to device clock skew
+    this.lastFixAt = Date.now();
     this._animateTo(r.fix);
     this._emit();
     this.o.onFix?.(r.fix);
@@ -220,32 +242,49 @@ export class VehicleTracker {
     const now = performance.now();
     const heading = fix.heading ?? this.shown?.heading ?? 0;
     if (!this.shown) {
-      this.shown = { lat: fix.lat, lon: fix.lon, heading };
-      this.marker.setLngLat([fix.lon, fix.lat]).setRotation(heading).addTo(this.map); // [lon, lat]
+      this.shown = { lat: fix.lat, lon: fix.lon, heading, speed: fix.speed || 0 };
+      this.marker.setLngLat([fix.lon, fix.lat]);
+      if (typeof this.marker.setRotation === 'function') {
+        this.marker.setRotation(heading);
+      }
+      this.marker.addTo(this.map); // [lon, lat]
       this.map.jumpTo({ center: [fix.lon, fix.lat], zoom: Math.max(this.map.getZoom(), 16) });
       this.prevFixAt = now;
       return;
     }
-    // Glide over roughly the time since the previous fix, so motion looks continuous.
-    const dur = clamp(now - this.prevFixAt, 250, 2000);
+    // Glide over roughly the time since previous fix (+5% padding) so motion flows continuously
+    const sampleDt = this.prevFixAt > 0 ? (now - this.prevFixAt) : 1000;
+    const dur = clamp(sampleDt * 1.05, 300, 2500);
     this.prevFixAt = now;
-    this.anim = { from: { ...this.shown }, to: { lat: fix.lat, lon: fix.lon, heading }, start: now, dur };
+    this.anim = {
+      from: { ...this.shown },
+      to: { lat: fix.lat, lon: fix.lon, heading, speed: fix.speed || 0 },
+      start: now,
+      dur
+    };
     if (!this.raf) this.raf = requestAnimationFrame(this._tick);
   }
 
   _tick = (t) => {
     const a = this.anim;
     if (!a) { this.raf = 0; return; }
-    const k = clamp((t - a.start) / a.dur, 0, 1);
-    let dh = ((a.to.heading - a.from.heading + 540) % 360) - 180; // shortest arc
+    const rawK = clamp((t - a.start) / a.dur, 0, 1);
+    // Hermite smoothstep easing (3k^2 - 2k^3) gives silky-smooth continuous movement
+    const k = rawK * rawK * (3 - 2 * rawK);
+
+    let dh = ((a.to.heading - a.from.heading + 540) % 360) - 180; // shortest arc [-180, 180]
     this.shown = {
       lat: a.from.lat + (a.to.lat - a.from.lat) * k,
       lon: a.from.lon + (a.to.lon - a.from.lon) * k,
       heading: (a.from.heading + dh * k + 360) % 360,
+      speed: a.from.speed + ((a.to.speed || 0) - (a.from.speed || 0)) * k,
     };
-    this.marker.setLngLat([this.shown.lon, this.shown.lat]).setRotation(this.shown.heading);
+    this.marker.setLngLat([this.shown.lon, this.shown.lat]);
+    if (typeof this.marker.setRotation === 'function') {
+      this.marker.setRotation(this.shown.heading);
+    }
     if (this.o.follow) this.map.jumpTo({ center: [this.shown.lon, this.shown.lat] });
-    if (k < 1) this.raf = requestAnimationFrame(this._tick);
+    if (rawK < 1) this.raf = requestAnimationFrame(this._tick);
     else { this.anim = null; this.raf = 0; }
   };
 }
