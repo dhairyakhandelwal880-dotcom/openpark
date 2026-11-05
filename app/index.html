@@ -2722,7 +2722,14 @@
             this.setupRouteSource();
             this.createVehicleMarker();
             this.setupOverpassLayers();
-            ParkingApp.loadNearbyLots();
+
+            const cur = STATE.userLocation;
+            if (cur && (cur.lat !== CONFIG.DEFAULT_COORDS[1] || cur.lng !== CONFIG.DEFAULT_COORDS[0])) {
+              this.map.jumpTo({ center: [cur.lng, cur.lat], zoom: 16 });
+              ParkingApp.loadNearbyLots(cur.lat, cur.lng);
+            } else {
+              ParkingApp.loadNearbyLots();
+            }
 
             const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
             this.tracker = new VehicleTracker(this.map, {
@@ -4312,6 +4319,114 @@
               }
             });
           }
+
+          // Automatically capture real-time physical device location on app load
+          this.startRealtimeDeviceLocation();
+        },
+
+        startRealtimeDeviceLocation() {
+          const locBtn = document.getElementById('btn-my-location');
+          if (!('geolocation' in navigator)) {
+            console.warn('[Geolocation] Geolocation API not supported by this browser');
+            return;
+          }
+
+          if (locBtn) locBtn.classList.add('active-blue', 'active-pulse');
+          STATE.isCameraFollowing = true;
+          STATE.isTrackingLocation = true;
+          WakeLockManager.acquire();
+
+          // 1. Rapid initial device location lock (maximumAge: 0, high accuracy)
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
+              const fix = {
+                lat: latitude,
+                lng: longitude,
+                speed: (speed || 0) * 3.6,
+                speedMs: speed || 0,
+                heading: heading || STATE.userLocation.heading || 0,
+                altitude: altitude || 920,
+                accuracy: accuracy || 5,
+                timestamp: pos.timestamp || Date.now()
+              };
+
+              const filteredFix = GPSFilter.filterFix(fix);
+              if (filteredFix) {
+                STATE.userLocation = filteredFix;
+                GPSMonitor.onValidFix();
+                if (MapEngine.tracker) MapEngine.tracker.feedFix(filteredFix);
+                else MapEngine.updateVehicle(filteredFix);
+
+                if (MapEngine.map) {
+                  MapEngine.map.flyTo({
+                    center: [filteredFix.lng, filteredFix.lat],
+                    zoom: 16,
+                    duration: 800
+                  });
+                }
+                ParkingApp.loadNearbyLots(filteredFix.lat, filteredFix.lng);
+                API.sendTraccarPing(filteredFix);
+                TelemetryController.update(filteredFix);
+              }
+            },
+            (err) => {
+              console.warn('[Geolocation] Initial lock warning:', err.message);
+              if (err.code === 1) { // PERMISSION_DENIED
+                if (locBtn) locBtn.classList.remove('active-blue', 'active-pulse');
+                STATE.isTrackingLocation = false;
+              }
+            },
+            { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+          );
+
+          // 2. Continuous real-time device location watching
+          if (STATE.watchId) navigator.geolocation.clearWatch(STATE.watchId);
+          STATE.watchId = navigator.geolocation.watchPosition(
+            (pos) => {
+              const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
+              const rawFix = {
+                lat: latitude,
+                lng: longitude,
+                speed: (speed || 0) * 3.6,
+                speedMs: speed || 0,
+                heading: heading || STATE.userLocation.heading || 0,
+                altitude: altitude || 920,
+                accuracy: accuracy || 5,
+                timestamp: pos.timestamp || Date.now()
+              };
+
+              const filteredFix = GPSFilter.filterFix(rawFix);
+              if (!filteredFix) return;
+
+              GPSMonitor.onValidFix();
+              STATE.userLocation = filteredFix;
+              STATE.isTrackingLocation = true;
+              if (locBtn) locBtn.classList.add('active-blue', 'active-pulse');
+
+              if (MapEngine.tracker) {
+                MapEngine.tracker.feedFix(filteredFix);
+              } else {
+                MapEngine.updateVehicle(filteredFix);
+              }
+
+              TelemetryController.update(filteredFix);
+              API.sendTraccarPing(filteredFix);
+
+              // Dynamically erase traveled path if currently navigating a route
+              if (STATE.activeTrip && NavigationEngine.trimRouteFrom) {
+                NavigationEngine.trimRouteFrom(filteredFix.lng, filteredFix.lat);
+              }
+            },
+            (err) => {
+              console.warn('[Geolocation] watchPosition warning:', err.message);
+              if (err.code === 1) {
+                if (locBtn) locBtn.classList.remove('active-blue', 'active-pulse');
+                STATE.isTrackingLocation = false;
+              }
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 }
+          );
         },
 
         async loadNearbyLots(lat = CONFIG.DEFAULT_COORDS[1], lon = CONFIG.DEFAULT_COORDS[0]) {
@@ -4358,61 +4473,19 @@
 
         toggleLiveLocation() {
           const locBtn = document.getElementById('btn-my-location');
-          if (STATE.isTrackingLocation) {
-            if (STATE.watchId) navigator.geolocation.clearWatch(STATE.watchId);
-            STATE.isTrackingLocation = false;
-            locBtn.classList.remove('active-blue', 'active-pulse');
-            if (!STATE.activeTrip) {
-              WakeLockManager.release();
-            }
-            this.showToast("Live location paused");
-          } else {
+          if (STATE.isTrackingLocation && STATE.userLocation && MapEngine.map) {
+            // Already tracking: re-center camera on device location like Google Maps
             STATE.isCameraFollowing = true;
-            locBtn.classList.add('active-blue', 'active-pulse');
-            WakeLockManager.acquire();
-
-            // Fly immediately to current user coordinates
-            if (STATE.userLocation && MapEngine.map) {
-              MapEngine.map.flyTo({
-                center: [STATE.userLocation.lng, STATE.userLocation.lat],
-                zoom: 16,
-                duration: 600
-              });
-            }
-
-            if ('geolocation' in navigator) {
-              STATE.watchId = navigator.geolocation.watchPosition(
-                (pos) => {
-                  STATE.isTrackingLocation = true;
-                  const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
-                  const rawFix = {
-                    lat: latitude,
-                    lng: longitude,
-                    speed: (speed || 0) * 3.6,
-                    speedMs: speed || 0,
-                    heading: heading || STATE.userLocation.heading || 0,
-                    altitude: altitude || 920,
-                    accuracy: accuracy || 5,
-                    timestamp: pos.timestamp || Date.now()
-                  };
-
-                  const filteredFix = GPSFilter.filterFix(rawFix);
-                  if (!filteredFix) return;
-
-                  GPSMonitor.onValidFix();
-                  ParkingApp.smoothGlideTo(filteredFix);
-                  API.sendTraccarPing(filteredFix);
-                },
-                (err) => {
-                  console.warn("Geolocation watch warning:", err);
-                  this.showToast("Streaming device telemetry (Sim/Traccar)");
-                },
-                { enableHighAccuracy: true, maximumAge: 1000 }
-              );
-              this.showToast("Tracking your location live");
-            } else {
-              this.showToast("Geolocation active");
-            }
+            if (MapEngine.tracker) MapEngine.tracker.o.follow = true;
+            MapEngine.map.flyTo({
+              center: [STATE.userLocation.lng, STATE.userLocation.lat],
+              zoom: Math.max(MapEngine.map.getZoom(), 16),
+              duration: 600
+            });
+            this.showToast("Centered on your location");
+          } else {
+            this.startRealtimeDeviceLocation();
+            this.showToast("Tracking your location live");
           }
         },
 
