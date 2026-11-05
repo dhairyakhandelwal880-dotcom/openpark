@@ -1892,10 +1892,12 @@
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
             <span>Map Style & Detail Level</span>
             <select id="select-map-style" class="styled-input" style="width: 100%;">
-              <option value="openfreemap-auto">Google Maps Ultra-Detail Vector (Auto Dark/Light) (Default)</option>
-              <option value="osm-standard">OpenStreetMap Standard (Every Building, Shop & Corner Name)</option>
-              <option value="carto-voyager">Carto Voyager Retina @2x (Clean City Vector)</option>
-              <option value="openfreemap-dark">Google Maps Ultra-Detail (Night Mode)</option>
+              <option value="google-roadmap">Google Maps Full Detail Retina (Roads, Buildings, PGs & Shops) (Default)</option>
+              <option value="google-traffic">Google Maps Live Traffic & Congestion Flow</option>
+              <option value="google-hybrid">Google Maps Satellite Hybrid</option>
+              <option value="openfreemap-vector">OpenFreeMap Ultra-Detail Vector</option>
+              <option value="osm-standard">OpenStreetMap Standard</option>
+              <option value="carto-voyager">Carto Voyager Retina @2x</option>
             </select>
           </div>
         </div>
@@ -2164,7 +2166,7 @@
           showHud: true,
           showBreadcrumbs: true,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
-          activeStyle: localStorage.getItem('openpark_map_style') || 'openfreemap-auto'
+          activeStyle: localStorage.getItem('openpark_map_style') || 'google-roadmap'
         },
         watchId: null,
         animationFrameId: null,
@@ -2182,7 +2184,62 @@
       // 5.3 Google Maps & OpenStreetMap Ultra-Detail Map Styles Configuration
       // --------------------------------------------------------------------------
       const MAP_STYLES = {
+        'google-roadmap': {
+          version: 8,
+          sources: {
+            'google-roadmap-tiles': {
+              type: 'raster',
+              tiles: [
+                'https://mt0.google.com/vt/lyrs=m&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt1.google.com/vt/lyrs=m&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt2.google.com/vt/lyrs=m&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt3.google.com/vt/lyrs=m&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}'
+              ],
+              tileSize: 256,
+              maxzoom: 22,
+              attribution: '© Google Maps'
+            }
+          },
+          layers: [{ id: 'google-roadmap-layer', type: 'raster', source: 'google-roadmap-tiles', minzoom: 0, maxzoom: 22 }]
+        },
+        'google-traffic': {
+          version: 8,
+          sources: {
+            'google-traffic-tiles': {
+              type: 'raster',
+              tiles: [
+                'https://mt0.google.com/vt/lyrs=m,traffic&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt1.google.com/vt/lyrs=m,traffic&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt2.google.com/vt/lyrs=m,traffic&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt3.google.com/vt/lyrs=m,traffic&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}'
+              ],
+              tileSize: 256,
+              maxzoom: 22,
+              attribution: '© Google Maps'
+            }
+          },
+          layers: [{ id: 'google-traffic-layer', type: 'raster', source: 'google-traffic-tiles', minzoom: 0, maxzoom: 22 }]
+        },
+        'google-hybrid': {
+          version: 8,
+          sources: {
+            'google-hybrid-tiles': {
+              type: 'raster',
+              tiles: [
+                'https://mt0.google.com/vt/lyrs=y&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt1.google.com/vt/lyrs=y&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt2.google.com/vt/lyrs=y&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
+                'https://mt3.google.com/vt/lyrs=y&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}'
+              ],
+              tileSize: 256,
+              maxzoom: 22,
+              attribution: '© Google Maps'
+            }
+          },
+          layers: [{ id: 'google-hybrid-layer', type: 'raster', source: 'google-hybrid-tiles', minzoom: 0, maxzoom: 22 }]
+        },
         'openfreemap-auto': '/api/map/style/ultra-detail',
+        'openfreemap-vector': '/api/map/style/ultra-detail',
         'openfreemap-liberty': '/api/map/style/ultra-detail',
         'openfreemap-dark': '/api/map/style/ultra-detail-dark',
         'liberty': '/api/map/style/ultra-detail',
@@ -2247,15 +2304,20 @@
       };
 
       function resolveMapStyleUrl(styleKey) {
-        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (!styleKey || styleKey === 'openfreemap-auto' || styleKey === 'auto' || styleKey === 'ultra-detail') {
-          return isDark ? '/api/map/style/ultra-detail-dark' : '/api/map/style/ultra-detail';
+        if (!styleKey || styleKey === 'google-roadmap' || styleKey === 'google-maps' || styleKey === 'openfreemap-auto' || styleKey === 'auto') {
+          return MAP_STYLES['google-roadmap'];
+        }
+        if (styleKey === 'google-traffic' || styleKey === 'traffic') {
+          return MAP_STYLES['google-traffic'];
+        }
+        if (styleKey === 'google-hybrid' || styleKey === 'hybrid') {
+          return MAP_STYLES['google-hybrid'];
+        }
+        if (styleKey === 'openfreemap-vector' || styleKey === 'ultra-detail' || styleKey === 'openfreemap-liberty' || styleKey === 'liberty') {
+          return '/api/map/style/ultra-detail';
         }
         if (styleKey === 'openfreemap-dark' || styleKey === 'dark' || styleKey === 'ultra-detail-dark') {
           return '/api/map/style/ultra-detail-dark';
-        }
-        if (styleKey === 'openfreemap-liberty' || styleKey === 'liberty') {
-          return '/api/map/style/ultra-detail';
         }
         if (styleKey === 'osm-standard' || styleKey === 'osm' || styleKey === 'traccar-osm') {
           return MAP_STYLES['osm-standard'];
@@ -2263,7 +2325,7 @@
         if (styleKey === 'carto-voyager') {
           return MAP_STYLES['carto-voyager'];
         }
-        return MAP_STYLES[styleKey] || (isDark ? '/api/map/style/ultra-detail-dark' : '/api/map/style/ultra-detail');
+        return MAP_STYLES[styleKey] || MAP_STYLES['google-roadmap'];
       }
 
       // --------------------------------------------------------------------------
@@ -3952,11 +4014,14 @@
             document.getElementById('btn-tilt-3d').classList.toggle('active-blue', STATE.is3D);
           };
 
-          // One-click Map Detail Switcher (Vector Ultra-Detail -> OSM Full Detail -> Carto Voyager)
-          const styleCycle = ['openfreemap-auto', 'osm-standard', 'carto-voyager'];
+          // One-click Map Detail Switcher (Google Maps Retina -> Live Traffic -> Satellite Hybrid -> Vector -> OSM)
+          const styleCycle = ['google-roadmap', 'google-traffic', 'google-hybrid', 'openfreemap-vector', 'osm-standard', 'carto-voyager'];
           const styleLabels = {
-            'openfreemap-auto': 'Google Maps Ultra-Detail Vector',
-            'osm-standard': 'OSM Full Detail (Every Building & Shop Name)',
+            'google-roadmap': 'Google Maps Full Detail Retina (Roads, Buildings, PGs & Shops)',
+            'google-traffic': 'Google Maps Live Traffic & Congestion Flow',
+            'google-hybrid': 'Google Maps Satellite Hybrid',
+            'openfreemap-vector': 'OpenFreeMap Ultra-Detail Vector',
+            'osm-standard': 'OpenStreetMap Standard',
             'carto-voyager': 'Carto Voyager Retina @2x'
           };
           document.getElementById('btn-toggle-layers').onclick = () => {
