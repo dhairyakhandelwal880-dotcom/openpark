@@ -254,3 +254,50 @@ def test_traccar_endpoints():
     assert trail_data["features"][0]["geometry"]["type"] == "LineString"
 
 
+def test_osm_overpass_features():
+    # 1. Test full features endpoint
+    res = client.get("/api/osm/overpass")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["type"] == "FeatureCollection"
+    assert len(data["features"]) >= 700
+
+    # 2. Test category filtering (parking, fuel, toll)
+    res_parking = client.get("/api/osm/overpass?category=parking")
+    assert res_parking.status_code == 200
+    parking_data = res_parking.json()
+    assert len(parking_data["features"]) >= 700
+    assert parking_data["features"][0]["geometry"]["type"] == "Polygon"
+    # Ensure [lon, lat] ordering
+    first_pt = parking_data["features"][0]["geometry"]["coordinates"][0][0]
+    assert 70.0 <= first_pt[0] <= 85.0  # Longitude
+    assert 10.0 <= first_pt[1] <= 20.0  # Latitude
+
+    res_fuel = client.get("/api/osm/overpass?category=fuel")
+    assert res_fuel.status_code == 200
+    fuel_data = res_fuel.json()
+    assert len(fuel_data["features"]) >= 10
+    assert fuel_data["features"][0]["geometry"]["type"] == "Point"
+
+    res_toll = client.get("/api/osm/overpass?category=toll")
+    assert res_toll.status_code == 200
+    toll_data = res_toll.json()
+    assert len(toll_data["features"]) >= 10
+    assert toll_data["features"][0]["geometry"]["type"] == "Point"
+
+
+def test_websocket_ping_pong():
+    with client.websocket_connect("/ws/vehicle") as ws:
+        # Send text ping
+        ws.send_text("ping")
+        data = ws.receive_text()
+        assert data == "pong"
+
+        # Send JSON ping
+        ws.send_json({"type": "ping", "timestamp": 123456789})
+        json_data = ws.receive_json()
+        assert json_data["type"] == "pong"
+        assert "time" in json_data
+
+
+
