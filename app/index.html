@@ -3346,6 +3346,7 @@
         vehicleEl: null,
         destinationMarker: null,
         poiMarkers: [],
+        routeLotMarkers: [],
 
         init() {
           const styleUrl = resolveMapStyleUrl(STATE.config.activeStyle);
@@ -3535,6 +3536,87 @@
             this.poiMarkers.forEach(m => m.remove());
             this.poiMarkers = [];
           }
+        },
+
+        // ---- Route Lot Markers (shown only along active route) ----
+        clearRouteLotMarkers() {
+          if (this.routeLotMarkers && this.routeLotMarkers.length) {
+            this.routeLotMarkers.forEach(m => m.remove());
+            this.routeLotMarkers = [];
+          }
+        },
+
+        renderRouteLotMarkers(lots) {
+          this.clearRouteLotMarkers();
+          if (!this.map || !lots || !lots.length) return;
+
+          lots.forEach(lot => {
+            const lon = Number(lot.lon !== undefined ? lot.lon : (lot.lng !== undefined ? lot.lng : lot.longitude));
+            const lat = Number(lot.lat !== undefined ? lot.lat : lot.latitude);
+            if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+
+            // Build the marker DOM – follow "no transform on root" rule
+            const el = document.createElement('div');
+            el.className = 'openpark-pin';
+            el.style.cssText = 'position:absolute!important;top:0!important;left:0!important;width:36px;height:44px;cursor:pointer;';
+
+            let statusColor = '#10b981'; // green
+            if ((lot.free_spots || 0) === 0) statusColor = '#ef4444';
+            else if ((lot.free_spots || 0) < 10) statusColor = '#f59e0b';
+
+            el.innerHTML = `
+              <svg viewBox="0 0 36 44" style="position:absolute;top:0;left:0;width:36px;height:44px;">
+                <path d="M18 0 C8.06 0 0 8.06 0 18 C0 30 18 44 18 44 C18 44 36 30 36 18 C36 8.06 27.94 0 18 0 Z" fill="${statusColor}" stroke="#fff" stroke-width="2"/>
+                <text x="18" y="22" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">P</text>
+              </svg>
+            `;
+
+            // Tooltip popup card
+            const popup = document.createElement('div');
+            popup.style.cssText = `
+              display:none; position:absolute; bottom:50px; left:50%; transform:translateX(-50%);
+              background:var(--surface-primary,#1e293b); color:var(--color-text-primary,#f1f5f9);
+              border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:12px 14px;
+              min-width:170px; box-shadow:0 8px 24px rgba(0,0,0,0.5); z-index:50; white-space:nowrap;
+            `;
+            popup.innerHTML = `
+              <div style="font-weight:700;font-size:13px;margin-bottom:4px;">${lot.name || 'Parking Lot'}</div>
+              <div style="font-size:11px;color:${statusColor};font-weight:600;margin-bottom:6px;">
+                ${lot.free_spots !== undefined ? lot.free_spots + ' spots free' : 'Available'}
+              </div>
+              <div style="font-size:11px;color:var(--color-text-secondary,#94a3b8);margin-bottom:8px;">
+                ${lot.price_car || '₹40'}/hr &nbsp;|&nbsp; ${lot.distance_km ? lot.distance_km + ' km' : ''}
+              </div>
+              <button onclick="NavigationEngine.startTrip(window._routeLot_${lot.id})"
+                style="width:100%;padding:6px 0;background:#2563eb;color:#fff;border:none;border-radius:7px;
+                       font-size:12px;font-weight:600;cursor:pointer;">
+                Navigate Here
+              </button>
+            `;
+            // Store lot on window keyed by id so the inline onclick can reach it
+            window['_routeLot_' + lot.id] = lot;
+            el.appendChild(popup);
+
+            el.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const isOpen = popup.style.display !== 'none';
+              // Close all other popups first
+              document.querySelectorAll('.openpark-pin').forEach(pin => {
+                const p = pin.querySelector('div');
+                if (p) p.style.display = 'none';
+              });
+              popup.style.display = isOpen ? 'none' : 'block';
+            });
+
+            const marker = new maplibregl.Marker({
+              element: el,
+              anchor: 'bottom'
+            })
+              .setLngLat([lon, lat])
+              .addTo(this.map);
+
+            this.routeLotMarkers.push(marker);
+          });
         },
 
         createVehicleMarker() {
@@ -4452,6 +4534,17 @@
             }
           };
 
+          // Auto-draw driving route to selected destination so user sees the way immediately
+          if (STATE.userLocation && STATE.userLocation.lat && MapEngine.map && MapEngine.map.getSource) {
+            const destObj = {
+              id: item.lot_id || ('place-' + Date.now()),
+              name: item.name,
+              lat: item.lat,
+              lon: item.lon
+            };
+            NavigationEngine.loadRoute(STATE.userLocation, destObj).catch(() => {});
+          }
+
           ParkingApp.loadNearbyLots(item.lat, item.lon).then(() => {
             const nearbyContainer = document.getElementById('pv-nearby-lots');
             if (nearbyContainer) {
@@ -4499,6 +4592,7 @@
         routePoints: [],
         routeSteps: [],
         currentStepIndex: 0,
+        isSimulating: false,
 
         async startTrip(lot) {
           STATE.activeTrip = {
@@ -4545,6 +4639,9 @@
         },
 
         async loadRoute(origin, destination) {
+          // Clear any previously shown route lot markers
+          MapEngine.clearRouteLotMarkers();
+
           const routeData = await API.getTraccarRoute(origin.lat, origin.lng, destination.lat, destination.lon);
 
           let coords = [];
@@ -4612,6 +4709,40 @@
           if (this.routeSteps.length > 0) {
             this.updateTurnBanner(this.routeSteps[0]);
           }
+
+          // Show parking lots along this route
+          this.showRouteLotsOnMap();
+        },
+
+        // ---- Helper: point-to-segment distance (metres) ----
+        _ptSegDist(pLat, pLon, aLat, aLon, bLat, bLon) {
+          const dx = bLon - aLon, dy = bLat - aLat;
+          const len2 = dx * dx + dy * dy;
+          let t = 0;
+          if (len2 > 0) t = Math.max(0, Math.min(1, ((pLon - aLon) * dx + (pLat - aLat) * dy) / len2));
+          return calculateDistanceMeters(pLat, pLon, aLat + t * dy, aLon + t * dx);
+        },
+
+        // ---- Show only lots within 400 m of the drawn route ----
+        showRouteLotsOnMap() {
+          if (!this.routePoints || this.routePoints.length < 2) return;
+          const THRESHOLD_M = 400;
+
+          // Filter STATE.lots to those close to any route segment
+          const onRoute = (STATE.lots || []).filter(lot => {
+            const lotLat = Number(lot.lat !== undefined ? lot.lat : lot.latitude);
+            const lotLon = Number(lot.lon !== undefined ? lot.lon : (lot.lng !== undefined ? lot.lng : lot.longitude));
+            if (!Number.isFinite(lotLat) || !Number.isFinite(lotLon)) return false;
+            for (let i = 0; i < this.routePoints.length - 1; i++) {
+              const a = this.routePoints[i];     // [lon, lat]
+              const b = this.routePoints[i + 1]; // [lon, lat]
+              const d = this._ptSegDist(lotLat, lotLon, a[1], a[0], b[1], b[0]);
+              if (d <= THRESHOLD_M) return true;
+            }
+            return false;
+          });
+
+          MapEngine.renderRouteLotMarkers(onRoute);
         },
 
         trimRouteFrom(curLng, curLat) {
@@ -4665,6 +4796,7 @@
           cancelAnimationFrame(STATE.animationFrameId);
           if (!this.routePoints || this.routePoints.length < 2) return;
 
+          this.isSimulating = true;
           STATE.isCameraFollowing = true;
           const recenterBtn = document.getElementById('btn-recenter-nav');
           if (recenterBtn) recenterBtn.classList.remove('visible');
@@ -4841,6 +4973,7 @@
         },
 
         handleArrival() {
+          this.isSimulating = false;
           document.getElementById('nav-turn-banner').style.display = 'none';
           const recenterBtn = document.getElementById('btn-recenter-nav');
           if (recenterBtn) recenterBtn.classList.remove('visible');
@@ -4851,6 +4984,7 @@
             if (rSource) rSource.setData({ type: 'FeatureCollection', features: [] });
             const bSource = MapEngine.map.getSource('breadcrumbs');
             if (bSource) bSource.setData({ type: 'FeatureCollection', features: [] });
+            MapEngine.clearRouteLotMarkers();
           }
 
           ParkingApp.showToast("Arrived at your destination!");
@@ -4883,9 +5017,12 @@
 
         endTrip() {
           STATE.activeTrip = null;
+          this.isSimulating = false;
           cancelAnimationFrame(STATE.animationFrameId);
           STATE.isCameraFollowing = true;
           if (MapEngine.tracker) MapEngine.tracker.o.follow = true;
+          // Clear parking lots shown along the route
+          MapEngine.clearRouteLotMarkers();
           const recenterBtn = document.getElementById('btn-recenter-nav');
           if (recenterBtn) recenterBtn.classList.remove('visible');
 
@@ -5084,9 +5221,17 @@
               if (!filteredFix) return;
 
               GPSMonitor.onValidFix();
-              STATE.userLocation = filteredFix;
               STATE.isTrackingLocation = true;
               if (locBtn) locBtn.classList.add('active-blue', 'active-pulse');
+
+              // Don't override simulation position with real GPS during simulated drive
+              if (NavigationEngine.isSimulating) {
+                TelemetryController.update(filteredFix);
+                API.sendTraccarPing(filteredFix);
+                return;
+              }
+
+              STATE.userLocation = filteredFix;
 
               if (MapEngine.tracker) {
                 MapEngine.tracker.feedFix(filteredFix, true);
