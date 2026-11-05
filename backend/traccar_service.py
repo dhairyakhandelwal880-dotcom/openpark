@@ -453,7 +453,35 @@ BENGALURU_PLACES_CATALOG = [
     {"name": "Trinity Metro Station", "category": "Metro", "badge": "🚇", "address": "Trinity Circle, MG Rd, Bengaluru", "lat": 12.9729, "lon": 77.6171, "aliases": ["trinity metro", "taj vivanta trinity"]},
     {"name": "Whitefield (Kadugodi) Metro Station", "category": "Metro", "badge": "🚇", "address": "Kadugodi, Whitefield, Bengaluru", "lat": 12.9961, "lon": 77.7607, "aliases": ["whitefield metro", "kadugodi metro"]},
     {"name": "Jayanagar Metro Station", "category": "Metro", "badge": "🚇", "address": "Rashtriya Vidyalaya Rd, 4th Block, Jayanagar, Bengaluru", "lat": 12.9299, "lon": 77.5801, "aliases": ["jayanagar metro", "rv road metro"]},
-    {"name": "Cubbon Park Metro Station", "category": "Metro", "badge": "🚇", "address": "Kasturba Rd, Shivaji Nagar, Bengaluru", "lat": 12.9806, "lon": 77.5973, "aliases": ["cubbon park metro", "chinnaswamy metro"]}
+    {"name": "Cubbon Park Metro Station", "category": "Metro", "badge": "🚇", "address": "Kasturba Rd, Shivaji Nagar, Bengaluru", "lat": 12.9806, "lon": 77.5973, "aliases": ["cubbon park metro", "chinnaswamy metro"]},
+
+    # Top Super-Speciality Hospitals
+    {"name": "Apollo Speciality Hospital Bannerghatta", "category": "Hospital", "badge": "🏥", "address": "154/11, Opp IIMB, Bannerghatta Rd, Bengaluru", "lat": 12.8953, "lon": 77.5982, "aliases": ["apollo hospital", "apollo", "apollo bannerghatta", "hospital", "emergency hospital"]},
+    {"name": "Manipal Hospital Old Airport Road", "category": "Hospital", "badge": "🏥", "address": "98 HAL Old Airport Rd, Kodihalli, Bengaluru", "lat": 12.9587, "lon": 77.6496, "aliases": ["manipal hospital", "manipal", "hospital", "emergency manipal"]},
+    {"name": "Fortis Hospital Cunningham Road", "category": "Hospital", "badge": "🏥", "address": "14 Cunningham Rd, Vasanth Nagar, Bengaluru", "lat": 12.9866, "lon": 77.5960, "aliases": ["fortis hospital", "fortis", "hospital"]},
+    {"name": "Narayana Institute of Cardiac Sciences", "category": "Hospital", "badge": "🏥", "address": "258/A Bommasandra Industrial Area, Anekal Taluk, Bengaluru", "lat": 12.8124, "lon": 77.6946, "aliases": ["narayana hrudayalaya", "narayana health", "narayana hospital", "hospital"]},
+    {"name": "St. John's Medical College Hospital", "category": "Hospital", "badge": "🏥", "address": "Sarjapur Main Rd, John Nagar, Koramangala, Bengaluru", "lat": 12.9304, "lon": 77.6200, "aliases": ["st johns hospital", "st johns", "hospital"]},
+
+    # Popular Cafes & Coffee Roasters
+    {"name": "Starbucks Coffee Indiranagar 100ft Rd", "category": "Cafe", "badge": "☕", "address": "100 Feet Rd, HAL 2nd Stage, Indiranagar, Bengaluru", "lat": 12.9719, "lon": 77.6412, "aliases": ["starbucks", "starbucks coffee", "starbucks indiranagar", "cafe", "coffee"]},
+    {"name": "Third Wave Coffee Roasters Koramangala", "category": "Cafe", "badge": "☕", "address": "984 80 Feet Rd, 4th Block, Koramangala, Bengaluru", "lat": 12.9341, "lon": 77.6321, "aliases": ["third wave coffee", "third wave", "cafe", "coffee"]},
+    {"name": "Blue Tokai Coffee Roasters Indiranagar", "category": "Cafe", "badge": "☕", "address": "583 12th Main Rd, HAL 2nd Stage, Indiranagar, Bengaluru", "lat": 12.9722, "lon": 77.6391, "aliases": ["blue tokai", "blue tokai coffee", "cafe", "coffee"]},
+    {"name": "Cafe Coffee Day (CCD) The Square", "category": "Cafe", "badge": "☕", "address": "23/2 Vittal Mallya Rd, Shanthala Nagar, Bengaluru", "lat": 12.9715, "lon": 77.5972, "aliases": ["cafe coffee day", "ccd", "the square ccd", "cafe", "coffee"]},
+    {"name": "DYU Art Cafe Koramangala", "category": "Cafe", "badge": "☕", "address": "KHB Colony, 5th Block, Koramangala, Bengaluru", "lat": 12.9348, "lon": 77.6192, "aliases": ["dyu art cafe", "dyu cafe", "cafe", "coffee"]},
+
+    # Iconic Bengaluru Restaurants & Food Destinations
+    {"name": "Truffles Koramangala 5th Block", "category": "Restaurant", "badge": "🍔", "address": "93/A Apex Building, 5th Block, Koramangala, Bengaluru", "lat": 12.9352, "lon": 77.6245, "aliases": ["truffles", "truffles koramangala", "burger", "restaurant", "food"]},
+    {"name": "Toit Brewpub Indiranagar", "category": "Restaurant", "badge": "🍔", "address": "298 100 Feet Rd, Near KFC Signal, Indiranagar, Bengaluru", "lat": 12.9793, "lon": 77.6406, "aliases": ["toit", "toit pub", "brewpub", "restaurant", "food"]},
+    {"name": "Vidyarthi Bhavan Gandhi Bazaar", "category": "Restaurant", "badge": "🍔", "address": "32 Gandhi Bazaar Main Rd, Basavanagudi, Bengaluru", "lat": 12.9431, "lon": 77.5739, "aliases": ["vidyarthi bhavan", "dosa", "masala dosa", "restaurant", "food"]},
+    {"name": "Central Tiffin Room (CTR) Shri Sagar", "category": "Restaurant", "badge": "🍔", "address": "7th Cross Margosa Rd, Malleshwaram, Bengaluru", "lat": 12.9984, "lon": 77.5710, "aliases": ["ctr", "shri sagar", "ctr malleswaram", "restaurant", "food"]},
+    {"name": "Meghana Foods Biryani Koramangala", "category": "Restaurant", "badge": "🍔", "address": "124 1st Cross Rd, 5th Block, Koramangala, Bengaluru", "lat": 12.9350, "lon": 77.6225, "aliases": ["meghana foods", "meghana biryani", "biryani", "restaurant", "food"]},
+    {"name": "Empire Restaurant Church Street", "category": "Restaurant", "badge": "🍔", "address": "36 Church St, Shanthala Nagar, Ashok Nagar, Bengaluru", "lat": 12.9750, "lon": 77.6042, "aliases": ["empire restaurant", "empire", "kebab", "restaurant", "food"]},
+
+    # Major 24/7 Fuel & EV Fast Charging Stations
+    {"name": "Shell Fuel Station & EV Supercharger Bellandur", "category": "Fuel Station", "badge": "⛽", "address": "Outer Ring Rd, Bellandur, Bengaluru", "lat": 12.9275, "lon": 77.6740, "aliases": ["shell", "shell petrol", "shell bunk", "shell bellandur", "fuel", "petrol", "ev charging"]},
+    {"name": "Indian Oil Petrol Pump (COCO) MG Road", "category": "Fuel Station", "badge": "⛽", "address": "1 MG Rd, Opp Trinity Circle, Bengaluru", "lat": 12.9735, "lon": 77.6180, "aliases": ["indian oil", "iocl", "petrol pump", "mg road petrol", "fuel", "petrol"]},
+    {"name": "Bharat Petroleum (BPCL) Speed Station Koramangala", "category": "Fuel Station", "badge": "⛽", "address": "80 Feet Rd, 4th Block, Koramangala, Bengaluru", "lat": 12.9320, "lon": 77.6295, "aliases": ["bpcl", "bharat petroleum", "petrol bunk", "fuel", "petrol"]},
+    {"name": "HP Petrol Pump & Fast EV Charger Indiranagar", "category": "Fuel Station", "badge": "⛽", "address": "100 Feet Rd, HAL 2nd Stage, Indiranagar, Bengaluru", "lat": 12.9705, "lon": 77.6415, "aliases": ["hp", "hpcl", "hindustan petroleum", "petrol bunk", "fuel", "petrol", "ev charger"]}
 ]
 
 
@@ -526,14 +554,15 @@ def enrich_place_details(place: Dict[str, Any]) -> Dict[str, Any]:
     """
     name = place.get("name", "Destination")
     cat = (place.get("category") or "").lower()
-    badge = place.get("badge") or resolve_place_badge(cat, "")
+    combined_info = f"{cat} {name}".lower()
+    badge = place.get("badge") or resolve_place_badge(cat, name)
     h = abs(hash(f"{name}_{place.get('lat')}_{place.get('lon')}"))
 
     rating = round(4.2 + (h % 7) * 0.1, 1)  # 4.2 to 4.8
     review_count = 350 + (h % 4800)
 
     # Determine place archetype
-    if badge == "🏥" or any(k in cat for k in ["hospital", "clinic", "medical", "doctor"]):
+    if badge == "🏥" or any(k in combined_info for k in ["hospital", "clinic", "medical", "doctor", "apollo", "manipal", "fortis", "narayana"]):
         archetype = "hospital"
         price_tier = "Insurance / Cashless TPA Accepted"
         open_status = "Open 24 hours"
@@ -556,7 +585,7 @@ def enrich_place_details(place: Dict[str, Any]) -> Dict[str, Any]:
             {"author": "Dr. Ramesh K.", "rating": 5, "text": "Outstanding emergency team and very clean inpatient facilities. Attentive nursing staff."},
             {"author": "Priya Sundaram", "rating": 5, "text": "Smooth admission process and transparent billing. Highly recommended for multi-specialty care."}
         ]
-    elif badge == "☕" or any(k in cat for k in ["cafe", "coffee"]):
+    elif badge == "☕" or any(k in combined_info for k in ["cafe", "coffee", "starbucks", "roasters", "espresso", "tea"]):
         archetype = "cafe"
         price_tier = ["₹₹ (₹350 for two)", "₹ (₹200 for two)", "₹₹₹ (₹600 for two)"][h % 3]
         open_status = "Open now • Closes 11:00 PM"
@@ -579,7 +608,7 @@ def enrich_place_details(place: Dict[str, Any]) -> Dict[str, Any]:
             {"author": "Aditi Sharma", "rating": 5, "text": "Best place to get work done with excellent cold brew and cozy corner tables with charging ports."},
             {"author": "Rohan Mehta", "rating": 4, "text": "Great atmosphere, soothing background music, and super friendly baristas."}
         ]
-    elif badge == "🍔" or any(k in cat for k in ["restaurant", "food", "fast_food", "pizza", "burger", "bistro", "bakery"]):
+    elif badge == "🍔" or any(k in combined_info for k in ["restaurant", "food", "fast_food", "pizza", "burger", "bistro", "bakery", "truffles", "biryani", "toit", "dosa", "hotel", "pub", "bar"]):
         archetype = "restaurant"
         price_tier = ["₹₹ (₹600 for two)", "₹₹₹ (₹1,200 for two)", "₹ (₹300 for two)"][h % 3]
         open_status = "Open now • Closes 11:30 PM"
@@ -602,7 +631,7 @@ def enrich_place_details(place: Dict[str, Any]) -> Dict[str, Any]:
             {"author": "Siddharth Rao", "rating": 5, "text": "Loved the gourmet burgers and pasta. Huge portion sizes and very reasonable prices!"},
             {"author": "Kavita Nair", "rating": 4, "text": "Prompt table service and vibrant ambiance. Perfect for weekend dinner with friends."}
         ]
-    elif badge == "⛽" or any(k in cat for k in ["fuel", "gas", "petrol"]):
+    elif badge == "⛽" or any(k in combined_info for k in ["fuel", "gas", "petrol", "shell", "indian oil", "bpcl", "hpcl"]):
         archetype = "fuel"
         price_tier = "Regulated City Rates"
         open_status = "Open 24 hours"
@@ -610,7 +639,7 @@ def enrich_place_details(place: Dict[str, Any]) -> Dict[str, Any]:
         hours_today = "Open 24 hours"
         hours_week = {"Mon-Sun": "Open 24 hours"}
         phone = f"+91 80 {2800 + (h % 1000)} {4000 + (h % 5999)}"
-        website = "https://www.iocl.com" if "indian oil" in name.lower() else "https://www.shell.in" if "shell" in name.lower() else "https://www.bharatpetroleum.in"
+        website = "https://www.shell.in" if "shell" in name.lower() else "https://www.iocl.com" if "indian oil" in name.lower() else "https://www.bharatpetroleum.in"
         amenities = [
             "⛽ Speed Petrol & Hi-Speed Diesel",
             "⚡ 60kW DC Fast EV Charging",
@@ -624,7 +653,7 @@ def enrich_place_details(place: Dict[str, Any]) -> Dict[str, Any]:
             {"author": "Gaurav Sen", "rating": 5, "text": "Quick fuel turnaround, clean forecourt, and the free nitrogen air dispenser was functioning well."},
             {"author": "Deepak M.", "rating": 4, "text": "Helpful staff, verified meter dispensing and clean rest area."}
         ]
-    elif badge == "🛍️" or any(k in cat for k in ["mall", "supermarket", "shop", "store"]):
+    elif badge == "🛍️" or any(k in combined_info for k in ["mall", "supermarket", "shop", "store", "commercial", "ub city"]):
         archetype = "shopping"
         price_tier = "Multi-Brand Shopping"
         open_status = "Open now • Closes 10:00 PM"
@@ -646,7 +675,7 @@ def enrich_place_details(place: Dict[str, Any]) -> Dict[str, Any]:
             {"author": "Sneha Gupta", "rating": 5, "text": "All top clothing brands under one roof, huge clean food court, and organized basement parking."},
             {"author": "Varun Joshi", "rating": 4, "text": "Great shopping destination with comfortable seating zones and clean amenities."}
         ]
-    elif badge == "🏛️" or any(k in cat for k in ["monument", "museum", "attraction", "tourism", "palace"]):
+    elif badge == "🏛️" or any(k in combined_info for k in ["monument", "museum", "attraction", "tourism", "palace", "vidhana"]):
         archetype = "landmark"
         price_tier = "Public Landmark"
         open_status = "Open • Closes 6:00 PM"
@@ -883,10 +912,13 @@ async def search_traccar_places(
     # 4. Fallback geocoded coordinate point if absolutely nothing matches
     if not results:
         hash_offset = (abs(hash(q_lower)) % 40) * 0.0006
+        fb_badge = resolve_place_badge("", raw_query)
+        cat_map = {"🏥": "Hospital", "☕": "Cafe", "🍔": "Restaurant", "⛽": "Fuel Station", "🛍️": "Shopping Mall", "🏛️": "Landmark"}
+        fb_cat = cat_map.get(fb_badge, "Destination")
         results.append({
             "name": f"{raw_query.title()}",
-            "badge": "📍",
-            "category": "Searched Road Point",
+            "badge": fb_badge,
+            "category": fb_cat,
             "address": f"Near Destination Corridor ({round(hash_offset * 100, 1)} km)",
             "lat": round(lat + hash_offset, 5),
             "lon": round(lon + hash_offset * 1.2, 5),
