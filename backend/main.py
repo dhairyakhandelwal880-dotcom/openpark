@@ -26,10 +26,11 @@ load_dotenv()
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import redis.asyncio as aioredis
+import urllib.parse
 from fastapi import FastAPI, HTTPException, Header, WebSocket, WebSocketDisconnect, status, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
 try:
@@ -41,15 +42,21 @@ try:
     from backend.traccar_service import (
         process_traccar_ping,
         get_all_devices,
+        get_device,
         get_all_positions,
+        get_latest_position,
         get_position_history,
+        get_traccar_server_info,
     )
 except ImportError:
     from traccar_service import (
         process_traccar_ping,
         get_all_devices,
+        get_device,
         get_all_positions,
+        get_latest_position,
         get_position_history,
+        get_traccar_server_info,
     )
 
 try:
@@ -250,6 +257,117 @@ manager = ConnectionManager()
 redis_client: Optional[aioredis.Redis] = None
 
 
+async def start_traccar_port_5055(broadcast_fn):
+    """
+    Standard Traccar Port 5055 OsmAnd Ingestion Server (https://www.traccar.org/osmand/):
+    Listens on TCP 5055 to ingest telemetry from official Traccar Client apps on iOS/Android
+    and hardware GPS devices.
+    """
+    async def handle_client(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+        try:
+            data = await asyncio.wait_for(reader.read(4096), timeout=4.0)
+            if not data:
+                writer.close()
+                return
+
+            raw_req = data.decode("utf-8", errors="ignore")
+            lines = raw_req.split("\r\n")
+            if not lines:
+                writer.close()
+                return
+
+            first_line = lines[0]
+            parts = first_line.split(" ")
+            if len(parts) >= 2:
+                method = parts[0]
+                path = parts[1]
+                parsed = urllib.parse.urlparse(path)
+                query_params = urllib.parse.parse_qs(parsed.query)
+
+                # Parse body for POST requests
+                if method == "POST" and "\r\n\r\n" in raw_req:
+                    body = raw_req.split("\r\n\r\n", 1)[1]
+                    try:
+                        if body.strip().startswith("{"):
+                            jb = json.loads(body)
+                            for k, v in jb.items():
+                                query_params[k] = [str(v)]
+                        else:
+                            body_params = urllib.parse.parse_qs(body)
+                            for k, v in body_params.items():
+                                if k not in query_params:
+                                    query_params[k] = v
+                    except Exception:
+                        pass
+
+                def get_p(key, cast_fn=str, default=None):
+                    v = query_params.get(key)
+                    if v and len(v) > 0:
+                        try:
+                            return cast_fn(v[0])
+                        except Exception:
+                            return default
+                    return default
+
+                dev_id = get_p("id") or get_p("device_id") or get_p("uniqueId") or "OP-TRACKER-01"
+                lat = get_p("lat", float) or get_p("latitude", float)
+                lon = get_p("lon", float) or get_p("longitude", float)
+
+                if lat is not None and lon is not None:
+                    raw_spd = get_p("speed", float)
+                    # OsmAnd sends speed in knots (1 knot = 1.852 km/h)
+                    speed_kmh = (raw_spd * 1.852) if raw_spd is not None else None
+                    bearing = get_p("bearing", float) or get_p("course", float) or get_p("hdg", float)
+                    alt = get_p("altitude", float) or get_p("alt", float)
+                    acc = get_p("accuracy", float) or get_p("acc", float)
+                    batt = get_p("batt", float) or get_p("battery", float)
+                    charge = get_p("charge", lambda x: x.lower() in ("true", "1", "yes"))
+
+                    pos = process_traccar_ping(
+                        device_id=dev_id,
+                        lat=lat,
+                        lon=lon,
+                        timestamp=get_p("timestamp"),
+                        speed=speed_kmh,
+                        bearing=bearing,
+                        altitude=alt,
+                        accuracy=acc,
+                        batt=batt,
+                        charge=charge,
+                        protocol="osmand-port-5055"
+                    )
+                    await broadcast_fn({
+                        "type": "traccar_position",
+                        "position": pos.model_dump()
+                    })
+
+            resp = (
+                "HTTP/1.1 200 OK\r\n"
+                "Content-Type: text/plain\r\n"
+                "Content-Length: 2\r\n"
+                "Connection: close\r\n"
+                "\r\n"
+                "OK"
+            )
+            writer.write(resp.encode("utf-8"))
+            await writer.drain()
+        except Exception:
+            pass
+        finally:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+
+    try:
+        server = await asyncio.start_server(handle_client, "0.0.0.0", 5055)
+        return server
+    except Exception as e:
+        print(f"Notice: Could not bind Traccar port 5055 ({e}). HTTP 8000 endpoints active.")
+        return None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global redis_client
@@ -260,14 +378,25 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Redis connection warning: {e}. Falling back to in-memory pub/sub.")
         redis_client = None
+
+    # Start Traccar port 5055 OsmAnd listener
+    t_server = await start_traccar_port_5055(manager.broadcast_vehicle)
+    if t_server:
+        print("Traccar Port 5055 listener active on 0.0.0.0:5055")
+
     yield
+
+    if t_server:
+        t_server.close()
+        await t_server.wait_closed()
+
     if redis_client:
         await redis_client.close()
 
 
 app = FastAPI(
     title="OpenPark API",
-    description="Open-source real-time parking platform for metro cities",
+    description="Open-source real-time parking platform powered by Traccar GPS (https://www.traccar.org/)",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -292,8 +421,84 @@ if os.path.isdir(DASHBOARD_DIR):
 
 
 @app.get("/", include_in_schema=False)
-def root_redirect():
+async def root_redirect(
+    id: Optional[str] = Query(None),
+    lat: Optional[float] = Query(None),
+    lon: Optional[float] = Query(None),
+    speed: Optional[float] = Query(None),
+    bearing: Optional[float] = Query(None),
+    altitude: Optional[float] = Query(None),
+    accuracy: Optional[float] = Query(None),
+    batt: Optional[float] = Query(None),
+    timestamp: Optional[str] = Query(None)
+):
+    """Accepts OsmAnd/Traccar client pings on root or redirects browser to /app/."""
+    if lat is not None and lon is not None:
+        raw_spd = speed
+        speed_kmh = (raw_spd * 1.852) if raw_spd is not None else None
+        pos = process_traccar_ping(
+            device_id=id or "OP-TRACKER-01",
+            lat=lat,
+            lon=lon,
+            timestamp=timestamp,
+            speed=speed_kmh,
+            bearing=bearing,
+            altitude=altitude,
+            accuracy=accuracy,
+            batt=batt,
+            protocol="osmand-port-8000"
+        )
+        await manager.broadcast_vehicle({
+            "type": "traccar_position",
+            "position": pos.model_dump()
+        })
+        return PlainTextResponse("OK")
     return RedirectResponse(url="/app/")
+
+
+class TraccarPingPayload(BaseModel):
+    id: Optional[str] = None
+    deviceId: Optional[str] = None
+    lat: Optional[float] = None
+    latitude: Optional[float] = None
+    lon: Optional[float] = None
+    longitude: Optional[float] = None
+    timestamp: Optional[str] = None
+    speed: Optional[float] = None
+    bearing: Optional[float] = None
+    course: Optional[float] = None
+    altitude: Optional[float] = None
+    accuracy: Optional[float] = None
+    batt: Optional[float] = None
+    battery: Optional[float] = None
+    charge: Optional[bool] = None
+
+
+@app.post("/", include_in_schema=False)
+async def root_traccar_post(payload: Optional[TraccarPingPayload] = None):
+    """Accepts POST Traccar client pings on root."""
+    if payload and (payload.lat is not None or payload.latitude is not None):
+        lat = payload.latitude if payload.latitude is not None else payload.lat
+        lon = payload.longitude if payload.longitude is not None else payload.lon
+        pos = process_traccar_ping(
+            device_id=payload.deviceId or payload.id or "OP-TRACKER-01",
+            lat=lat,
+            lon=lon,
+            timestamp=payload.timestamp,
+            speed=payload.speed,
+            bearing=payload.course or payload.bearing,
+            altitude=payload.altitude,
+            accuracy=payload.accuracy,
+            batt=payload.battery or payload.batt,
+            charge=payload.charge,
+            protocol="osmand-post-8000"
+        )
+        await manager.broadcast_vehicle({
+            "type": "traccar_position",
+            "position": pos.model_dump()
+        })
+        return PlainTextResponse("OK")
+    return PlainTextResponse("OK")
 
 
 
@@ -416,24 +621,6 @@ async def mappls_route_endpoint(
 # Traccar GPS Tracking Protocol & REST API (https://www.traccar.org/)
 # --------------------------------------------------------------------------
 
-class TraccarPingPayload(BaseModel):
-    id: Optional[str] = None
-    deviceId: Optional[str] = None
-    lat: Optional[float] = None
-    latitude: Optional[float] = None
-    lon: Optional[float] = None
-    longitude: Optional[float] = None
-    timestamp: Optional[str] = None
-    speed: Optional[float] = None
-    bearing: Optional[float] = None
-    course: Optional[float] = None
-    altitude: Optional[float] = None
-    accuracy: Optional[float] = None
-    batt: Optional[float] = None
-    battery: Optional[float] = None
-    charge: Optional[bool] = None
-
-
 @app.get("/api/traccar")
 @app.post("/api/traccar")
 async def traccar_client_endpoint(
@@ -505,6 +692,68 @@ def traccar_positions():
 def traccar_position_history(deviceId: str = Query("OP-TRACKER-01")):
     """Traccar REST API: Return position trail history for trajectory breadcrumbs."""
     return get_position_history(deviceId)
+
+
+@app.get("/api/server")
+def traccar_server_endpoint():
+    """Traccar Official REST API: Return server info and protocol capabilities (https://www.traccar.org/api-reference/)."""
+    return get_traccar_server_info()
+
+
+@app.get("/api/session")
+def traccar_session_endpoint():
+    """Traccar Official REST API: Current active session representation."""
+    return {
+        "id": 1,
+        "name": "OpenPark Driver",
+        "email": "driver@openpark.io",
+        "readonly": False,
+        "administrator": True,
+        "map": "MapLibre GL JS",
+        "latitude": 12.9716,
+        "longitude": 77.5946,
+        "zoom": 15
+    }
+
+
+@app.get("/api/devices/{device_id}")
+def traccar_device_detail(device_id: str):
+    """Traccar Official REST API: Retrieve specific GPS device details."""
+    dev = get_device(device_id)
+    if not dev:
+        raise HTTPException(status_code=404, detail=f"Traccar device '{device_id}' not found")
+    return dev
+
+
+@app.get("/api/positions/{device_id}")
+def traccar_position_detail(device_id: str):
+    """Traccar Official REST API: Retrieve latest fix for a specific device."""
+    pos = get_latest_position(device_id)
+    if not pos:
+        raise HTTPException(status_code=404, detail=f"No telemetry fixes for device '{device_id}'")
+    return pos
+
+
+@app.websocket("/api/socket")
+async def websocket_traccar_standard_socket(websocket: WebSocket):
+    """
+    Traccar Official Standard WebSocket Stream (https://www.traccar.org/api-reference/):
+    Emits initial snapshot of { devices: [...], positions: [...] } and streams real-time updates.
+    """
+    await manager.connect_vehicle(websocket)
+    try:
+        await websocket.send_json({
+            "devices": get_all_devices(),
+            "positions": get_all_positions()
+        })
+        while True:
+            data = await websocket.receive_text()
+            if data == "ping":
+                await websocket.send_text("pong")
+    except WebSocketDisconnect:
+        manager.disconnect_vehicle(websocket)
+    except Exception:
+        manager.disconnect_vehicle(websocket)
 
 
 @app.get("/lots")

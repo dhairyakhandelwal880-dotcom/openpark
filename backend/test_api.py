@@ -203,3 +203,28 @@ def test_traccar_endpoints():
     assert hist_res.status_code == 200
     assert len(hist_res.json()) >= 1
 
+    # 6. Test Traccar official /api/server info
+    srv_res = client.get("/api/server")
+    assert srv_res.status_code == 200
+    assert "version" in srv_res.json()
+    assert srv_res.json()["registration"] is True
+
+    # 7. Test Traccar official /api/session
+    sess_res = client.get("/api/session")
+    assert sess_res.status_code == 200
+    assert "id" in sess_res.json()
+
+    # 8. Test specific device and position lookup
+    d_res = client.get("/api/devices/OP-TRACKER-01")
+    assert d_res.status_code == 200
+    assert d_res.json()["uniqueId"] == "OP-TRACKER-01"
+
+    p_res = client.get("/api/positions/OP-TRACKER-01")
+    assert p_res.status_code == 200
+    assert p_res.json()["deviceId"] == "OP-TRACKER-01"
+
+    # 9. Test root OsmAnd ingestion
+    root_ping = client.get("/?id=OP-TRACKER-01&lat=12.9716&lon=77.5946&speed=20.0&bearing=45.0")
+    assert root_ping.status_code == 200
+    assert root_ping.text == "OK"
+
