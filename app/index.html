@@ -1188,43 +1188,17 @@
 
     /* Google Maps Destination Search Pin */
     .destination-pin {
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 32px !important;
-      height: 40px !important;
-      margin: 0 !important;
-      padding: 0 !important;
+      width: 32px;
+      height: 40px;
       cursor: pointer;
       z-index: 95;
       pointer-events: auto;
       user-select: none;
     }
-    .destination-pin-badge {
-      position: absolute;
-      bottom: 44px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #dc2626;
-      color: #ffffff;
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 12px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.45);
-      border: 1.5px solid #ffffff;
-      white-space: nowrap;
-      max-width: 160px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      pointer-events: none;
-    }
     .destination-pin-svg {
-      position: absolute;
-      inset: 0;
       width: 32px;
       height: 40px;
-      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.45));
       transform-origin: bottom center;
       transition: transform 0.15s ease;
     }
@@ -1262,24 +1236,22 @@
 
     /* Google Maps POI Map Markers - Firmly pinned to vector map */
     .gmap-poi-marker {
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 32px !important;
-      height: 32px !important;
-      margin: 0 !important;
-      padding: 0 !important;
+      width: 32px;
+      height: 32px;
+      margin: 0;
+      padding: 0;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       user-select: none;
       z-index: 50;
       pointer-events: auto;
+      overflow: visible !important;
     }
     .gmap-poi-badge {
-      width: 30px;
-      height: 30px;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -1297,32 +1269,36 @@
       z-index: 100;
     }
     .gmap-poi-label {
-      position: absolute;
-      top: 34px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.94);
-      color: #0f172a;
-      padding: 1.5px 7px;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 700;
-      white-space: nowrap;
-      max-width: 160px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.28);
-      border: 1px solid rgba(0,0,0,0.1);
-      pointer-events: none;
+      position: absolute !important;
+      top: 34px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      background: #ffffff !important;
+      color: #0f172a !important;
+      padding: 2px 8px !important;
+      border-radius: 4px !important;
+      font-size: 11px !important;
+      font-weight: 700 !important;
+      white-space: nowrap !important;
+      max-width: 180px !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35) !important;
+      border: 1px solid rgba(0,0,0,0.15) !important;
+      pointer-events: none !important;
       letter-spacing: -0.2px;
+      z-index: 100 !important;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
     @media (prefers-color-scheme: dark) {
       .gmap-poi-label {
-        background: rgba(15, 23, 42, 0.94);
-        color: #f8fafc;
-        border-color: rgba(255,255,255,0.2);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+        background: #0f172a !important;
+        color: #f8fafc !important;
+        border-color: rgba(255,255,255,0.25) !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.7) !important;
       }
     }
     /* POI category thematic backgrounds matching Google Maps */
@@ -1357,22 +1333,6 @@
       font-size: 13px !important;
       font-weight: 900 !important;
       border-radius: 6px !important;
-    }
-
-    .gmap-poi-label {
-      margin-top: 3px;
-      background: rgba(15, 23, 42, 0.9);
-      color: #f8fafc;
-      padding: 2px 7px;
-      border-radius: 4px;
-      font-size: 10.5px;
-      font-weight: 600;
-      white-space: nowrap;
-      max-width: 135px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.35);
-      border: 0.5px solid rgba(255,255,255,0.2);
     }
 
     /* Google Maps Place Detail View Styles */
@@ -3511,28 +3471,11 @@
             const clickLng = e.lngLat.lng;
             const clickLat = e.lngLat.lat;
 
-            // Check rendered features at clicked point for immediate name detection
-            let immediateName = null;
-            try {
-              const features = this.map.queryRenderedFeatures(e.point);
-              for (const f of features) {
-                const p = f.properties || {};
-                const candidate = p.name || p['name:en'] || p['name:latin'] || p.housenumber;
-                if (candidate) {
-                  immediateName = candidate;
-                  break;
-                }
-              }
-            } catch (err) {}
-
-            // Immediately drop destination marker pin on the clicked building
+            // Immediately drop clean red destination pin without any loading text
             this.setDestinationMarker({
-              name: immediateName || 'Locating building...',
               lat: clickLat,
               lon: clickLng
             });
-
-            ParkingApp.showToast(immediateName ? `Inspecting: ${immediateName}` : 'Identifying building...');
 
             // Fetch full reverse-geocoded building details across India
             try {
@@ -3554,12 +3497,12 @@
             clearTimeout(_poiDebounce);
             _poiDebounce = setTimeout(() => {
               this.loadViewportPois();
-            }, 350);
+            }, 200);
           };
           this.map.on('moveend', loadViewportPois);
           this.map.on('zoomend', loadViewportPois);
-          // Initial load after map settles
-          setTimeout(() => this.loadViewportPois(), 1200);
+          this.map.once('idle', () => this.loadViewportPois());
+          this.loadViewportPois();
         },
 
         async loadViewportPois() {
@@ -3715,7 +3658,7 @@
               badgeContent = badge;
             }
 
-            const shortName = (place.name || '').split(' (')[0].split(',')[0].slice(0, 24);
+            const shortName = (place.name || '').split(' (')[0].split(',')[0];
 
             el.innerHTML = `
               <div class="gmap-poi-badge ${colorClass} ${badgeExtra}" style="font-size:${badgeContent.length === 1 ? '13px' : '15px'}">${badgeContent}</div>
@@ -3890,7 +3833,6 @@
           const el = document.createElement('div');
           el.className = 'destination-pin';
           el.innerHTML = `
-            <div class="destination-pin-badge">${place.name}</div>
             <svg viewBox="0 0 32 40" class="destination-pin-svg">
               <path d="M16 0 C7.16 0 0 7.16 0 16 C0 26 16 40 16 40 C16 40 32 26 32 16 C32 7.16 24.84 0 16 0 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
               <circle cx="16" cy="15" r="6" fill="#ffffff"/>
@@ -5382,9 +5324,8 @@
 
         async loadInitialPois(lat = CONFIG.DEFAULT_COORDS[1], lon = CONFIG.DEFAULT_COORDS[0]) {
           try {
-            const results = await API.searchTraccar('Bangalore', lat, lon);
-            if (results && results.length > 0) {
-              MapEngine.renderPoiMarkers(results);
+            if (MapEngine && MapEngine.loadViewportPois) {
+              await MapEngine.loadViewportPois();
             }
           } catch (e) {
             console.warn("Initial POIs notice", e);
