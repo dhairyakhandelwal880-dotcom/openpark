@@ -3490,6 +3490,54 @@
           this.map.on('dragstart', onUserPan);
           this.map.on('touchstart', onUserPan);
 
+          // Interactive cursor for buildings
+          try {
+            this.map.on('mouseenter', 'building', () => { this.map.getCanvas().style.cursor = 'pointer'; });
+            this.map.on('mouseleave', 'building', () => { this.map.getCanvas().style.cursor = ''; });
+          } catch (e) {}
+
+          // Click anywhere on map / any building to inspect & get full Google Maps place details
+          this.map.on('click', async (e) => {
+            const clickLng = e.lngLat.lng;
+            const clickLat = e.lngLat.lat;
+
+            // Check rendered features at clicked point for immediate name detection
+            let immediateName = null;
+            try {
+              const features = this.map.queryRenderedFeatures(e.point);
+              for (const f of features) {
+                const p = f.properties || {};
+                const candidate = p.name || p['name:en'] || p['name:latin'] || p.housenumber;
+                if (candidate) {
+                  immediateName = candidate;
+                  break;
+                }
+              }
+            } catch (err) {}
+
+            // Immediately drop destination marker pin on the clicked building
+            this.setDestinationMarker({
+              name: immediateName || 'Locating building...',
+              lat: clickLat,
+              lon: clickLng
+            });
+
+            ParkingApp.showToast(immediateName ? `Inspecting: ${immediateName}` : 'Identifying building...');
+
+            // Fetch full reverse-geocoded building details across India
+            try {
+              const resp = await fetch(`/api/places/lookup?lat=${clickLat.toFixed(6)}&lon=${clickLng.toFixed(6)}`);
+              if (resp.ok) {
+                const data = await resp.json();
+                if (data.place) {
+                  SearchEngine.selectResult(data.place);
+                }
+              }
+            } catch (err) {
+              console.warn('[MapEngine] building lookup error:', err);
+            }
+          });
+
           // ---- Viewport POI loading: auto-populate map like Google Maps ----
           let _poiDebounce = null;
           const loadViewportPois = () => {

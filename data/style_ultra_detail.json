@@ -4445,7 +4445,7 @@
           ]
         ],
         "text-font": [
-          "Noto Sans Italic"
+          "Noto Sans Regular"
         ],
         "text-max-width": 9,
         "text-offset": [
@@ -4466,13 +4466,15 @@
           10,
           18,
           12
-        ]
+        ],
+        "text-optional": true,
+        "icon-optional": true
       },
       "paint": {
-        "text-color": "#666",
-        "text-halo-blur": 0.5,
+        "text-color": "#0f172a",
+        "text-halo-blur": 1.0,
         "text-halo-color": "#ffffff",
-        "text-halo-width": 1.5
+        "text-halo-width": 2.0
       }
     },
     {
@@ -4564,7 +4566,7 @@
           ]
         ],
         "text-font": [
-          "Noto Sans Italic"
+          "Noto Sans Regular"
         ],
         "text-max-width": 9,
         "text-offset": [
@@ -4585,13 +4587,15 @@
           10.5,
           17,
           12
-        ]
+        ],
+        "text-optional": true,
+        "icon-optional": true
       },
       "paint": {
-        "text-color": "#666",
-        "text-halo-blur": 0.5,
+        "text-color": "#0f172a",
+        "text-halo-blur": 1.0,
         "text-halo-color": "#ffffff",
-        "text-halo-width": 1.5
+        "text-halo-width": 2.0
       }
     },
     {
@@ -4683,7 +4687,7 @@
           ]
         ],
         "text-font": [
-          "Noto Sans Italic"
+          "Noto Sans Regular"
         ],
         "text-max-width": 9,
         "text-offset": [
@@ -4704,13 +4708,15 @@
           11,
           17,
           13
-        ]
+        ],
+        "text-optional": true,
+        "icon-optional": true
       },
       "paint": {
-        "text-color": "#666",
-        "text-halo-blur": 0.5,
+        "text-color": "#0f172a",
+        "text-halo-blur": 1.0,
         "text-halo-color": "#ffffff",
-        "text-halo-width": 1.5
+        "text-halo-width": 2.0
       }
     },
     {
@@ -6171,6 +6177,62 @@
         "text-color": "#64748b",
         "text-halo-color": "#ffffff",
         "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "building-names",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 12,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:en"
+          ],
+          [
+            "get",
+            "name"
+          ],
+          [
+            "get",
+            "name:latin"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          12,
+          8.5,
+          14,
+          10.5,
+          16,
+          12,
+          18,
+          14
+        ],
+        "text-max-width": 9,
+        "text-padding": 2,
+        "text-offset": [
+          0,
+          0.8
+        ],
+        "text-anchor": "top"
+      },
+      "paint": {
+        "text-color": "#0f172a",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2.0
       }
     }
   ],

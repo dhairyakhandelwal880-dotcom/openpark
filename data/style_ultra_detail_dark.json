@@ -2723,6 +2723,62 @@
         "text-halo-color": "#0f172a",
         "text-halo-width": 1.2
       }
+    },
+    {
+      "id": "building-names",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 12,
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:en"
+          ],
+          [
+            "get",
+            "name"
+          ],
+          [
+            "get",
+            "name:latin"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          12,
+          8.5,
+          14,
+          10.5,
+          16,
+          12,
+          18,
+          14
+        ],
+        "text-max-width": 9,
+        "text-padding": 2,
+        "text-offset": [
+          0,
+          0.8
+        ],
+        "text-anchor": "top"
+      },
+      "paint": {
+        "text-color": "#f8fafc",
+        "text-halo-color": "#0f172a",
+        "text-halo-width": 2.0
+      }
     }
   ]
 }

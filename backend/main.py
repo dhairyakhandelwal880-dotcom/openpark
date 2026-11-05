@@ -780,6 +780,115 @@ def viewport_places_endpoint(
 
 
 # --------------------------------------------------------------------------
+# Building & Place Reverse Lookup API (Click any building in India for details)
+# --------------------------------------------------------------------------
+
+@app.get("/api/places/lookup")
+async def place_lookup_endpoint(
+    lat: float = Query(...),
+    lon: float = Query(...)
+):
+    """
+    Reverse geocodes any clicked coordinate in India (or worldwide) to find the exact
+    building name, house number, shop, office, hospital, or facility name and address.
+    Enriched with Google Maps-style ratings, reviews, amenities, hours, and photos.
+    """
+    import httpx
+    from traccar_service import BENGALURU_PLACES_CATALOG, enrich_place_details, resolve_place_badge
+
+    place_name = None
+    place_cat = "Building"
+    place_badge = "🏢"
+    place_address = f"Coordinates: {round(lat, 5)}, {round(lon, 5)}"
+    source = "coordinate_fallback"
+
+    # 1. Reverse lookup via Photon (covers every building, shop, and address in India)
+    try:
+        url = f"https://photon.komoot.io/reverse?lat={lat}&lon={lon}"
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/json"
+        }
+        async with httpx.AsyncClient(timeout=3.5, verify=False) as client:
+            resp = await client.get(url, headers=headers)
+            if resp.status_code == 200:
+                data = resp.json()
+                features = data.get("features", [])
+                if features:
+                    props = features[0].get("properties", {})
+                    raw_name = props.get("name")
+                    street = props.get("street")
+                    locality = props.get("locality") or props.get("district")
+                    city = props.get("city") or "Bengaluru"
+                    state = props.get("state") or "Karnataka"
+                    postcode = props.get("postcode")
+                    osm_key = props.get("osm_key", "")
+                    osm_val = props.get("osm_value", "")
+
+                    if raw_name:
+                        place_name = raw_name
+                    elif street:
+                        place_name = f"Building on {street}"
+                    elif locality:
+                        place_name = f"Premises in {locality}"
+
+                    addr_parts = [p for p in [street, locality, city, state, postcode] if p]
+                    if addr_parts:
+                        place_address = ", ".join(addr_parts)
+
+                    place_badge = resolve_place_badge(osm_val, osm_key)
+                    cat_map = {
+                        "🏥": "Hospital / Healthcare",
+                        "☕": "Cafe & Bakery",
+                        "🍔": "Restaurant / Dining",
+                        "⛽": "Fuel & EV Station",
+                        "🛍️": "Shopping & Retail",
+                        "🏛️": "Landmark / Temple",
+                        "🚇": "Metro Station",
+                        "🚆": "Railway Transit",
+                        "🌳": "Park / Garden",
+                        "💻": "IT Park / Office",
+                        "🏢": "Commercial Building"
+                    }
+                    place_cat = cat_map.get(place_badge, osm_val.replace("_", " ").title() if osm_val else "Building")
+                    source = "photon_osm"
+    except Exception:
+        pass
+
+    # 2. If no name found from reverse geocoder, check local catalog within 300m
+    if not place_name:
+        for item in BENGALURU_PLACES_CATALOG:
+            d = math.hypot((lat - item["lat"]) * 111000, (lon - item["lon"]) * 111000 * math.cos(math.radians(lat)))
+            if d < 300:
+                place_name = item["name"]
+                place_badge = item.get("badge", "🏢")
+                place_cat = item.get("category", "Landmark")
+                place_address = item.get("address", place_address)
+                source = "catalog_proximity"
+                break
+
+    # 3. Final fallback
+    if not place_name:
+        place_name = f"Building @ {round(lat, 5)}, {round(lon, 5)}"
+        place_badge = "📍"
+        place_cat = "Destination Building"
+
+    raw_item = {
+        "name": place_name,
+        "badge": place_badge,
+        "category": place_cat,
+        "address": place_address,
+        "lat": lat,
+        "lon": lon,
+        "distance_km": 0.0,
+        "source": source
+    }
+
+    enriched = enrich_place_details(raw_item)
+    return {"status": "ok", "place": enriched}
+
+
+# --------------------------------------------------------------------------
 # Geofabrik OpenStreetMap Regional Extracts API (https://download.geofabrik.de/)
 # --------------------------------------------------------------------------
 
