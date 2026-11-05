@@ -1920,14 +1920,12 @@
             </label>
           </div>
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-            <span>Map Style</span>
+            <span>Map Style & Detail Level</span>
             <select id="select-map-style" class="styled-input" style="width: 100%;">
-              <option value="openfreemap-auto">OpenFreeMap Auto (Liberty / Dark) (Default)</option>
-              <option value="openfreemap-liberty">OpenFreeMap Liberty</option>
-              <option value="openfreemap-dark">OpenFreeMap Dark</option>
-              <option value="traccar-osm">Traccar OSM Standard</option>
-              <option value="traccar-carto-dark">Traccar Carto Dark</option>
-              <option value="traccar-carto-voyager">Traccar Carto Voyager</option>
+              <option value="openfreemap-auto">Google Maps Ultra-Detail Vector (Auto Dark/Light) (Default)</option>
+              <option value="osm-standard">OpenStreetMap Standard (Every Building, Shop & Corner Name)</option>
+              <option value="carto-voyager">Carto Voyager Retina @2x (Clean City Vector)</option>
+              <option value="openfreemap-dark">Google Maps Ultra-Detail (Night Mode)</option>
             </select>
           </div>
         </div>
@@ -1986,6 +1984,9 @@
     </button>
     <button class="cluster-btn" id="btn-tilt-3d" aria-label="Toggle 3D tilt" title="Toggle 3D Pitch">
       <span style="font-size: 11px; font-weight: 700; letter-spacing: -0.5px;">3D</span>
+    </button>
+    <button class="cluster-btn" id="btn-toggle-layers" aria-label="Toggle map detail layers" title="Cycle Detail Styles (Google Maps Vector / OSM Full Detail / Carto Voyager)">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
     </button>
   </div>
 
@@ -2208,14 +2209,33 @@
       } catch (e) {}
 
       // --------------------------------------------------------------------------
-      // 5.3 OpenFreeMap & Traccar MapLibre Styles Configuration
+      // 5.3 Google Maps & OpenStreetMap Ultra-Detail Map Styles Configuration
       // --------------------------------------------------------------------------
       const MAP_STYLES = {
-        'openfreemap-auto': 'auto',
-        'openfreemap-liberty': 'https://tiles.openfreemap.org/styles/liberty',
-        'openfreemap-dark': 'https://tiles.openfreemap.org/styles/dark',
-        'liberty': 'https://tiles.openfreemap.org/styles/liberty',
-        'dark': 'https://tiles.openfreemap.org/styles/dark',
+        'openfreemap-auto': '/api/map/style/ultra-detail',
+        'openfreemap-liberty': '/api/map/style/ultra-detail',
+        'openfreemap-dark': '/api/map/style/ultra-detail-dark',
+        'liberty': '/api/map/style/ultra-detail',
+        'dark': '/api/map/style/ultra-detail-dark',
+        'ultra-detail': '/api/map/style/ultra-detail',
+        'ultra-detail-dark': '/api/map/style/ultra-detail-dark',
+        'osm-standard': {
+          version: 8,
+          sources: {
+            'osm-tiles': {
+              type: 'raster',
+              tiles: [
+                'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                'https://b.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
+              ],
+              tileSize: 256,
+              maxzoom: 19,
+              attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }
+          },
+          layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 22 }]
+        },
         'traccar-osm': {
           version: 8,
           sources: {
@@ -2227,31 +2247,53 @@
                 'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
               ],
               tileSize: 256,
-              attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | <a href="https://openfreemap.org/">OpenFreeMap</a>'
+              maxzoom: 19,
+              attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }
           },
-          layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }]
+          layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 22 }]
         },
-        'traccar-carto-dark': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        'carto-voyager': {
+          version: 8,
+          sources: {
+            'carto-voyager-tiles': {
+              type: 'raster',
+              tiles: [
+                'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                'https://b.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                'https://c.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png',
+                'https://d.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}@2x.png'
+              ],
+              tileSize: 256,
+              maxzoom: 19,
+              attribution: '© CARTO, © OpenStreetMap contributors'
+            }
+          },
+          layers: [{ id: 'carto-voyager-layer', type: 'raster', source: 'carto-voyager-tiles', minzoom: 0, maxzoom: 22 }]
+        },
         'traccar-carto-voyager': 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-        'traccar-carto-positron': 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-        'traccar-demo': 'https://demotiles.maplibre.org/style.json',
-        'carto-dark': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-        'carto-voyager': 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json'
+        'traccar-carto-dark': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        'traccar-carto-positron': 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
       };
 
       function resolveMapStyleUrl(styleKey) {
         const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (!styleKey || styleKey === 'openfreemap-auto' || styleKey === 'auto') {
-          return isDark ? 'https://tiles.openfreemap.org/styles/dark' : 'https://tiles.openfreemap.org/styles/liberty';
+        if (!styleKey || styleKey === 'openfreemap-auto' || styleKey === 'auto' || styleKey === 'ultra-detail') {
+          return isDark ? '/api/map/style/ultra-detail-dark' : '/api/map/style/ultra-detail';
         }
-        if (styleKey === 'openfreemap-dark' || styleKey === 'dark') {
-          return 'https://tiles.openfreemap.org/styles/dark';
+        if (styleKey === 'openfreemap-dark' || styleKey === 'dark' || styleKey === 'ultra-detail-dark') {
+          return '/api/map/style/ultra-detail-dark';
         }
         if (styleKey === 'openfreemap-liberty' || styleKey === 'liberty') {
-          return 'https://tiles.openfreemap.org/styles/liberty';
+          return '/api/map/style/ultra-detail';
         }
-        return MAP_STYLES[styleKey] || (isDark ? 'https://tiles.openfreemap.org/styles/dark' : 'https://tiles.openfreemap.org/styles/liberty');
+        if (styleKey === 'osm-standard' || styleKey === 'osm' || styleKey === 'traccar-osm') {
+          return MAP_STYLES['osm-standard'];
+        }
+        if (styleKey === 'carto-voyager') {
+          return MAP_STYLES['carto-voyager'];
+        }
+        return MAP_STYLES[styleKey] || (isDark ? '/api/map/style/ultra-detail-dark' : '/api/map/style/ultra-detail');
       }
 
       // --------------------------------------------------------------------------
@@ -3379,7 +3421,7 @@
             style: styleUrl,
             center: CONFIG.DEFAULT_COORDS,
             zoom: CONFIG.INITIAL_ZOOM,
-            maxZoom: 19,
+            maxZoom: 22,
             pitch: 0,
             bearing: 0,
             antialias: true,
@@ -3903,6 +3945,26 @@
               duration: 400
             });
             document.getElementById('btn-tilt-3d').classList.toggle('active-blue', STATE.is3D);
+          };
+
+          // One-click Map Detail Switcher (Vector Ultra-Detail -> OSM Full Detail -> Carto Voyager)
+          const styleCycle = ['openfreemap-auto', 'osm-standard', 'carto-voyager'];
+          const styleLabels = {
+            'openfreemap-auto': 'Google Maps Ultra-Detail Vector',
+            'osm-standard': 'OSM Full Detail (Every Building & Shop Name)',
+            'carto-voyager': 'Carto Voyager Retina @2x'
+          };
+          document.getElementById('btn-toggle-layers').onclick = () => {
+            const curIdx = styleCycle.indexOf(STATE.config.activeStyle);
+            const nextStyle = styleCycle[(curIdx + 1) % styleCycle.length];
+            STATE.config.activeStyle = nextStyle;
+            localStorage.setItem('openpark_map_style', nextStyle);
+            const sel = document.getElementById('select-map-style');
+            if (sel) sel.value = nextStyle;
+            ParkingApp.showToast(`Map Style: ${styleLabels[nextStyle]}`);
+            MapEngine.clearPoiMarkers();
+            MapEngine.map.remove();
+            MapEngine.init();
           };
 
           document.getElementById('btn-my-location').onclick = () => {

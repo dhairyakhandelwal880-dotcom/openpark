@@ -700,6 +700,30 @@ def osm_overpass_endpoint(
 
 
 # --------------------------------------------------------------------------
+# Ultra-Detail Google Maps / Apple Maps Vector Style Endpoints
+# Unlocks every road name, cross street, building footprint, house number,
+# corner name, and POI at all zoom levels (with overzooming up to zoom 22)
+# --------------------------------------------------------------------------
+
+@app.get("/api/map/style/ultra-detail")
+def get_ultra_detail_style():
+    style_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "style_ultra_detail.json")
+    if os.path.exists(style_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(style_path, media_type="application/json")
+    raise HTTPException(status_code=404, detail="Ultra detail style not found")
+
+
+@app.get("/api/map/style/ultra-detail-dark")
+def get_ultra_detail_dark_style():
+    style_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "style_ultra_detail_dark.json")
+    if os.path.exists(style_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(style_path, media_type="application/json")
+    raise HTTPException(status_code=404, detail="Ultra detail dark style not found")
+
+
+# --------------------------------------------------------------------------
 # Viewport Places API — returns catalog POIs within a lat/lon bounding box
 # --------------------------------------------------------------------------
 

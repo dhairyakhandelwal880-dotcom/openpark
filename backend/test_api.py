@@ -128,6 +128,13 @@ def test_maplibre_config_endpoints():
     assert post_res.json()["default_style"] == "carto-voyager"
     assert post_res.json()["requires_token"] is False
 
+    # Test ultra-detail vector style endpoint
+    style_res = client.get("/api/map/style/ultra-detail")
+    assert style_res.status_code == 200
+    style_data = style_res.json()
+    assert style_data["version"] == 8
+    assert len(style_data["layers"]) > 50
+
 
 def test_mappls_rest_api_endpoints():
     # 1. Test Mappls config endpoint (delegated to Traccar)
