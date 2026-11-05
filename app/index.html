@@ -2744,6 +2744,9 @@
                 STATE.userLocation.speed = (fix.speed || 0) * 3.6;
                 STATE.userLocation.accuracy = fix.accuracy || 5;
                 TelemetryController.update(STATE.userLocation);
+                if (STATE.activeTrip && NavigationEngine.trimRouteFrom) {
+                  NavigationEngine.trimRouteFrom(fix.lon, fix.lat);
+                }
               }
             });
             this.tracker.start();
@@ -3824,6 +3827,13 @@
             startTime: Date.now()
           };
 
+          // Erase previous trip breadcrumb trails
+          STATE.breadcrumbs = [];
+          if (MapEngine.map) {
+            const bSource = MapEngine.map.getSource('breadcrumbs');
+            if (bSource) bSource.setData({ type: 'FeatureCollection', features: [] });
+          }
+
           WakeLockManager.acquire();
           if (MapEngine.tracker) MapEngine.tracker.o.follow = STATE.isCameraFollowing;
 
@@ -3922,6 +3932,32 @@
           this.renderStepList();
           if (this.routeSteps.length > 0) {
             this.updateTurnBanner(this.routeSteps[0]);
+          }
+        },
+
+        trimRouteFrom(curLng, curLat) {
+          if (!this.routePoints || this.routePoints.length < 2) return;
+          const rSource = MapEngine.map ? MapEngine.map.getSource('route') : null;
+          if (!rSource) return;
+
+          let minD = Infinity;
+          let closestIdx = 0;
+          for (let i = 0; i < this.routePoints.length; i++) {
+            const pt = this.routePoints[i];
+            const d = calculateDistanceMeters(curLat, curLng, pt[1], pt[0]);
+            if (d < minD) {
+              minD = d;
+              closestIdx = i;
+            }
+          }
+
+          // Erase the path traveled before: only retain from current position forward
+          const remaining = [[curLng, curLat], ...this.routePoints.slice(closestIdx + 1)];
+          if (remaining.length >= 2) {
+            rSource.setData({
+              type: 'Feature',
+              geometry: { type: 'LineString', coordinates: remaining }
+            });
           }
         },
 
@@ -4061,6 +4097,17 @@
             const curLng = activeSeg.p1[0] + (activeSeg.p2[0] - activeSeg.p1[0]) * ratio;
             const curLat = activeSeg.p1[1] + (activeSeg.p2[1] - activeSeg.p1[1]) * ratio;
 
+            // Dynamically erase the path traveled behind the vehicle:
+            // Slices the route from current vehicle coordinates forward to destination
+            const remainingCoords = [[curLng, curLat], ...this.routePoints.slice(currentSegmentIdx + 1)];
+            const rSource = MapEngine.map ? MapEngine.map.getSource('route') : null;
+            if (rSource && remainingCoords.length >= 2) {
+              rSource.setData({
+                type: 'Feature',
+                geometry: { type: 'LineString', coordinates: remainingCoords }
+              });
+            }
+
             // Smooth shortest-arc heading rotation along road curve
             const angleDiff = shortestAngleDiff(currentHeading, activeSeg.bearing);
             currentHeading = (currentHeading + angleDiff * Math.min(1.0, dt * 6.5) + 360) % 360;
@@ -4094,19 +4141,6 @@
               API.sendTraccarPing(STATE.userLocation);
             }
 
-            // Breadcrumb path trail
-            if (STATE.config.showBreadcrumbs && Math.random() < dt * 2.5) {
-              STATE.breadcrumbs.push([curLng, curLat]);
-              if (STATE.breadcrumbs.length > 500) STATE.breadcrumbs.shift();
-              const bSource = MapEngine.map.getSource('breadcrumbs');
-              if (bSource) {
-                bSource.setData({
-                  type: 'Feature',
-                  geometry: { type: 'LineString', coordinates: STATE.breadcrumbs }
-                });
-              }
-            }
-
             // Turn-by-turn guidance progress
             const totalProgress = totalRouteMeters > 0 ? (currentDistMeters / totalRouteMeters) : 0;
             if (this.routeSteps.length >= 3) {
@@ -4131,6 +4165,14 @@
           document.getElementById('nav-turn-banner').style.display = 'none';
           const recenterBtn = document.getElementById('btn-recenter-nav');
           if (recenterBtn) recenterBtn.classList.remove('visible');
+
+          // Erase route and trails on arrival
+          if (MapEngine.map) {
+            const rSource = MapEngine.map.getSource('route');
+            if (rSource) rSource.setData({ type: 'FeatureCollection', features: [] });
+            const bSource = MapEngine.map.getSource('breadcrumbs');
+            if (bSource) bSource.setData({ type: 'FeatureCollection', features: [] });
+          }
 
           ParkingApp.showToast("Arrived at your destination!");
           
@@ -4172,7 +4214,15 @@
             WakeLockManager.release();
           }
 
-          MapEngine.map.getSource('route').setData({ type: 'FeatureCollection', features: [] });
+          // Cleanly erase route and breadcrumb trails
+          STATE.breadcrumbs = [];
+          if (MapEngine.map) {
+            const rSource = MapEngine.map.getSource('route');
+            if (rSource) rSource.setData({ type: 'FeatureCollection', features: [] });
+            const bSource = MapEngine.map.getSource('breadcrumbs');
+            if (bSource) bSource.setData({ type: 'FeatureCollection', features: [] });
+          }
+
           document.getElementById('nav-turn-banner').style.display = 'none';
           document.getElementById('nav-alert-banner').style.display = 'none';
           document.getElementById('trip-active-content').style.display = 'none';
