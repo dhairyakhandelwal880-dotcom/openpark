@@ -13,6 +13,7 @@ import json
 import math
 import re
 import difflib
+import urllib.parse
 import httpx
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
@@ -532,8 +533,11 @@ async def search_traccar_places(
     if len(raw_query) >= 2:
         try:
             photon_url = f"https://photon.komoot.io/api/?q={urllib.parse.quote(raw_query)}&lat={lat}&lon={lon}&limit=10"
-            headers = {"User-Agent": "OpenParkApp/1.0 (contact@openpark.io)", "Accept": "application/json"}
-            async with httpx.AsyncClient(timeout=3.5, verify=False) as client:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/json"
+            }
+            async with httpx.AsyncClient(timeout=4.5, verify=False) as client:
                 resp = await client.get(photon_url, headers=headers)
                 if resp.status_code == 200:
                     features = resp.json().get("features", [])
@@ -546,15 +550,14 @@ async def search_traccar_places(
 
                         p_lon = float(coords[0])
                         p_lat = float(coords[1])
-                        name = props.get("name") or props.get("street") or props.get("city")
-                        if not name:
+                        base_name = props.get("name") or props.get("street") or props.get("city")
+                        if not base_name:
                             continue
 
-                        norm_key = f"{name.lower()}_{round(p_lat, 3)}_{round(p_lon, 3)}"
-                        if norm_key in seen_names or name.lower() in seen_names:
+                        norm_key = f"{base_name.lower()}_{round(p_lat, 3)}_{round(p_lon, 3)}"
+                        if norm_key in seen_names:
                             continue
                         seen_names.add(norm_key)
-                        seen_names.add(name.lower())
 
                         # Build formatted address
                         addr_parts = []
@@ -571,15 +574,21 @@ async def search_traccar_places(
                         if props.get("country"):
                             addr_parts.append(props["country"])
 
-                        full_addr = ", ".join(addr_parts) if addr_parts else name
+                        full_addr = ", ".join(addr_parts) if addr_parts else base_name
                         dist = calculate_haversine_km(lat, lon, p_lat, p_lon)
                         osm_type = props.get("type", "")
                         osm_val = props.get("osm_value", "")
                         badge = resolve_place_badge(osm_type, osm_val)
                         cat = (props.get("osm_value") or props.get("type") or "Place").replace("_", " ").title()
 
+                        # For popular chains (e.g. Starbucks, McDonald's), distinguish branch by street/locality if available
+                        disp_name = base_name
+                        locality = props.get("locality") or props.get("street") or props.get("district")
+                        if locality and locality.lower() not in base_name.lower():
+                            disp_name = f"{base_name} ({locality})"
+
                         results.append({
-                            "name": name,
+                            "name": disp_name,
                             "badge": badge,
                             "category": cat,
                             "address": full_addr,
@@ -595,16 +604,20 @@ async def search_traccar_places(
     if len(results) < 5 and len(raw_query) >= 3:
         try:
             nom_url = f"https://nominatim.openstreetmap.org/search?format=json&q={urllib.parse.quote(raw_query)}&limit=6&addressdetails=1"
-            headers = {"User-Agent": "OpenParkApp/1.0 (contact@openpark.io)", "Accept": "application/json"}
-            async with httpx.AsyncClient(timeout=3.0, verify=False) as client:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/json"
+            }
+            async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
                 resp = await client.get(nom_url, headers=headers)
                 if resp.status_code == 200:
                     for item in resp.json():
                         p_lat = float(item["lat"])
                         p_lon = float(item["lon"])
                         d_name = item.get("display_name", "").split(",")[0]
-                        if d_name.lower() not in seen_names:
-                            seen_names.add(d_name.lower())
+                        norm_key = f"{d_name.lower()}_{round(p_lat, 3)}_{round(p_lon, 3)}"
+                        if norm_key not in seen_names:
+                            seen_names.add(norm_key)
                             dist = calculate_haversine_km(lat, lon, p_lat, p_lon)
                             cat = item.get("type", "Place").replace("_", " ").title()
                             badge = resolve_place_badge(item.get("type", ""), item.get("class", ""))
