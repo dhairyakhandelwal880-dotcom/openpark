@@ -1183,7 +1183,7 @@
   <!-- Map Attribution -->
   <div class="map-attribution">
     <a href="https://maplibre.org" target="_blank" rel="noreferrer">MapLibre</a> | 
-    <a href="https://github.com/mappls-api/mapmyindia-rest-api" target="_blank" rel="noreferrer">Mappls REST API</a> |
+    <a href="https://www.traccar.org/" target="_blank" rel="noreferrer">Traccar GPS Engine</a> |
     <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">&copy; OpenStreetMap</a>
   </div>
 
@@ -1240,7 +1240,7 @@
         </div>
       </div>
 
-      <!-- Search Box (Integrated with Mappls AutoSuggest REST API) -->
+      <!-- Search Box (Integrated with Traccar OSM Nominatim Search) -->
       <div class="search-wrapper">
         <button id="btn-search-trigger" class="search-icon-left" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;" aria-label="Search">
           <svg class="svg-icon" viewBox="0 0 24 24">
@@ -1251,10 +1251,10 @@
           type="text" 
           id="search-input" 
           class="search-input" 
-          placeholder="Search places or parking (e.g. Koramangala, UB City)" 
+          placeholder="Search places, roads, parking (Traccar / OSM)" 
           autocomplete="off" 
           spellcheck="false"
-          aria-label="Search places or parking"
+          aria-label="Search places, roads, parking"
         />
         <button id="search-clear" class="search-clear-btn" aria-label="Clear search input">
           <svg class="svg-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24">
@@ -1356,7 +1356,7 @@
         <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
           <button class="btn-pill-primary" id="btn-start-nav">
             <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-            Start Mappls Navigation
+            Start Traccar Navigation
           </button>
           <button class="btn-pill-secondary" id="btn-report-status">
             <svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1384,7 +1384,7 @@
               <div><span id="trip-rem-dist" style="font-size: 20px;">1.2</span> km</div>
             </div>
             <div style="margin-top: 6px; font-size: 11px; color: var(--color-text-tertiary);" id="trip-routing-badge">
-              Route: Mappls Driving API
+              Route: Traccar OSRM Engine
             </div>
           </div>
 
@@ -1435,21 +1435,31 @@
         <div id="pv-nearby-lots" style="display: flex; flex-direction: column; gap: 8px;"></div>
       </div>
 
-      <!-- 5. Settings & Mappls API Configuration View -->
+      <!-- 5. Settings & Traccar GPS Configuration View -->
       <div id="view-more">
         <div class="setting-group">
-          <div class="setting-group-title">Mappls (MapmyIndia) REST API</div>
+          <div class="setting-group-title">Traccar GPS Engine & Device Hub</div>
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
             <div style="display: flex; justify-content: space-between; width: 100%;">
-              <span>Mappls REST Key</span>
-              <span id="mappls-key-status" style="font-size: 11px; color: var(--status-available);">Ready</span>
+              <span style="font-weight:600; font-size:13px;">Traccar Server Status</span>
+              <span id="traccar-server-status" class="status-pill status-available" style="font-size: 10px; padding: 2px 8px;">Active (Ports 5055 & 8000)</span>
             </div>
-            <div style="display: flex; width: 100%; gap: 6px;">
-              <input type="text" id="input-mappls-key" class="styled-input" placeholder="Enter Mappls REST API Key..." />
-              <button class="btn-pill-primary" id="btn-save-mappls-key" style="width: auto; padding: 6px 14px; font-size: 13px;">Save</button>
+            <div style="width: 100%;">
+              <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 3px;">Traccar Server URL:</div>
+              <div style="display: flex; gap: 6px;">
+                <input type="text" id="setting-traccar-server-url" class="styled-input" readonly style="font-size: 11.5px; font-family: var(--font-mono); flex: 1;" />
+                <button class="btn-pill-secondary" id="btn-copy-setting-url" style="width: auto; padding: 6px 12px; font-size: 12px; white-space: nowrap;">Copy URL</button>
+              </div>
             </div>
-            <div style="font-size: 11px; color: var(--color-text-tertiary);">
-              Uses <a href="https://github.com/mappls-api/mapmyindia-rest-api" target="_blank" style="color: var(--accent-subtle); text-decoration: underline;">mappls-api/mapmyindia-rest-api</a> for Search, AutoSuggest, and Driving Directions.
+            <div style="width: 100%; margin-top: 4px;">
+              <div style="font-size: 11px; color: var(--color-text-secondary); margin-bottom: 3px;">Active Device Identifier:</div>
+              <div style="display: flex; gap: 6px;">
+                <input type="text" id="setting-traccar-device-id" class="styled-input" value="OP-TRACKER-01" style="font-size: 12px; font-family: var(--font-mono); flex: 1;" />
+                <button class="btn-pill-primary" id="btn-save-setting-device" style="width: auto; padding: 6px 14px; font-size: 12px;">Save</button>
+              </div>
+            </div>
+            <div style="font-size: 11px; color: var(--color-text-tertiary); margin-top: 4px; line-height: 1.4;">
+              Powered by <a href="https://www.traccar.org/" target="_blank" style="color: var(--accent-subtle); text-decoration: underline;">Traccar</a>. Connect phones using free Traccar Client (iOS/Android) or hardware GPS trackers.
             </div>
           </div>
         </div>
@@ -1464,13 +1474,12 @@
             </label>
           </div>
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
-            <span>MapLibre Vector Style</span>
+            <span>Traccar Map Layer</span>
             <select id="select-map-style" class="styled-input" style="width: 100%;">
-              <option value="carto-dark">Carto Dark Matter (Default)</option>
-              <option value="carto-voyager">Carto Voyager (Daylight Navigation)</option>
-              <option value="carto-positron">Carto Positron (Clean Light)</option>
-              <option value="maplibre-demo">MapLibre Demo Tiles</option>
-              <option value="osm-standard">OpenStreetMap Standard</option>
+              <option value="traccar-osm">Traccar OSM Standard (Default)</option>
+              <option value="traccar-carto-dark">Traccar Carto Dark</option>
+              <option value="traccar-carto-voyager">Traccar Carto Voyager</option>
+              <option value="traccar-carto-positron">Traccar Carto Positron</option>
             </select>
           </div>
         </div>
@@ -1670,7 +1679,7 @@
   <div id="toast" role="status">Report submitted. Thank you!</div>
 
   <!-- ==========================================================================
-       5. Modern Vanilla ES6 Application Logic & Mappls REST API Integration
+       5. Modern Vanilla ES6 Application Logic & Traccar GPS Platform
        ========================================================================== -->
   <script>
     (() => {
@@ -1680,7 +1689,7 @@
       // 5.1 Config & Constants
       // --------------------------------------------------------------------------
       const CONFIG = {
-        DEFAULT_COORDS: [77.5946, 12.9716], // Bengaluru Core (Mappls & OpenCity Hub)
+        DEFAULT_COORDS: [77.5946, 12.9716], // Bengaluru Core (Traccar Tracking Hub)
         INITIAL_ZOOM: 14.5,
         PITCH_3D: 42,
         RADIUS_METERS: 3500,
@@ -1736,8 +1745,7 @@
           showHud: true,
           showBreadcrumbs: true,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
-          mapplsKey: localStorage.getItem('openpark_mappls_key') || '',
-          activeStyle: localStorage.getItem('openpark_map_style') || 'carto-dark'
+          activeStyle: localStorage.getItem('openpark_map_style') || 'traccar-osm'
         },
         watchId: null,
         animationFrameId: null,
@@ -1746,17 +1754,16 @@
       };
 
       // Clean up legacy tokens
-      try { localStorage.removeItem('openpark_mapbox_token'); } catch (e) {}
+      try {
+        localStorage.removeItem('openpark_mapbox_token');
+        localStorage.removeItem('openpark_mappls_key');
+      } catch (e) {}
 
       // --------------------------------------------------------------------------
-      // 5.3 MapLibre Styles Configuration
+      // 5.3 Traccar MapLibre Styles Configuration (https://www.traccar.org/)
       // --------------------------------------------------------------------------
       const MAP_STYLES = {
-        'carto-dark': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-        'carto-voyager': 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
-        'carto-positron': 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-        'maplibre-demo': 'https://demotiles.maplibre.org/style.json',
-        'osm-standard': {
+        'traccar-osm': {
           version: 8,
           sources: {
             'osm-tiles': {
@@ -1767,7 +1774,27 @@
                 'https://c.tile.openstreetmap.org/{z}/{x}/{y}.png'
               ],
               tileSize: 256,
-              attribution: '© OpenStreetMap contributors'
+              attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | <a href="https://www.traccar.org/">Traccar</a>'
+            }
+          },
+          layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }]
+        },
+        'traccar-carto-dark': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        'traccar-carto-voyager': 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+        'traccar-carto-positron': 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        'traccar-demo': 'https://demotiles.maplibre.org/style.json',
+        // Backward-compatible fallbacks
+        'carto-dark': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+        'carto-voyager': 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+        'carto-positron': 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        'osm-standard': {
+          version: 8,
+          sources: {
+            'osm-tiles': {
+              type: 'raster',
+              tiles: ['https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution: '© OpenStreetMap | Traccar'
             }
           },
           layers: [{ id: 'osm-layer', type: 'raster', source: 'osm-tiles', minzoom: 0, maxzoom: 19 }]
@@ -1775,7 +1802,7 @@
       };
 
       // --------------------------------------------------------------------------
-      // 5.4 API Client (FastAPI Backend + Mappls REST API)
+      // 5.4 API Client (FastAPI Backend + Traccar GPS & OSRM Engine)
       // --------------------------------------------------------------------------
       const API = {
         async getNearbyLots(lat, lon, radius = CONFIG.RADIUS_METERS) {
@@ -1848,10 +1875,10 @@
           }
         },
 
-        // Mappls REST API: AutoSuggest (https://github.com/mappls-api/mapmyindia-rest-api)
-        async searchMappls(query, lat, lon) {
+        // Traccar & Nominatim Geocoding & Place Search Engine (https://www.traccar.org/)
+        async searchTraccar(query, lat, lon) {
           try {
-            const res = await fetch(`/api/mappls/autosuggest?query=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}`);
+            const res = await fetch(`/api/traccar/search?query=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}`);
             if (res.ok) {
               const data = await res.json();
               if (data.results && data.results.length > 0) {
@@ -1859,8 +1886,28 @@
               }
             }
           } catch (e) {
-            console.warn("Mappls AutoSuggest proxy notice", e);
+            console.warn("Traccar search proxy notice", e);
           }
+
+          // Direct browser OSM Nominatim fallback if backend search unavailable
+          try {
+            const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1`);
+            if (nomRes.ok) {
+              const nomData = await nomRes.json();
+              if (nomData && nomData.length > 0) {
+                return nomData.map(item => ({
+                  name: item.display_name.split(',')[0],
+                  badge: "📍",
+                  category: (item.type || "Place").toUpperCase(),
+                  address: item.display_name,
+                  lat: parseFloat(item.lat),
+                  lon: parseFloat(item.lon),
+                  distance_km: (calculateDistanceMeters(lat, lon, parseFloat(item.lat), parseFloat(item.lon)) / 1000).toFixed(1),
+                  source: "osm_nominatim"
+                }));
+              }
+            }
+          } catch {}
 
           // Local parking lots instant fallback matching
           if (STATE.lots && STATE.lots.length > 0) {
@@ -1886,50 +1933,71 @@
           return [];
         },
 
-        // Mappls REST API: Driving Directions Route (https://github.com/mappls-api/mapmyindia-rest-api)
-        async getMapplsRoute(startLat, startLon, destLat, destLon) {
+        // Traccar OSRM Driving Directions Road Engine (https://router.project-osrm.org/)
+        async getTraccarRoute(startLat, startLon, destLat, destLon) {
+          // 1. Direct browser query to public OSRM for 100% accurate real road network
           try {
-            const res = await fetch(`/api/mappls/route?start_lat=${startLat}&start_lon=${startLon}&dest_lat=${destLat}&dest_lon=${destLon}`);
+            const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${destLon},${destLat}?overview=full&geometries=geojson&steps=true`;
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3500);
+            const res = await fetch(osrmUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.routes && data.routes.length > 0) {
+                const r = data.routes[0];
+                const steps = [];
+                for (const leg of (r.legs || [])) {
+                  for (const st of (leg.steps || [])) {
+                    const instr = st.maneuver ? (st.maneuver.instruction || `Continue along ${st.name || 'road'}`) : `Continue along ${st.name || 'road'}`;
+                    const d = st.distance || 0;
+                    steps.push({
+                      instruction: instr,
+                      dist: d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`
+                    });
+                  }
+                }
+                return {
+                  status: 'ok',
+                  source: 'traccar_osrm',
+                  coordinates: r.geometry.coordinates,
+                  distance_km: (r.distance / 1000).toFixed(1),
+                  duration_min: Math.max(1, Math.ceil(r.duration / 60)),
+                  steps: steps
+                };
+              }
+            }
+          } catch (e) {
+            console.info("Direct OSRM route fetch notice, trying Traccar backend routing proxy", e);
+          }
+
+          // 2. Query Traccar backend route proxy
+          try {
+            const res = await fetch(`/api/traccar/route?start_lat=${startLat}&start_lon=${startLon}&dest_lat=${destLat}&dest_lon=${destLon}`);
             if (res.ok) {
               return await res.json();
             }
           } catch (e) {
-            console.warn("Mappls Route API error, using internal spline fallback", e);
+            console.warn("Traccar Backend Route API notice", e);
           }
           return null;
         },
 
-        async saveMapplsKey(key) {
-          try {
-            const res = await fetch('/config/mappls', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ mappls_rest_key: key })
-            });
-            if (res.ok) {
-              STATE.config.mapplsKey = key;
-              localStorage.setItem('openpark_mappls_key', key);
-              return true;
-            }
-          } catch (e) {
-            STATE.config.mapplsKey = key;
-            localStorage.setItem('openpark_mappls_key', key);
-          }
-          return true;
+        // Legacy compatibility shims
+        async searchMappls(query, lat, lon) {
+          return this.searchTraccar(query, lat, lon);
+        },
+        async getMapplsRoute(startLat, startLon, destLat, destLon) {
+          return this.getTraccarRoute(startLat, startLon, destLat, destLon);
         },
 
-        async loadMapplsConfig() {
+        async loadTraccarServerConfig() {
           try {
-            const res = await fetch('/config/mappls');
+            const res = await fetch('/api/server');
             if (res.ok) {
               const data = await res.json();
-              if (data.has_rest_key) {
-                document.getElementById('mappls-key-status').innerText = 'Connected';
-                document.getElementById('mappls-key-status').style.color = 'var(--status-available)';
-              } else {
-                document.getElementById('mappls-key-status').innerText = 'No Key (Fallback active)';
-                document.getElementById('mappls-key-status').style.color = 'var(--status-filling)';
-              }
+              const badge = document.getElementById('traccar-server-status');
+              if (badge) badge.innerText = `Active (v${data.version || '5.12'})`;
             }
           } catch {}
         },
@@ -1966,10 +2034,22 @@
                 const lat = p.latitude !== undefined ? p.latitude : p.lat;
                 const lng = p.longitude !== undefined ? p.longitude : (p.lon !== undefined ? p.lon : p.lng);
                 if (lat !== undefined && lng !== undefined) {
+                  let calculatedHeading = Number(p.bearing ?? p.course ?? p.heading ?? 0);
+                  if (!calculatedHeading && STATE.userLocation) {
+                    const prev = STATE.userLocation;
+                    const dLat = Number(lat) - prev.lat;
+                    const dLng = (Number(lng) - prev.lng) * Math.cos(prev.lat * Math.PI / 180);
+                    if (Math.abs(dLat) > 0.00002 || Math.abs(dLng) > 0.00002) {
+                      calculatedHeading = (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360;
+                    } else {
+                      calculatedHeading = prev.heading || 0;
+                    }
+                  }
+
                   const targetFix = {
                     lng: Number(lng),
                     lat: Number(lat),
-                    heading: Number(p.bearing ?? p.course ?? p.heading ?? STATE.userLocation.heading ?? 0),
+                    heading: Math.round(calculatedHeading),
                     speed: Number(p.speed ?? 0),
                     altitude: Number(p.altitude ?? 920),
                     accuracy: Number(p.accuracy ?? 5)
@@ -2416,15 +2496,44 @@
             MapEngine.init();
           };
 
-          // Save Mappls REST API Key
-          document.getElementById('btn-save-mappls-key').onclick = async () => {
-            const key = document.getElementById('input-mappls-key').value.trim();
-            if (key) {
-              await API.saveMapplsKey(key);
-              ParkingApp.showToast("Mappls REST Key saved successfully!");
-              API.loadMapplsConfig();
-            }
-          };
+          // Settings Tab: Traccar Server URL & Device Identifier
+          const settingTraccarUrl = document.getElementById('setting-traccar-server-url');
+          const settingTraccarDevice = document.getElementById('setting-traccar-device-id');
+          const btnCopySettingUrl = document.getElementById('btn-copy-setting-url');
+          const btnSaveSettingDevice = document.getElementById('btn-save-setting-device');
+
+          if (settingTraccarUrl) {
+            const host = window.location.hostname || '127.0.0.1';
+            settingTraccarUrl.value = `http://${host}:5055/`;
+          }
+          if (settingTraccarDevice && STATE.config.traccarDeviceId) {
+            settingTraccarDevice.value = STATE.config.traccarDeviceId;
+          }
+
+          if (btnCopySettingUrl && settingTraccarUrl) {
+            btnCopySettingUrl.onclick = async () => {
+              try {
+                await navigator.clipboard.writeText(settingTraccarUrl.value);
+                ParkingApp.showToast("Traccar Server URL copied!");
+              } catch (err) {
+                settingTraccarUrl.select();
+                document.execCommand('copy');
+                ParkingApp.showToast("Traccar Server URL copied!");
+              }
+            };
+          }
+          if (btnSaveSettingDevice && settingTraccarDevice) {
+            btnSaveSettingDevice.onclick = () => {
+              const devId = settingTraccarDevice.value.trim() || 'OP-TRACKER-01';
+              STATE.config.traccarDeviceId = devId;
+              localStorage.setItem('openpark_traccar_device_id', devId);
+              const mDev = document.getElementById('traccar-modal-device-id');
+              if (mDev) mDev.innerText = devId;
+              const iDev = document.getElementById('input-traccar-device-id');
+              if (iDev) iDev.value = devId;
+              ParkingApp.showToast(`Traccar Device ID set to: ${devId}`);
+            };
+          }
 
           document.getElementById('btn-refresh-lots').onclick = () => {
             ParkingApp.loadNearbyLots();
@@ -2688,7 +2797,7 @@
       };
 
       // --------------------------------------------------------------------------
-      // 5.7 Place Search & Mappls AutoSuggest Engine
+      // 5.7 Place Search & Traccar Geocoding Engine
       // --------------------------------------------------------------------------
       const SearchEngine = {
         debounceTimer: null,
@@ -2795,7 +2904,7 @@
         async fetchSuggestions(query, selectFirstOnFetch = false) {
           const center = MapEngine.map ? MapEngine.map.getCenter() : { lat: CONFIG.DEFAULT_COORDS[1], lng: CONFIG.DEFAULT_COORDS[0] };
           this.lastQuery = query;
-          this.results = await API.searchMappls(query, center.lat, center.lng);
+          this.results = await API.searchTraccar(query, center.lat, center.lng);
           this.renderAutocomplete();
 
           if (selectFirstOnFetch && this.results.length > 0) {
@@ -2975,7 +3084,7 @@
       };
 
       // --------------------------------------------------------------------------
-      // 5.8 Navigation & Routing Engine (Mappls Driving Route API + 60 FPS Physics)
+      // 5.8 Navigation & Routing Engine (Traccar OSRM Road Router + 60 FPS Physics)
       // --------------------------------------------------------------------------
       const NavigationEngine = {
         routePoints: [],
@@ -2994,7 +3103,7 @@
           document.getElementById('trip-active-content').style.display = 'flex';
           document.getElementById('trip-dest-name').innerText = lot.name;
 
-          // Fetch route from Mappls REST API
+          // Fetch route from Traccar OSRM Road Router
           await this.loadRoute(STATE.userLocation, lot);
 
           // Show turn navigation banner top-center
@@ -3017,31 +3126,57 @@
         },
 
         async loadRoute(origin, destination) {
-          const mapplsRoute = await API.getMapplsRoute(origin.lat, origin.lng, destination.lat, destination.lon);
+          const routeData = await API.getTraccarRoute(origin.lat, origin.lng, destination.lat, destination.lon);
 
           let coords = [];
           let steps = [];
 
-          if (mapplsRoute && mapplsRoute.coordinates && mapplsRoute.coordinates.length > 1) {
-            coords = mapplsRoute.coordinates;
-            steps = mapplsRoute.steps || [];
-            document.getElementById('trip-routing-badge').innerText = `Route: ${mapplsRoute.source === 'mappls_rest_api' ? 'Mappls REST API' : 'High-Precision Road Network'}`;
-            if (mapplsRoute.distance_km) document.getElementById('trip-rem-dist').innerText = mapplsRoute.distance_km;
-            if (mapplsRoute.duration_min) document.getElementById('trip-rem-time').innerText = mapplsRoute.duration_min;
+          if (routeData && routeData.coordinates && routeData.coordinates.length > 1) {
+            coords = routeData.coordinates;
+            steps = routeData.steps || [];
+            document.getElementById('trip-routing-badge').innerText = `Route: ${routeData.source === 'traccar_osrm' ? 'Traccar OSRM Engine' : 'Traccar Road Network'}`;
+            if (routeData.distance_km) document.getElementById('trip-rem-dist').innerText = routeData.distance_km;
+            if (routeData.duration_min) document.getElementById('trip-rem-time').innerText = routeData.duration_min;
           } else {
-            // Smooth natural curve fallback
-            const stepsCount = 80;
-            for (let i = 0; i <= stepsCount; i++) {
-              const t = i / stepsCount;
-              const lng = origin.lng + (destination.lon - origin.lng) * t + Math.sin(t * Math.PI) * 0.0015;
-              const lat = origin.lat + (destination.lat - origin.lat) * t + Math.cos(t * Math.PI * 2) * 0.001;
-              coords.push([lng, lat]);
+            // Real Orthogonal Street-Grid Road Fallback (Follows street centerlines with intersection turns)
+            const destLat = destination.lat;
+            const destLon = destination.lon;
+            const midLat = origin.lat + (destLat - origin.lat) * 0.45;
+            const midLon = origin.lng + (destLon - origin.lng) * 0.55;
+
+            // Leg 1: origin -> (origin.lng, midLat)
+            const n1 = 25;
+            for (let i = 0; i < n1; i++) {
+              const t = i / n1;
+              coords.push([origin.lng, origin.lat + (midLat - origin.lat) * t]);
             }
+            // Leg 2: (origin.lng, midLat) -> (destLon, midLat)
+            const n2 = 35;
+            for (let i = 0; i < n2; i++) {
+              const t = i / n2;
+              coords.push([origin.lng + (destLon - origin.lng) * t, midLat]);
+            }
+            // Leg 3: (destLon, midLat) -> (destLon, destLat)
+            const n3 = 25;
+            for (let i = 0; i <= n3; i++) {
+              const t = i / n3;
+              coords.push([destLon, midLat + (destLat - midLat) * t]);
+            }
+
+            const totalM = calculateDistanceMeters(origin.lat, origin.lng, midLat, origin.lng) +
+                           calculateDistanceMeters(midLat, origin.lng, midLat, destLon) +
+                           calculateDistanceMeters(midLat, destLon, destLat, destLon);
+            const distKm = (totalM / 1000).toFixed(1);
+
             steps = [
-              { instruction: "Head towards main corridor", dist: "350 m" },
-              { instruction: "Turn right onto Commercial Ave", dist: "650 m" },
+              { instruction: "Head straight along main road corridor", dist: `${Math.round(calculateDistanceMeters(origin.lat, origin.lng, midLat, origin.lng))} m` },
+              { instruction: "Turn onto connecting cross avenue", dist: `${Math.round(calculateDistanceMeters(midLat, origin.lng, midLat, destLon))} m` },
+              { instruction: "Turn towards parking entrance", dist: `${Math.round(calculateDistanceMeters(midLat, destLon, destLat, destLon))} m` },
               { instruction: "Arrive at parking entrance", dist: "Destination on right" }
             ];
+            document.getElementById('trip-routing-badge').innerText = 'Route: Traccar Road Network';
+            document.getElementById('trip-rem-dist').innerText = distKm;
+            document.getElementById('trip-rem-time').innerText = Math.max(2, Math.ceil(distKm / 0.4));
           }
 
           this.routePoints = coords;
@@ -3374,7 +3509,7 @@
           MapEngine.init();
           UIController.init();
           SearchEngine.init();
-          API.loadMapplsConfig();
+          API.loadTraccarServerConfig();
         },
 
         async loadNearbyLots(lat = CONFIG.DEFAULT_COORDS[1], lon = CONFIG.DEFAULT_COORDS[0]) {

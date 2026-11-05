@@ -130,11 +130,11 @@ def test_maplibre_config_endpoints():
 
 
 def test_mappls_rest_api_endpoints():
-    # 1. Test Mappls config endpoint
+    # 1. Test Mappls config endpoint (delegated to Traccar)
     res = client.get("/config/mappls")
     assert res.status_code == 200
     data = res.json()
-    assert "Mappls REST API" in data["engine"]
+    assert "Traccar" in data["engine"]
     assert "has_rest_key" in data
 
     # 2. Test updating Mappls REST key
@@ -227,4 +227,30 @@ def test_traccar_endpoints():
     root_ping = client.get("/?id=OP-TRACKER-01&lat=12.9716&lon=77.5946&speed=20.0&bearing=45.0")
     assert root_ping.status_code == 200
     assert root_ping.text == "OK"
+
+    # 10. Test Traccar OSRM Driving Road Routing
+    route_res = client.get("/api/traccar/route?start_lat=12.9716&start_lon=77.5946&dest_lat=12.9750&dest_lon=77.6000")
+    assert route_res.status_code == 200
+    route_data = route_res.json()
+    assert route_data["status"] == "ok"
+    assert len(route_data["coordinates"]) >= 2
+    assert "steps" in route_data
+    assert "distance_km" in route_data
+
+    # 11. Test Traccar Places Search (OSM Nominatim + Local Catalog)
+    search_res = client.get("/api/traccar/search?query=Koramangala")
+    assert search_res.status_code == 200
+    search_data = search_res.json()
+    assert search_data["status"] == "ok"
+    assert len(search_data["results"]) >= 1
+    assert "name" in search_data["results"][0]
+
+    # 12. Test Traccar Device Road Trail
+    trail_res = client.get("/api/traccar/devices/OP-TRACKER-01/trail")
+    assert trail_res.status_code == 200
+    trail_data = trail_res.json()
+    assert trail_data["type"] == "FeatureCollection"
+    assert len(trail_data["features"]) >= 1
+    assert trail_data["features"][0]["geometry"]["type"] == "LineString"
+
 
