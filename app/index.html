@@ -1308,10 +1308,10 @@
           type="text" 
           id="search-input" 
           class="search-input" 
-          placeholder="Search places, roads, parking (Traccar / OSM)" 
+          placeholder="Search Google Maps (e.g. Starbucks, Airport, MG Road)..." 
           autocomplete="off" 
           spellcheck="false"
-          aria-label="Search places, roads, parking"
+          aria-label="Search places, addresses, destinations"
         />
         <button id="search-clear" class="search-clear-btn" aria-label="Clear search input">
           <svg class="svg-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24">
@@ -1323,18 +1323,15 @@
         <div id="search-autocomplete-box" class="autocomplete-list" role="listbox"></div>
       </div>
 
-      <!-- Filter Chips -->
-      <div class="filter-chip-row" role="radiogroup" aria-label="Filter parking status">
-        <button class="chip-btn active" data-filter="all">All Lots (<span id="total-lots-count">15</span>)</button>
-        <button class="chip-btn" data-filter="Available">
-          <span class="status-dot" style="background:var(--status-available);"></span>Available
-        </button>
-        <button class="chip-btn" data-filter="Filling up">
-          <span class="status-dot" style="background:var(--status-filling);"></span>Filling up
-        </button>
-        <button class="chip-btn" data-filter="Full">
-          <span class="status-dot" style="background:var(--status-full);"></span>Full
-        </button>
+      <!-- Quick Search Category Chips (Google Maps Style) -->
+      <div class="filter-chip-row" role="toolbar" aria-label="Quick search categories">
+        <button class="chip-btn" data-category="Cafes">☕ Cafes</button>
+        <button class="chip-btn" data-category="Restaurants">🍔 Food</button>
+        <button class="chip-btn" data-category="Shopping">🛍️ Shopping</button>
+        <button class="chip-btn" data-category="Fuel">⛽ Fuel</button>
+        <button class="chip-btn" data-category="Hospitals">🏥 Hospitals</button>
+        <button class="chip-btn" data-category="Landmarks">🏛️ Landmarks</button>
+        <button class="chip-btn" data-category="Parking">🅿️ Parking</button>
       </div>
     </div>
 
@@ -2493,8 +2490,9 @@
           }
         },
 
-        // Traccar & Nominatim Geocoding & Place Search Engine (https://www.traccar.org/)
+        // Universal Google Maps & Traccar Geocoding / Place Search
         async searchTraccar(query, lat, lon) {
+          // 1. Query backend proxy (Photon + Nominatim + Curated Landmarks)
           try {
             const res = await fetch(`/api/traccar/search?query=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}`);
             if (res.ok) {
@@ -2507,7 +2505,69 @@
             console.warn("Traccar search proxy notice", e);
           }
 
-          // Direct browser OSM Nominatim fallback if backend search unavailable
+          // 2. Direct browser Photon Geocoder fallback
+          try {
+            const photonRes = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}&limit=10`);
+            if (photonRes.ok) {
+              const pData = await photonRes.json();
+              if (pData.features && pData.features.length > 0) {
+                const getBadge = (val, type) => {
+                  const s = `${val || ''} ${type || ''}`.toLowerCase();
+                  if (s.includes('cafe') || s.includes('coffee')) return '☕';
+                  if (s.includes('restaurant') || s.includes('fast_food') || s.includes('food')) return '🍔';
+                  if (s.includes('bar') || s.includes('pub')) return '🍺';
+                  if (s.includes('hospital') || s.includes('clinic')) return '🏥';
+                  if (s.includes('pharmacy')) return '💊';
+                  if (s.includes('fuel') || s.includes('gas')) return '⛽';
+                  if (s.includes('hotel') || s.includes('motel')) return '🏨';
+                  if (s.includes('mall') || s.includes('shop') || s.includes('supermarket')) return '🛍️';
+                  if (s.includes('airport') || s.includes('aerodrome')) return '✈️';
+                  if (s.includes('station') || s.includes('subway') || s.includes('tram')) return '🚆';
+                  if (s.includes('bank') || s.includes('atm')) return '🏦';
+                  if (s.includes('park') || s.includes('garden')) return '🌳';
+                  if (s.includes('parking')) return '🅿️';
+                  return '📍';
+                };
+
+                return pData.features.map(f => {
+                  const p = f.properties || {};
+                  const coords = (f.geometry && f.geometry.coordinates) || [lon, lat];
+                  const pLon = parseFloat(coords[0]);
+                  const pLat = parseFloat(coords[1]);
+                  const baseName = p.name || p.street || p.city || query;
+                  const locality = p.locality || p.street || p.district;
+                  const dispName = (locality && !baseName.toLowerCase().includes(locality.toLowerCase()))
+                    ? `${baseName} (${locality})`
+                    : baseName;
+                  const addrParts = [];
+                  if (p.housenumber && p.street) addrParts.push(`${p.housenumber} ${p.street}`);
+                  else if (p.street) addrParts.push(p.street);
+                  if (p.district) addrParts.push(p.district);
+                  if (p.city) addrParts.push(p.city);
+                  if (p.state) addrParts.push(p.state);
+
+                  const fullAddr = addrParts.length > 0 ? addrParts.join(', ') : (p.name || 'Bengaluru');
+                  const distKm = (calculateDistanceMeters(lat, lon, pLat, pLon) / 1000).toFixed(1);
+                  const cat = (p.osm_value || p.type || 'Destination').replace('_', ' ');
+
+                  return {
+                    name: dispName,
+                    badge: getBadge(p.osm_value, p.type),
+                    category: cat.toUpperCase(),
+                    address: fullAddr,
+                    lat: pLat,
+                    lon: pLon,
+                    distance_km: distKm,
+                    source: "browser_photon"
+                  };
+                });
+              }
+            }
+          } catch (e) {
+            console.warn("Browser Photon fallback notice", e);
+          }
+
+          // 3. Direct browser OSM Nominatim fallback
           try {
             const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1`);
             if (nomRes.ok) {
@@ -2527,7 +2587,7 @@
             }
           } catch {}
 
-          // Local parking lots instant fallback matching
+          // 4. Local parking lots fallback matching
           if (STATE.lots && STATE.lots.length > 0) {
             const q = query.trim().toLowerCase();
             const localMatches = STATE.lots
@@ -2535,7 +2595,7 @@
               .map(l => ({
                 name: l.name,
                 badge: "🅿️",
-                category: "Parking Lot",
+                category: "PARKING",
                 address: l.address,
                 lat: l.lat,
                 lon: l.lon,
@@ -2721,7 +2781,6 @@
           this.map.on('load', () => {
             this.setupRouteSource();
             this.createVehicleMarker();
-            this.setupOverpassLayers();
 
             const cur = STATE.userLocation;
             if (cur && (cur.lat !== CONFIG.DEFAULT_COORDS[1] || cur.lng !== CONFIG.DEFAULT_COORDS[0])) {
@@ -2827,130 +2886,14 @@
         },
 
         async setupOverpassLayers() {
-          try {
-            const res = await fetch('/api/osm/overpass');
-            if (!res.ok) return;
-            const data = await res.json();
-            if (!data || !data.features) return;
-
-            const parkingPolys = [];
-            const poiPoints = [];
-
-            data.features.forEach(f => {
-              const geomType = f.geometry && f.geometry.type;
-              const cat = f.properties && f.properties.category;
-              const amenity = f.properties && f.properties.amenity;
-
-              if (cat === 'parking_outline' || amenity === 'parking') {
-                if (geomType === 'Polygon' || geomType === 'MultiPolygon') {
-                  parkingPolys.push(f);
-                }
-              } else if (cat === 'fuel' || amenity === 'fuel' || cat === 'toll' || (f.properties && f.properties.barrier === 'toll_booth')) {
-                poiPoints.push(f);
-              }
-            });
-
-            // 1. Add OSM Parking Outlines (Polygon Fills & Crisp Outlines)
-            if (this.map.getSource('osm-parking-source')) {
-              this.map.getSource('osm-parking-source').setData({
-                type: 'FeatureCollection',
-                features: parkingPolys
-              });
-            } else {
-              this.map.addSource('osm-parking-source', {
-                type: 'geojson',
-                data: {
-                  type: 'FeatureCollection',
-                  features: parkingPolys
-                }
-              });
-
-              this.map.addLayer({
-                id: 'osm-parking-fills',
-                type: 'fill',
-                source: 'osm-parking-source',
-                paint: {
-                  'fill-color': '#0284c7',
-                  'fill-opacity': 0.18
-                }
-              });
-
-              this.map.addLayer({
-                id: 'osm-parking-outlines',
-                type: 'line',
-                source: 'osm-parking-source',
-                paint: {
-                  'line-color': '#38bdf8',
-                  'line-width': 1.8,
-                  'line-opacity': 0.85
-                }
-              });
-
-              this.map.on('click', 'osm-parking-fills', (e) => {
-                if (e.features && e.features[0]) {
-                  const p = e.features[0].properties;
-                  new maplibregl.Popup({ offset: 12, closeButton: true })
-                    .setLngLat(e.lngLat)
-                    .setHTML(`
-                      <div style="font-family: -apple-system, sans-serif; font-size: 12px; color: #0f172a; padding: 4px;">
-                        <div style="font-weight: 700; margin-bottom: 3px;">🅿️ ${p.name || 'OSM Parking Zone'}</div>
-                        <div style="color: #64748b; font-size: 11px;">Capacity: ~${p.capacity || '100'} spots</div>
-                        <div style="color: #0284c7; font-weight: 600; font-size: 11px; margin-top: 3px;">Municipal Verified Lot Outline</div>
-                      </div>
-                    `)
-                    .addTo(this.map);
-                }
-              });
-
-              this.map.on('mouseenter', 'osm-parking-fills', () => {
-                this.map.getCanvas().style.cursor = 'pointer';
-              });
-              this.map.on('mouseleave', 'osm-parking-fills', () => {
-                this.map.getCanvas().style.cursor = '';
-              });
-            }
-
-            // 2. Add Fuel and Toll Markers from OSM Overpass Data
-            this.clearPoiMarkers();
-            poiPoints.forEach(f => {
-              if (!f.geometry || !f.geometry.coordinates) return;
-              const [lon, lat] = f.geometry.coordinates; // [lon, lat] order
-              const p = f.properties || {};
-              const isFuel = p.category === 'fuel' || p.amenity === 'fuel';
-
-              const el = document.createElement('div');
-              el.className = `osm-poi-marker ${isFuel ? 'fuel-marker' : 'toll-marker'}`;
-              el.innerHTML = `
-                <span class="poi-icon">${isFuel ? '⛽' : '🛣️'}</span>
-                <span class="poi-label">${p.brand || p.name}</span>
-              `;
-              el.title = `${p.name} (${isFuel ? 'Fuel Station' : 'Highway Toll Plaza'})`;
-
-              el.addEventListener('click', (ev) => {
-                ev.stopPropagation();
-                new maplibregl.Popup({ offset: 12 })
-                  .setLngLat([lon, lat])
-                  .setHTML(`
-                    <div style="font-family: -apple-system, sans-serif; font-size: 12px; color: #0f172a; padding: 4px;">
-                      <div style="font-weight: 700; margin-bottom: 2px;">${isFuel ? '⛽ Fuel Station' : '🛣️ Highway Toll Plaza'}</div>
-                      <div style="font-weight: 600; color: #1e293b;">${p.name}</div>
-                      <div style="color: #64748b; font-size: 11px; margin-top: 4px;">Verified OSM Infrastructure</div>
-                    </div>
-                  `)
-                  .addTo(this.map);
-              });
-
-              const marker = new maplibregl.Marker({
-                element: el,
-                anchor: 'center'
-              })
-                .setLngLat([lon, lat])
-                .addTo(this.map);
-
-              this.poiMarkers.push(marker);
-            });
-          } catch (err) {
-            console.warn("[MapEngine] Failed loading OSM overpass layers:", err);
+          // Parking lot outlines and toll markers are hidden to keep map clean like Google Maps
+          this.clearPoiMarkers();
+          if (this.map) {
+            try {
+              if (this.map.getLayer('osm-parking-fills')) this.map.removeLayer('osm-parking-fills');
+              if (this.map.getLayer('osm-parking-outlines')) this.map.removeLayer('osm-parking-outlines');
+              if (this.map.getSource('osm-parking-source')) this.map.removeSource('osm-parking-source');
+            } catch (e) {}
           }
         },
 
@@ -3043,45 +2986,10 @@
         },
 
         renderLotMarkers(lots) {
-          // Clear old markers
+          // Clear any existing lot markers to keep map uncluttered like Google Maps
           this.markers.forEach(m => m.marker.remove());
           this.markers.clear();
-
-          lots.forEach(lot => {
-            const el = document.createElement('div');
-            el.className = 'openpark-pin';
-            el.setAttribute('role', 'button');
-            el.setAttribute('aria-label', `${lot.name}: ${lot.free_spots} spots available`);
-            
-            let color = '#10b981'; // Emerald
-            if (lot.status === 'Filling up') color = '#f59e0b';
-            if (lot.status === 'Full') color = '#ef4444';
-            if (lot.status === 'Unknown') color = '#94a3b8';
-
-            // Precise SVG Pin with anchor strictly at bottom tip (17, 44)
-            el.innerHTML = `
-              <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
-                <path d="M17 43.5 C17 43.5 3 27 3 17 A14 14 0 1 1 31 17 C31 27 17 43.5 17 43.5 Z" fill="${color}" stroke="#ffffff" stroke-width="1.8"/>
-                <circle cx="17" cy="17" r="10.5" fill="#0f172a" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
-                <text x="17" y="21" fill="#ffffff" font-size="11" font-family="-apple-system, sans-serif" font-weight="700" text-anchor="middle">${lot.free_spots > 999 ? '999+' : lot.free_spots}</text>
-              </svg>
-            `;
-
-            el.addEventListener('click', (e) => {
-              e.stopPropagation();
-              ParkingApp.selectLot(lot.id);
-            });
-
-            const marker = new maplibregl.Marker({
-              element: el,
-              anchor: 'bottom',
-              offset: [0, 0]
-            })
-              .setLngLat([lot.lon, lot.lat])
-              .addTo(this.map);
-
-            this.markers.set(lot.id, { marker, element: el });
-          });
+          // The map displays only the real-time vehicle and user-selected destination pin
         },
 
         highlightMarker(lotId) {
@@ -3114,13 +3022,17 @@
             ParkingApp.showListView();
           };
 
-          // Filter chips
+          // Category Quick Search chips (Google Maps Style)
           document.querySelectorAll('.filter-chip-row .chip-btn').forEach(btn => {
             btn.addEventListener('click', () => {
               document.querySelectorAll('.filter-chip-row .chip-btn').forEach(b => b.classList.remove('active'));
               btn.classList.add('active');
-              STATE.activeFilter = btn.dataset.filter;
-              this.renderLotList(STATE.lots);
+              if (btn.dataset.category) {
+                SearchEngine.quickSearch(btn.dataset.category);
+              } else if (btn.dataset.filter) {
+                STATE.activeFilter = btn.dataset.filter;
+                this.renderLotList(STATE.lots);
+              }
             });
           });
 
@@ -3625,7 +3537,7 @@
             const clearBtn = document.getElementById('search-clear');
             if (clearBtn) clearBtn.classList.add('visible');
             input.focus();
-            this.fetchSuggestions(query, true);
+            this.fetchSuggestions(query, false);
           }
         },
 
@@ -4440,6 +4352,7 @@
           if (!lot) return;
 
           STATE.selectedLot = lot;
+          MapEngine.setDestinationMarker(lot);
           MapEngine.highlightMarker(lotId);
           MapEngine.map.easeTo({ center: [lot.lon, lot.lat], zoom: 16, duration: 500 });
           UIController.renderLotDetail(lot);
@@ -4454,6 +4367,7 @@
         showListView() {
           STATE.selectedLot = null;
           STATE.selectedPlace = null;
+          MapEngine.clearDestinationMarker();
           MapEngine.highlightMarker(null);
           document.getElementById('view-detail').style.display = 'none';
           document.getElementById('view-place').style.display = 'none';
