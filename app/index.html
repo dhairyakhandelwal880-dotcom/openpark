@@ -1085,8 +1085,8 @@
       position: absolute;
       width: 48px;
       height: 48px;
-      border: 1.5px solid rgba(56, 189, 248, 0.55);
-      background: radial-gradient(circle, rgba(56, 189, 248, 0.22) 0%, rgba(37, 99, 235, 0.05) 70%, transparent 100%);
+      border: 1.5px solid rgba(239, 68, 68, 0.65);
+      background: radial-gradient(circle, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.05) 70%, transparent 100%);
       border-radius: 50%;
       animation: nav-pulse 2.2s infinite ease-out;
     }
@@ -1115,9 +1115,9 @@
       bottom: -15px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid rgba(56, 189, 248, 0.45);
-      color: #38bdf8;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      color: #fca5a5;
       font-size: 10px;
       font-weight: 700;
       font-family: var(--font-mono);
@@ -1935,7 +1935,7 @@
           <div class="setting-row">
             <span>Simulate vehicle movement</span>
             <label class="toggle-switch">
-              <input type="checkbox" id="toggle-sim-drive" checked />
+              <input type="checkbox" id="toggle-sim-drive" />
               <span class="slider"></span>
             </label>
           </div>
@@ -2190,7 +2190,7 @@
         tripOdometerKm: 0,
         config: {
           voiceAlerts: true,
-          simulateDrive: true,
+          simulateDrive: false,
           showHud: true,
           showBreadcrumbs: true,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
@@ -2692,18 +2692,21 @@
             '<div class="vehicle-heading-rotator" id="v-rotator">' +
               '<svg viewBox="0 0 48 48" class="vehicle-chevron-svg">' +
                 '<defs>' +
-                  '<linearGradient id="navPuckGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
-                    '<stop offset="0%" stop-color="#38bdf8"/>' +
-                    '<stop offset="100%" stop-color="#1d4ed8"/>' +
+                  '<linearGradient id="redPointerGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+                    '<stop offset="0%" stop-color="#ef4444"/>' +
+                    '<stop offset="100%" stop-color="#b91c1c"/>' +
                   '</linearGradient>' +
+                  '<filter id="pointerShadow" x="-20%" y="-20%" width="140%" height="140%">' +
+                    '<feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="rgba(0,0,0,0.5)"/>' +
+                  '</filter>' +
                 '</defs>' +
-                '<circle cx="24" cy="24" r="22" fill="rgba(37, 99, 235, 0.15)"/>' +
-                '<path d="M24 4 L42 40 L24 31 L6 40 Z" fill="#ffffff"/>' +
-                '<path d="M24 7 L39 37 L24 29 L9 37 Z" fill="url(#navPuckGrad)"/>' +
-                '<circle cx="24" cy="23" r="3.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.5"/>' +
+                '<circle cx="24" cy="24" r="22" fill="rgba(239, 68, 68, 0.2)"/>' +
+                '<path d="M24 3 L43 41 L24 32 L5 41 Z" fill="#ffffff" filter="url(#pointerShadow)"/>' +
+                '<path d="M24 6 L39 38 L24 30 L9 38 Z" fill="url(#redPointerGrad)"/>' +
+                '<circle cx="24" cy="24" r="3.5" fill="#ffffff" stroke="#991b1b" stroke-width="1.5"/>' +
               '</svg>' +
             '</div>' +
-            '<div class="vehicle-speed-pill" id="v-speed-pill">Stopped</div>';
+            '<div class="vehicle-speed-pill" id="v-speed-pill">Device Location</div>';
           this.marker = new maplibregl.Marker({ element: this.el, anchor: 'center' });
         }
 
@@ -3774,18 +3777,21 @@
             <div class="vehicle-heading-rotator" id="v-rotator">
               <svg viewBox="0 0 48 48" class="vehicle-chevron-svg">
                 <defs>
-                  <linearGradient id="navPuckGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#38bdf8"/>
-                    <stop offset="100%" stop-color="#1d4ed8"/>
+                  <linearGradient id="redPointerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#ef4444"/>
+                    <stop offset="100%" stop-color="#b91c1c"/>
                   </linearGradient>
+                  <filter id="pointerShadow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="rgba(0,0,0,0.5)"/>
+                  </filter>
                 </defs>
-                <circle cx="24" cy="24" r="22" fill="rgba(37, 99, 235, 0.15)"/>
-                <path d="M24 4 L42 40 L24 31 L6 40 Z" fill="#ffffff"/>
-                <path d="M24 7 L39 37 L24 29 L9 37 Z" fill="url(#navPuckGrad)"/>
-                <circle cx="24" cy="23" r="3.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.5"/>
+                <circle cx="24" cy="24" r="22" fill="rgba(239, 68, 68, 0.2)"/>
+                <path d="M24 3 L43 41 L24 32 L5 41 Z" fill="#ffffff" filter="url(#pointerShadow)"/>
+                <path d="M24 6 L39 38 L24 30 L9 38 Z" fill="url(#redPointerGrad)"/>
+                <circle cx="24" cy="24" r="3.5" fill="#ffffff" stroke="#991b1b" stroke-width="1.5"/>
               </svg>
             </div>
-            <div class="vehicle-speed-pill" id="v-speed-pill">Stopped</div>
+            <div class="vehicle-speed-pill" id="v-speed-pill">Device Location</div>
           `;
 
           this.vehicleMarker = new maplibregl.Marker({
@@ -4800,9 +4806,8 @@
             }
           });
 
-          if (STATE.config.simulateDrive) {
-            this.startSimulation();
-          }
+          // When clicking direction: ONLY show the route path, DO NOT start moving
+          this.isSimulating = false;
         },
 
         async loadRoute(origin, destination) {
@@ -4871,6 +4876,16 @@
             geometry: { type: 'LineString', coordinates: coords }
           };
           MapEngine.map.getSource('route').setData(geojson);
+
+          // Fit bounds to show entire route from device location to destination
+          if (MapEngine.map && coords.length > 1) {
+            const bounds = coords.reduce((b, pt) => b.extend(pt), new maplibregl.LngLatBounds(coords[0], coords[0]));
+            MapEngine.map.fitBounds(bounds, {
+              padding: { top: 110, bottom: 110, left: 70, right: 70 },
+              maxZoom: 16.5,
+              duration: 650
+            });
+          }
 
           this.renderStepList();
           if (this.routeSteps.length > 0) {
