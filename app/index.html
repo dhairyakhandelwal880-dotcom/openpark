@@ -1040,8 +1040,21 @@
       .sidebar-drag-handle { display: none; }
     }
 
+    /* MapLibre Markers - Ensure they are strictly absolute and never in layout flow */
+    .maplibregl-marker {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      will-change: transform;
+    }
+
     /* Custom Map Marker styles */
     .openpark-pin {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
       cursor: pointer;
       user-select: none;
     }
@@ -1055,9 +1068,13 @@
 
     /* Google Maps 3D Navigation Puck & Arrowhead Pointer */
     .vehicle-marker-root {
-      position: relative;
-      width: 54px;
-      height: 54px;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 54px !important;
+      height: 54px !important;
+      margin: 0 !important;
+      padding: 0 !important;
       pointer-events: none;
       display: flex;
       align-items: center;
@@ -1171,16 +1188,23 @@
 
     /* Google Maps Destination Search Pin */
     .destination-pin {
-      position: relative;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 32px !important;
+      height: 40px !important;
+      margin: 0 !important;
+      padding: 0 !important;
       cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       z-index: 95;
       pointer-events: auto;
       user-select: none;
     }
     .destination-pin-badge {
+      position: absolute;
+      bottom: 44px;
+      left: 50%;
+      transform: translateX(-50%);
       background: #dc2626;
       color: #ffffff;
       font-size: 11px;
@@ -1190,15 +1214,16 @@
       box-shadow: 0 3px 8px rgba(0,0,0,0.45);
       border: 1.5px solid #ffffff;
       white-space: nowrap;
-      margin-bottom: 2px;
       max-width: 160px;
       overflow: hidden;
       text-overflow: ellipsis;
       pointer-events: none;
     }
     .destination-pin-svg {
-      width: 30px;
-      height: 38px;
+      position: absolute;
+      inset: 0;
+      width: 32px;
+      height: 40px;
       filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
       transform-origin: bottom center;
       transition: transform 0.15s ease;
@@ -1237,11 +1262,17 @@
 
     /* Google Maps POI Map Markers - Firmly pinned to vector map */
     .gmap-poi-marker {
-      position: relative;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 32px !important;
+      height: 32px !important;
+      margin: 0 !important;
+      padding: 0 !important;
       cursor: pointer;
       display: flex;
-      flex-direction: column;
       align-items: center;
+      justify-content: center;
       user-select: none;
       z-index: 50;
       pointer-events: auto;
@@ -1266,7 +1297,10 @@
       z-index: 100;
     }
     .gmap-poi-label {
-      margin-top: 2px;
+      position: absolute;
+      top: 34px;
+      left: 50%;
+      transform: translateX(-50%);
       background: rgba(15, 23, 42, 0.9);
       color: #f8fafc;
       padding: 1.5px 6px;
@@ -2271,12 +2305,12 @@
           const speed = isFiniteNum(p.speed) && p.speed >= 0 ? p.speed : implied;
 
           // Stationary deadband: when vehicle speed is below minHeadingSpeed (1 m/s),
-          // filter out micro GPS noise/jitter (< 6.5m) so the pointer stays solidly pinned in place.
+          // filter out micro GPS noise/jitter (< 12m) so the pointer stays solidly pinned in place.
           if (!this.smooth) {
             this.smooth = { lat: p.lat, lon: p.lon };
           } else {
             const distFromSmooth = haversine(this.smooth.lat, this.smooth.lon, p.lat, p.lon);
-            if (speed < this.minHeadingSpeed && distFromSmooth < 6.5) {
+            if (speed < this.minHeadingSpeed && distFromSmooth < 12.0) {
               // Stationary jitter: keep pointer pinned at current smooth coordinates
             } else {
               this.smooth.lat += this.alpha * (p.lat - this.smooth.lat);
@@ -2526,11 +2560,12 @@
           if (!r.ok) { console.debug('[tracker] rejected:', r.reason); return; }
           this.lastFixAt = Date.now();
 
-          // Stationary deadband: when stationary or position jitter is minimal (< 0.8m),
+          // Stationary deadband: when stationary or position jitter is minimal (< 12m while stationary),
           // keep the vehicle pointer firmly pinned without restarting glide animation loop
           if (this.shown) {
             const dMeters = haversine(this.shown.lat, this.shown.lon, r.fix.lat, r.fix.lon);
-            if (dMeters < 0.8) {
+            const isStationary = (r.fix.speed || 0) < 1.0;
+            if (dMeters < 0.8 || (isStationary && dMeters < 12.0)) {
               this.shown.speed = r.fix.speed || 0;
               if (r.fix.heading !== undefined && (r.fix.speed || 0) > 1.0) {
                 this.shown.heading = r.fix.heading;
@@ -3480,12 +3515,15 @@
               SearchEngine.selectResult(place);
             });
 
+            const lon = Number(place.lon !== undefined ? place.lon : (place.lng !== undefined ? place.lng : place.longitude));
+            const lat = Number(place.lat !== undefined ? place.lat : place.latitude);
+            if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+
             const marker = new maplibregl.Marker({
               element: el,
-              anchor: 'top',
-              offset: [0, -15]
+              anchor: 'center'
             })
-              .setLngLat([place.lon, place.lat])
+              .setLngLat([lon, lat])
               .addTo(this.map);
 
             this.poiMarkers.push(marker);
@@ -3553,6 +3591,10 @@
           }
           if (!place) return;
 
+          const lon = Number(place.lon !== undefined ? place.lon : (place.lng !== undefined ? place.lng : place.longitude));
+          const lat = Number(place.lat !== undefined ? place.lat : place.latitude);
+          if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+
           const el = document.createElement('div');
           el.className = 'destination-pin';
           el.innerHTML = `
@@ -3569,7 +3611,7 @@
             anchor: 'bottom',
             offset: [0, 0]
           })
-            .setLngLat([place.lon, place.lat])
+            .setLngLat([lon, lat])
             .addTo(this.map);
         },
 
