@@ -212,10 +212,42 @@ def get_all_devices() -> List[Dict]:
     return [dev.model_dump() for dev in DEVICES.values()]
 
 
+def get_device(device_id: str) -> Optional[Dict]:
+    dev = DEVICES.get(device_id)
+    return dev.model_dump() if dev else None
+
+
 def get_all_positions() -> List[Dict]:
     return [pos.model_dump() for pos in LATEST_POSITIONS.values()]
+
+
+def get_latest_position(device_id: str) -> Optional[Dict]:
+    pos = LATEST_POSITIONS.get(device_id)
+    return pos.model_dump() if pos else None
 
 
 def get_position_history(device_id: str) -> List[Dict]:
     history = POSITION_HISTORY.get(device_id, [])
     return [pos.model_dump() for pos in history]
+
+
+def get_traccar_server_info() -> Dict:
+    return {
+        "version": "5.12-openpark",
+        "name": "OpenPark Traccar Telemetry Hub",
+        "url": "https://www.traccar.org/",
+        "registration": True,
+        "readonly": False,
+        "device_count": len(DEVICES),
+        "protocols": ["osmand", "traccar-http", "json-telemetry"],
+        "client_ports": {
+            "standard_osmand": 5055,
+            "http_proxy": 8000
+        },
+        "endpoints": {
+            "osmand_ping": "http://<host>:5055/ or http://<host>:8000/api/traccar",
+            "devices": "/api/devices",
+            "positions": "/api/positions",
+            "socket": "/api/socket or /ws/vehicle"
+        }
+    }

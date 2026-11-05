@@ -1229,9 +1229,15 @@
           <span>OpenPark</span>
           <span class="brand-badge">Bengaluru Core</span>
         </div>
-        <button id="btn-refresh-top" class="chip-btn" style="padding: 4px 8px;" title="Refresh Occupancy">
-          <span>🔄</span>
-        </button>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button id="btn-traccar-pill" class="chip-btn" style="padding: 3px 9px; font-size: 11px; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #34d399; display: flex; align-items: center; gap: 5px; cursor: pointer;" title="Traccar GPS Tracking Engine (https://www.traccar.org/)">
+            <span class="status-dot" style="background:#10b981; width:6px; height:6px;"></span>
+            <span id="traccar-pill-text">Traccar</span>
+          </button>
+          <button id="btn-refresh-top" class="chip-btn" style="padding: 4px 8px;" title="Refresh Occupancy">
+            <span>🔄</span>
+          </button>
+        </div>
       </div>
 
       <!-- Search Box (Integrated with Mappls AutoSuggest REST API) -->
@@ -1581,6 +1587,79 @@
     </div>
   </div>
 
+  <!-- Traccar GPS Tracking Integration Modal (https://www.traccar.org/) -->
+  <div class="modal-backdrop" id="modal-traccar">
+    <div class="modal-sheet glass-surface" style="max-width: 440px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 700; font-size: 16px;">📡 Traccar GPS Integration</span>
+        </div>
+        <button id="modal-traccar-close" style="background:none; border:none; color:var(--color-text-secondary); cursor:pointer;">
+          <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div style="font-size: 12px; color: var(--color-text-secondary); line-height: 1.4;">
+        Powered by <a href="https://www.traccar.org/" target="_blank" style="color:var(--accent-subtle); text-decoration:none; font-weight:600;">Traccar</a> — the open-source GPS tracking standard. Connect your phone or OBD-II hardware GPS tracker.
+      </div>
+
+      <!-- Live Device Status Card -->
+      <div class="contrast-card" style="padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-text-secondary); font-weight: 600;">Device Telemetry</span>
+          <span id="traccar-modal-status-badge" class="status-pill status-available" style="font-size: 10px; padding: 1px 7px;">
+            <span class="status-dot"></span><span>Online</span>
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="font-size: 16px; font-weight: 700; font-family: var(--font-mono);" id="traccar-modal-device-id">OP-TRACKER-01</div>
+          <div style="font-size: 11px; color: var(--color-text-secondary);" id="traccar-modal-last-update">Fix: Just now</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 4px;">
+          <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 6px 8px; text-align: center;">
+            <div style="font-size: 14px; font-weight: 700; font-family: var(--font-mono);" id="traccar-modal-speed">0 km/h</div>
+            <div style="font-size: 10px; color: var(--color-text-secondary);">Speed</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 6px 8px; text-align: center;">
+            <div style="font-size: 14px; font-weight: 700; font-family: var(--font-mono);" id="traccar-modal-battery">92% ⚡</div>
+            <div style="font-size: 10px; color: var(--color-text-secondary);">Battery</div>
+          </div>
+          <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 6px 8px; text-align: center;">
+            <div style="font-size: 14px; font-weight: 700; font-family: var(--font-mono);" id="traccar-modal-odometer">0.0 km</div>
+            <div style="font-size: 10px; color: var(--color-text-secondary);">Odometer</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Setup Instructions for Phone App -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-weight: 600; font-size: 12.5px;">📲 Track with Your Phone (Official Traccar Client)</div>
+        <div style="font-size: 11.5px; color: var(--color-text-secondary); line-height: 1.45;">
+          1. Install free <strong>Traccar Client</strong> from <a href="https://apps.apple.com/app/traccar-client/id843156976" target="_blank" style="color:var(--accent-subtle);">iOS App Store</a> or <a href="https://play.google.com/store/apps/details?id=org.traccar.client" target="_blank" style="color:var(--accent-subtle);">Google Play</a>.<br>
+          2. Set <strong>Server URL</strong> and <strong>Device Identifier</strong> below, then turn status <strong>ON</strong>.
+        </div>
+        <div style="display: flex; gap: 6px; align-items: center;">
+          <input type="text" id="input-traccar-server-url" class="styled-input" style="flex:1; font-size:11.5px; padding:7px 9px;" readonly />
+          <button class="btn-pill-secondary" id="btn-copy-traccar-url" style="width:auto; padding:7px 11px; font-size:11.5px; white-space:nowrap;">Copy URL</button>
+        </div>
+      </div>
+
+      <!-- Device Identifier Switcher -->
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <label style="font-size: 11.5px; font-weight: 600; color: var(--color-text-secondary);">Device Identifier / IMEI</label>
+        <div style="display: flex; gap: 6px;">
+          <input type="text" id="input-traccar-device-id" class="styled-input" style="flex:1; font-size:12px; font-family:var(--font-mono);" value="OP-TRACKER-01" />
+          <button class="btn-pill-primary" id="btn-save-traccar-device" style="width:auto; padding:7px 12px; font-size:11.5px;">Save</button>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--color-border-subtle); padding-top: 8px;">
+        <span style="font-size: 11px; color: var(--color-text-secondary);">OsmAnd TCP 5055 & HTTP 8000</span>
+        <button class="btn-pill-secondary" id="btn-traccar-done" style="width:auto; padding:5px 14px; font-size:11.5px;">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Floating Navigation Re-center Button (Google Maps Style) -->
   <button id="btn-recenter-nav" class="recenter-floating-btn" aria-label="Re-center map on vehicle">
     <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
@@ -1656,6 +1735,7 @@
           simulateDrive: true,
           showHud: true,
           showBreadcrumbs: true,
+          traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
           mapplsKey: localStorage.getItem('openpark_mappls_key') || '',
           activeStyle: localStorage.getItem('openpark_map_style') || 'carto-dark'
         },
@@ -1882,7 +1962,7 @@
             ws.onmessage = (e) => {
               try {
                 const data = JSON.parse(e.data);
-                const p = data.position || data;
+                const p = (data.positions && data.positions[0]) || data.position || data;
                 const lat = p.latitude !== undefined ? p.latitude : p.lat;
                 const lng = p.longitude !== undefined ? p.longitude : (p.lon !== undefined ? p.lon : p.lng);
                 if (lat !== undefined && lng !== undefined) {
@@ -1894,6 +1974,18 @@
                     altitude: Number(p.altitude ?? 920),
                     accuracy: Number(p.accuracy ?? 5)
                   };
+
+                  const devId = data.device_id || p.deviceId || (p.attributes && p.attributes.id);
+                  if (devId) {
+                    const devEl = document.getElementById('traccar-modal-device-id');
+                    if (devEl) devEl.innerText = devId;
+                  }
+                  const batt = p.batt ?? (p.attributes && (p.attributes.batteryLevel ?? p.attributes.battery)) ?? null;
+                  if (batt !== null) {
+                    const battEl = document.getElementById('traccar-modal-battery');
+                    if (battEl) battEl.innerText = `${Math.round(batt)}% ⚡`;
+                  }
+
                   if (typeof ParkingApp !== 'undefined' && ParkingApp.smoothGlideTo) {
                     ParkingApp.smoothGlideTo(targetFix);
                   } else {
@@ -1906,12 +1998,17 @@
                 console.warn("WebSocket parse error", err);
               }
             };
+            ws.onclose = () => {
+              setTimeout(() => this.initVehicleWebSocket(), CONFIG.WS_RECONNECT_MS);
+            };
           } catch {}
         },
 
         sendTraccarPing(pos) {
           try {
-            fetch(`/api/traccar?id=OP-TRACKER-01&lat=${pos.lat}&lon=${pos.lng}&speed=${pos.speed}&bearing=${pos.heading}&altitude=${pos.altitude}&batt=95`)
+            const devId = (STATE.config && STATE.config.traccarDeviceId) || 'OP-TRACKER-01';
+            const knots = ((pos.speed || 0) / 1.852).toFixed(1);
+            fetch(`/api/traccar?id=${encodeURIComponent(devId)}&lat=${pos.lat}&lon=${pos.lng}&speed=${knots}&bearing=${Math.round(pos.heading || 0)}&altitude=${Math.round(pos.altitude || 920)}&batt=95`)
               .catch(() => {});
           } catch {}
         },
@@ -2364,6 +2461,66 @@
             btnBackPlace.onclick = () => {
               MapEngine.clearDestinationMarker();
               ParkingApp.showListView();
+            };
+          }
+
+          // Traccar GPS Tracking Modal & Device Setup Handlers
+          const btnTraccarPill = document.getElementById('btn-traccar-pill');
+          const modalTraccar = document.getElementById('modal-traccar');
+          const modalTraccarClose = document.getElementById('modal-traccar-close');
+          const btnTraccarDone = document.getElementById('btn-traccar-done');
+          const btnCopyTraccarUrl = document.getElementById('btn-copy-traccar-url');
+          const btnSaveTraccarDevice = document.getElementById('btn-save-traccar-device');
+          const inputTraccarUrl = document.getElementById('input-traccar-server-url');
+          const inputTraccarDevice = document.getElementById('input-traccar-device-id');
+          const modalTraccarDevice = document.getElementById('traccar-modal-device-id');
+
+          // Pre-populate Traccar Server URL and Device Identifier
+          if (inputTraccarUrl) {
+            const host = window.location.hostname || '127.0.0.1';
+            inputTraccarUrl.value = `http://${host}:5055/`;
+          }
+          if (inputTraccarDevice && STATE.config.traccarDeviceId) {
+            inputTraccarDevice.value = STATE.config.traccarDeviceId;
+          }
+          if (modalTraccarDevice && STATE.config.traccarDeviceId) {
+            modalTraccarDevice.innerText = STATE.config.traccarDeviceId;
+          }
+
+          if (btnTraccarPill && modalTraccar) {
+            btnTraccarPill.onclick = () => {
+              modalTraccar.classList.add('active');
+            };
+          }
+          if (modalTraccarClose && modalTraccar) {
+            modalTraccarClose.onclick = () => {
+              modalTraccar.classList.remove('active');
+            };
+          }
+          if (btnTraccarDone && modalTraccar) {
+            btnTraccarDone.onclick = () => {
+              modalTraccar.classList.remove('active');
+            };
+          }
+          if (btnCopyTraccarUrl && inputTraccarUrl) {
+            btnCopyTraccarUrl.onclick = async () => {
+              try {
+                await navigator.clipboard.writeText(inputTraccarUrl.value);
+                ParkingApp.showToast("Traccar Server URL copied to clipboard!");
+              } catch (err) {
+                inputTraccarUrl.select();
+                document.execCommand('copy');
+                ParkingApp.showToast("Traccar Server URL copied!");
+              }
+            };
+          }
+          if (btnSaveTraccarDevice && inputTraccarDevice) {
+            btnSaveTraccarDevice.onclick = () => {
+              const devId = inputTraccarDevice.value.trim() || 'OP-TRACKER-01';
+              STATE.config.traccarDeviceId = devId;
+              localStorage.setItem('openpark_traccar_device_id', devId);
+              if (modalTraccarDevice) modalTraccarDevice.innerText = devId;
+              ParkingApp.showToast(`Traccar Device ID set to: ${devId}`);
             };
           }
         },
@@ -3185,6 +3342,26 @@
               const charging = batt.charging ? " ⚡" : "";
               document.getElementById('hud-battery').innerText = `Battery: ${pct}%${charging}`;
             });
+          }
+
+          // Traccar Status Pill & Modal Updates
+          const traccarPillText = document.getElementById('traccar-pill-text');
+          if (traccarPillText) {
+            traccarPillText.innerText = (pos.speed > 2) ? "Traccar: Moving" : "Traccar: Online";
+          }
+          const trSpeed = document.getElementById('traccar-modal-speed');
+          if (trSpeed) trSpeed.innerText = `${Math.round(pos.speed || 0)} km/h`;
+          const trOdo = document.getElementById('traccar-modal-odometer');
+          if (trOdo) trOdo.innerText = `${(STATE.tripOdometerKm || 0).toFixed(1)} km`;
+          const trUpdate = document.getElementById('traccar-modal-last-update');
+          if (trUpdate) {
+            const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            trUpdate.innerText = `Fix: ${timeStr}`;
+          }
+          const trBadge = document.getElementById('traccar-modal-status-badge');
+          if (trBadge) {
+            trBadge.className = 'status-pill status-available';
+            trBadge.innerText = (pos.speed > 2) ? "MOVING" : "ONLINE";
           }
         }
       };
