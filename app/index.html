@@ -1316,15 +1316,38 @@
       pointer-events: none;
     }
     /* POI category thematic backgrounds matching Google Maps */
-    .gmap-poi-hospital { background: #ef4444; }
-    .gmap-poi-cafe { background: #d97706; }
-    .gmap-poi-restaurant { background: #ea580c; }
-    .gmap-poi-fuel { background: #2563eb; }
-    .gmap-poi-shopping { background: #0284c7; }
-    .gmap-poi-landmark { background: #7c3aed; }
-    .gmap-poi-transit { background: #059669; }
-    .gmap-poi-park { background: #16a34a; }
-    .gmap-poi-default { background: #475569; }
+    .gmap-poi-hospital  { background: #ef4444; }
+    .gmap-poi-cafe      { background: #d97706; }
+    .gmap-poi-restaurant{ background: #ea580c; }
+    .gmap-poi-fuel      { background: #2563eb; }
+    .gmap-poi-shopping  { background: #0284c7; }
+    .gmap-poi-landmark  { background: #7c3aed; }
+    .gmap-poi-transit   { background: #059669; }
+    .gmap-poi-park      { background: #16a34a; }
+    .gmap-poi-metro     { background: #8b2be2; }
+    .gmap-poi-hotel     { background: #db2777; }
+    .gmap-poi-tech      { background: #0369a1; }
+    .gmap-poi-mall      { background: #0891b2; }
+    .gmap-poi-stadium   { background: #b45309; }
+    .gmap-poi-default   { background: #475569; }
+
+    /* Metro station special style: circular M badge */
+    .gmap-poi-metro-badge {
+      background: #8b2be2 !important;
+      color: #fff !important;
+      font-size: 11px !important;
+      font-weight: 900 !important;
+      letter-spacing: -0.5px;
+    }
+
+    /* Hospital special style: square H badge like real GMap */
+    .gmap-poi-hospital-badge {
+      background: #ef4444 !important;
+      color: #fff !important;
+      font-size: 13px !important;
+      font-weight: 900 !important;
+      border-radius: 6px !important;
+    }
 
     .gmap-poi-label {
       margin-top: 3px;
@@ -3421,6 +3444,47 @@
           };
           this.map.on('dragstart', onUserPan);
           this.map.on('touchstart', onUserPan);
+
+          // ---- Viewport POI loading: auto-populate map like Google Maps ----
+          let _poiDebounce = null;
+          const loadViewportPois = () => {
+            clearTimeout(_poiDebounce);
+            _poiDebounce = setTimeout(() => {
+              this.loadViewportPois();
+            }, 350);
+          };
+          this.map.on('moveend', loadViewportPois);
+          this.map.on('zoomend', loadViewportPois);
+          // Initial load after map settles
+          setTimeout(() => this.loadViewportPois(), 1200);
+        },
+
+        async loadViewportPois() {
+          if (!this.map) return;
+          const zoom = this.map.getZoom();
+          // Don't clutter map at very low zoom; hide all POIs below zoom 11
+          if (zoom < 11) {
+            this.clearPoiMarkers();
+            return;
+          }
+          const bounds = this.map.getBounds();
+          const params = new URLSearchParams({
+            min_lat: bounds.getSouth().toFixed(5),
+            max_lat: bounds.getNorth().toFixed(5),
+            min_lon: bounds.getWest().toFixed(5),
+            max_lon: bounds.getEast().toFixed(5),
+            zoom: zoom.toFixed(1)
+          });
+          try {
+            const resp = await fetch('/api/places/viewport?' + params.toString());
+            if (!resp.ok) return;
+            const data = await resp.json();
+            if (data.results && data.results.length >= 0) {
+              this.renderPoiMarkers(data.results);
+            }
+          } catch (e) {
+            // Silently ignore network errors during pan
+          }
         },
 
         setupRouteSource() {
@@ -3485,40 +3549,81 @@
         renderPoiMarkers(places) {
           this.clearPoiMarkers();
           if (!this.map || !places || !places.length) return;
+          const zoom = this.map.getZoom();
+          const showLabel = zoom >= 13.5;
 
           places.forEach((place) => {
             if (!place.lat || !place.lon) return;
+
+            const lon = Number(place.lon !== undefined ? place.lon : (place.lng !== undefined ? place.lng : place.longitude));
+            const lat = Number(place.lat !== undefined ? place.lat : place.latitude);
+            if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
 
             const el = document.createElement('div');
             el.className = 'gmap-poi-marker';
 
             const cat = ((place.archetype || place.category || '') + ' ' + (place.name || '')).toLowerCase();
-            let colorClass = 'gmap-poi-default';
-            if (place.badge === '🏥' || /hospital|clinic|medical|doctor/.test(cat)) colorClass = 'gmap-poi-hospital';
-            else if (place.badge === '☕' || /cafe|coffee|starbucks/.test(cat)) colorClass = 'gmap-poi-cafe';
-            else if (place.badge === '🍔' || /food|restaurant|pizza|burger|bistro/.test(cat)) colorClass = 'gmap-poi-restaurant';
-            else if (place.badge === '⛽' || /fuel|gas|petrol|shell/.test(cat)) colorClass = 'gmap-poi-fuel';
-            else if (place.badge === '🛍️' || /mall|shop|supermarket|commercial/.test(cat)) colorClass = 'gmap-poi-shopping';
-            else if (place.badge === '🏛️' || /landmark|monument|museum|palace|temple/.test(cat)) colorClass = 'gmap-poi-landmark';
-            else if (place.badge === '🚆' || /transit|metro|station|railway/.test(cat)) colorClass = 'gmap-poi-transit';
-            else if (place.badge === '🌳' || /park|garden/.test(cat)) colorClass = 'gmap-poi-park';
-
             const badge = place.badge || '📍';
-            const shortName = (place.name || '').split(' (')[0].split(',')[0].slice(0, 22);
+
+            // Determine category & visual style
+            let colorClass = 'gmap-poi-default';
+            let badgeContent = badge;      // inner HTML of the circle
+            let badgeExtra = '';           // extra CSS class on the badge
+
+            if (/metro|🚇/.test(badge + cat)) {
+              colorClass = 'gmap-poi-metro';
+              badgeContent = 'M';
+              badgeExtra = 'gmap-poi-metro-badge';
+            } else if (/hospital|clinic|medical|🏥/.test(badge + cat)) {
+              colorClass = 'gmap-poi-hospital';
+              badgeContent = 'H';
+              badgeExtra = 'gmap-poi-hospital-badge';
+            } else if (/cafe|coffee|☕/.test(badge + cat)) {
+              colorClass = 'gmap-poi-cafe';
+              badgeContent = badge;
+            } else if (/restaurant|food|biryani|🍔/.test(badge + cat)) {
+              colorClass = 'gmap-poi-restaurant';
+              badgeContent = badge;
+            } else if (/fuel|petrol|gas|⛽/.test(badge + cat)) {
+              colorClass = 'gmap-poi-fuel';
+              badgeContent = '⛽';
+            } else if (/mall|shopping|🛍/.test(badge + cat)) {
+              colorClass = 'gmap-poi-mall';
+              badgeContent = badge;
+            } else if (/temple|mosque|church|shrine|🛕|🕌/.test(badge + cat)) {
+              colorClass = 'gmap-poi-landmark';
+              badgeContent = badge;
+            } else if (/landmark|monument|museum|palace|🏛|🏰/.test(badge + cat)) {
+              colorClass = 'gmap-poi-landmark';
+              badgeContent = badge;
+            } else if (/transit|railway|station|airport|🚆|✈|🚌/.test(badge + cat)) {
+              colorClass = 'gmap-poi-transit';
+              badgeContent = badge;
+            } else if (/park|garden|🌳/.test(badge + cat)) {
+              colorClass = 'gmap-poi-park';
+              badgeContent = '🌳';
+            } else if (/tech park|it park|💻/.test(badge + cat)) {
+              colorClass = 'gmap-poi-tech';
+              badgeContent = '💻';
+            } else if (/hotel|four seasons|marriott|🏨/.test(badge + cat)) {
+              colorClass = 'gmap-poi-hotel';
+              badgeContent = badge;
+            } else if (/stadium|🏏|⚽/.test(badge + cat)) {
+              colorClass = 'gmap-poi-stadium';
+              badgeContent = badge;
+            }
+
+            const shortName = (place.name || '').split(' (')[0].split(',')[0].slice(0, 24);
 
             el.innerHTML = `
-              <div class="gmap-poi-badge ${colorClass}">${badge}</div>
-              <div class="gmap-poi-label">${shortName}</div>
+              <div class="gmap-poi-badge ${colorClass} ${badgeExtra}" style="font-size:${badgeContent.length === 1 ? '13px' : '15px'}">${badgeContent}</div>
+              ${showLabel ? `<div class="gmap-poi-label">${shortName}</div>` : ''}
             `;
 
             el.addEventListener('click', (e) => {
               e.stopPropagation();
               SearchEngine.selectResult(place);
             });
-
-            const lon = Number(place.lon !== undefined ? place.lon : (place.lng !== undefined ? place.lng : place.longitude));
-            const lat = Number(place.lat !== undefined ? place.lat : place.latitude);
-            if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
 
             const marker = new maplibregl.Marker({
               element: el,
