@@ -300,7 +300,7 @@ async def get_traccar_route(
     (https://router.project-osrm.org/) as standard in Traccar.
     Falls back to high-resolution orthogonal street network routing if offline.
     """
-    osrm_url = os.getenv("OSRM_URL", "https://router.project-osrm.org")
+    osrm_url = os.getenv("OSRM_URL", "http://router.project-osrm.org")
     route_url = f"{osrm_url}/route/v1/driving/{start_lon},{start_lat};{dest_lon},{dest_lat}?overview=full&geometries=geojson&steps=true"
 
     try:
@@ -495,14 +495,31 @@ def load_opencity_places() -> List[Dict[str, Any]]:
 CACHED_OPENCITY_PLACES = load_opencity_places()
 
 
+def resolve_place_badge(category: str = "", osm_val: str = "") -> str:
+    combined = f"{category} {osm_val}".lower()
+    if any(k in combined for k in ["cafe", "coffee", "starbucks", "espresso"]): return "☕"
+    if any(k in combined for k in ["restaurant", "food", "fast_food", "pizza", "burger", "bar", "pub", "bistro", "bakery"]): return "🍔"
+    if any(k in combined for k in ["airport", "aeroway", "aerodrome", "terminal"]): return "✈️"
+    if any(k in combined for k in ["hotel", "motel", "hostel", "lodging", "resort"]): return "🏨"
+    if any(k in combined for k in ["hospital", "clinic", "pharmacy", "medical", "doctor"]): return "🏥"
+    if any(k in combined for k in ["school", "college", "university", "academy"]): return "🎓"
+    if any(k in combined for k in ["park", "garden", "forest", "nature", "recreation", "leisure"]): return "🌳"
+    if any(k in combined for k in ["mall", "supermarket", "shop", "store", "commercial"]): return "🛍️"
+    if any(k in combined for k in ["monument", "memorial", "museum", "historic", "attraction", "tourism", "palace", "temple", "church", "mosque"]): return "🏛️"
+    if any(k in combined for k in ["station", "train", "metro", "subway", "railway", "transit"]): return "🚆"
+    if any(k in combined for k in ["fuel", "gas", "petrol"]): return "⛽"
+    return "📍"
+
+
 async def search_traccar_places(
     query: str,
     lat: float = 12.9716,
     lon: float = 77.5946
 ) -> List[Dict[str, Any]]:
     """
-    Searches places using OpenStreetMap Nominatim Geocoder (Traccar standard)
-    plus curated high-speed catalog of landmarks and 147 municipal parking lots.
+    Universal Google Maps-style place search powered by Photon Geocoder (Komoot/OSM)
+    and OpenStreetMap Nominatim, plus curated landmarks and POIs.
+    Supports global landmarks, local restaurants, cafes, shops, airports, and street addresses.
     """
     raw_query = query.strip()
     q_lower = raw_query.lower()
@@ -511,12 +528,76 @@ async def search_traccar_places(
     results: List[Dict[str, Any]] = []
     seen_names = set()
 
-    # 1. Query OSM Nominatim if query is at least 3 characters
-    if len(raw_query) >= 3:
+    # 1. Query Photon Geocoder (Fast OpenStreetMap Search with location proximity bias)
+    if len(raw_query) >= 2:
         try:
-            nom_url = f"https://nominatim.openstreetmap.org/search?format=json&q={raw_query}&limit=6&addressdetails=1"
+            photon_url = f"https://photon.komoot.io/api/?q={urllib.parse.quote(raw_query)}&lat={lat}&lon={lon}&limit=10"
+            headers = {"User-Agent": "OpenParkApp/1.0 (contact@openpark.io)", "Accept": "application/json"}
+            async with httpx.AsyncClient(timeout=3.5, verify=False) as client:
+                resp = await client.get(photon_url, headers=headers)
+                if resp.status_code == 200:
+                    features = resp.json().get("features", [])
+                    for feat in features:
+                        props = feat.get("properties", {})
+                        geom = feat.get("geometry", {})
+                        coords = geom.get("coordinates")
+                        if not coords or len(coords) < 2:
+                            continue
+
+                        p_lon = float(coords[0])
+                        p_lat = float(coords[1])
+                        name = props.get("name") or props.get("street") or props.get("city")
+                        if not name:
+                            continue
+
+                        norm_key = f"{name.lower()}_{round(p_lat, 3)}_{round(p_lon, 3)}"
+                        if norm_key in seen_names or name.lower() in seen_names:
+                            continue
+                        seen_names.add(norm_key)
+                        seen_names.add(name.lower())
+
+                        # Build formatted address
+                        addr_parts = []
+                        if props.get("housenumber") and props.get("street"):
+                            addr_parts.append(f"{props['housenumber']} {props['street']}")
+                        elif props.get("street"):
+                            addr_parts.append(props["street"])
+                        if props.get("district"):
+                            addr_parts.append(props["district"])
+                        if props.get("city"):
+                            addr_parts.append(props["city"])
+                        if props.get("state"):
+                            addr_parts.append(props["state"])
+                        if props.get("country"):
+                            addr_parts.append(props["country"])
+
+                        full_addr = ", ".join(addr_parts) if addr_parts else name
+                        dist = calculate_haversine_km(lat, lon, p_lat, p_lon)
+                        osm_type = props.get("type", "")
+                        osm_val = props.get("osm_value", "")
+                        badge = resolve_place_badge(osm_type, osm_val)
+                        cat = (props.get("osm_value") or props.get("type") or "Place").replace("_", " ").title()
+
+                        results.append({
+                            "name": name,
+                            "badge": badge,
+                            "category": cat,
+                            "address": full_addr,
+                            "lat": p_lat,
+                            "lon": p_lon,
+                            "distance_km": round(dist, 1),
+                            "source": "photon_osm"
+                        })
+        except Exception:
+            pass
+
+    # 2. Query OSM Nominatim if needed or to augment results
+    if len(results) < 5 and len(raw_query) >= 3:
+        try:
+            nom_url = f"https://nominatim.openstreetmap.org/search?format=json&q={urllib.parse.quote(raw_query)}&limit=6&addressdetails=1"
+            headers = {"User-Agent": "OpenParkApp/1.0 (contact@openpark.io)", "Accept": "application/json"}
             async with httpx.AsyncClient(timeout=3.0, verify=False) as client:
-                resp = await client.get(nom_url, headers={"User-Agent": "OpenPark-Traccar/5.12"})
+                resp = await client.get(nom_url, headers=headers)
                 if resp.status_code == 200:
                     for item in resp.json():
                         p_lat = float(item["lat"])
@@ -525,10 +606,12 @@ async def search_traccar_places(
                         if d_name.lower() not in seen_names:
                             seen_names.add(d_name.lower())
                             dist = calculate_haversine_km(lat, lon, p_lat, p_lon)
+                            cat = item.get("type", "Place").replace("_", " ").title()
+                            badge = resolve_place_badge(item.get("type", ""), item.get("class", ""))
                             results.append({
                                 "name": d_name,
-                                "badge": "📍",
-                                "category": item.get("type", "Place").title(),
+                                "badge": badge,
+                                "category": cat,
                                 "address": item.get("display_name", ""),
                                 "lat": p_lat,
                                 "lon": p_lon,
@@ -538,11 +621,9 @@ async def search_traccar_places(
         except Exception:
             pass
 
-    # 2. Match against Local Catalog & OpenCity Parking Lots
-    all_local = BENGALURU_PLACES_CATALOG + CACHED_OPENCITY_PLACES
+    # 3. Match against Curated Landmarks & Local Catalog
     scored_candidates = []
-
-    for item in all_local:
+    for item in BENGALURU_PLACES_CATALOG:
         name_lower = item["name"].lower()
         if name_lower in seen_names:
             continue
@@ -566,15 +647,6 @@ async def search_traccar_places(
             elif token_matches > 0:
                 score += token_matches * 10
 
-            if len(q_lower) >= 3:
-                candidates_to_check = [name_lower] + aliases
-                best_ratio = max(
-                    (difflib.SequenceMatcher(None, q_lower, c[:len(q_lower) + 3]).ratio() for c in candidates_to_check if len(c) >= 3),
-                    default=0.0
-                )
-                if best_ratio >= 0.72:
-                    score += int(best_ratio * 40)
-
         if score > 0:
             dist = calculate_haversine_km(lat, lon, item["lat"], item["lon"])
             final_rank = score - min(dist * 1.5, 30)
@@ -582,32 +654,29 @@ async def search_traccar_places(
 
     scored_candidates.sort(key=lambda x: (-x[0], x[1]))
 
-    for _, dist, item in scored_candidates[:12]:
+    for _, dist, item in scored_candidates[:6]:
         p_name = item["name"]
-        seen_names.add(p_name.lower())
-        results.append({
-            "name": p_name,
-            "badge": item.get("badge", "📍"),
-            "category": item.get("category", "Place"),
-            "address": item.get("address", "Bengaluru"),
-            "lat": item["lat"],
-            "lon": item["lon"],
-            "distance_km": round(dist, 1),
-            "lot_id": item.get("lot_id"),
-            "capacity": item.get("capacity"),
-            "free_spots": item.get("free_spots"),
-            "price": item.get("price"),
-            "source": "traccar_knowledge_base"
-        })
+        if p_name.lower() not in seen_names:
+            seen_names.add(p_name.lower())
+            results.append({
+                "name": p_name,
+                "badge": item.get("badge", "📍"),
+                "category": item.get("category", "Landmark"),
+                "address": item.get("address", "Bengaluru"),
+                "lat": item["lat"],
+                "lon": item["lon"],
+                "distance_km": round(dist, 1),
+                "source": "curated_landmarks"
+            })
 
-    # 3. Fallback geocoded coordinate point near city center
+    # 4. Fallback geocoded coordinate point if absolutely nothing matches
     if not results:
         hash_offset = (abs(hash(q_lower)) % 40) * 0.0006
         results.append({
             "name": f"{raw_query.title()}",
             "badge": "📍",
             "category": "Searched Road Point",
-            "address": f"Near Central Corridor, Bengaluru ({round(hash_offset * 100, 1)} km)",
+            "address": f"Near Destination Corridor ({round(hash_offset * 100, 1)} km)",
             "lat": round(lat + hash_offset, 5),
             "lon": round(lon + hash_offset * 1.2, 5),
             "distance_km": round(hash_offset * 111, 1),
