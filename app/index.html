@@ -1907,7 +1907,7 @@
               <a href="https://cloud.olakrutrim.com" target="_blank" style="color: var(--color-primary); font-size: 12px; text-decoration: underline;">cloud.olakrutrim.com</a>
             </div>
             <div style="display: flex; gap: 8px; width: 100%;">
-              <input type="text" id="setting-olamaps-key" class="styled-input" style="flex: 1;" placeholder="api_key value" value="QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT" />
+              <input type="text" id="setting-olamaps-key" class="styled-input" style="flex: 1;" placeholder="api_key value" value="dZZGLlB7JiE6fylbxaTkHwbm88QPQP" />
               <button class="btn-pill-secondary" id="btn-save-olamaps-key" style="padding: 6px 14px; font-size: 13px; width: auto;">Save</button>
             </div>
           </div>
@@ -2121,7 +2121,7 @@
       // 5.1 Config & Constants
       // --------------------------------------------------------------------------
       const CONFIG = {
-        DEFAULT_COORDS: [77.50080, 12.90425], // Stanza Living Debrecan House, Kengeri, Bengaluru
+        DEFAULT_COORDS: [77.50180, 12.90480], // Stanza Living Debrecan House, Kengeri, Bengaluru
         INITIAL_ZOOM: 17.0,
         PITCH_3D: 42,
         RADIUS_METERS: 3500,
@@ -2177,8 +2177,8 @@
           showHud: true,
           showBreadcrumbs: true,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
-          activeStyle: localStorage.getItem('openpark_map_style') || 'ola-maps',
-          olaMapsKey: localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT'
+          activeStyle: localStorage.getItem('openpark_map_style') || 'google-roadmap',
+          olaMapsKey: localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP'
         },
         watchId: null,
         animationFrameId: null,
@@ -2196,8 +2196,8 @@
       // 5.3 Google Maps, Ola Maps & OpenStreetMap Ultra-Detail Map Styles
       // --------------------------------------------------------------------------
       const MAP_STYLES = {
-        'ola-maps': 'https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=' + (localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT'),
-        'ola-maps-dark': 'https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=' + (localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT'),
+        'ola-maps': 'https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=' + (localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP'),
+        'ola-maps-dark': 'https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=' + (localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP'),
         'google-roadmap': {
           version: 8,
           sources: {
@@ -2319,12 +2319,12 @@
 
       function resolveMapStyleUrl(styleKey) {
         if (styleKey === 'ola-maps' || styleKey === 'ola') {
-          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT';
+          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP';
           const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           return `https://api.olamaps.io/tiles/vector/v1/styles/${isDark ? 'default-dark-standard' : 'default-light-standard'}/style.json?api_key=${encodeURIComponent(key)}`;
         }
         if (styleKey === 'ola-maps-dark') {
-          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT';
+          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP';
           return `https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=${encodeURIComponent(key)}`;
         }
         if (!styleKey || styleKey === 'google-roadmap' || styleKey === 'google-maps' || styleKey === 'openfreemap-auto' || styleKey === 'auto') {
@@ -3497,9 +3497,22 @@
 
           this.map.on('error', (err) => {
             const errStr = String((err && err.error && err.error.message) || (err && err.status) || (err && err.message) || '');
-            if (errStr.includes('401') || errStr.includes('Unauthorized')) {
-              if (STATE.config.activeStyle === 'ola-maps') {
-                ParkingApp.showToast('Ola Maps key unauthorized. Enter active key from cloud.olakrutrim.com');
+            if (errStr.includes('401') || errStr.includes('Unauthorized') || (err && err.status === 401)) {
+              if (STATE.config.activeStyle === 'ola-maps' || STATE.config.activeStyle === 'ola-maps-dark') {
+                ParkingApp.showToast('Ola Maps key unauthorized. Switched to Google Maps Retina');
+                STATE.config.activeStyle = 'google-roadmap';
+                localStorage.setItem('openpark_map_style', 'google-roadmap');
+                const sel = document.getElementById('select-map-style');
+                if (sel) sel.value = 'google-roadmap';
+                setTimeout(() => {
+                  try {
+                    MapEngine.clearPoiMarkers();
+                    MapEngine.map.remove();
+                    MapEngine.init();
+                  } catch (e) {
+                    console.warn(e);
+                  }
+                }, 400);
               }
             }
           });
@@ -4160,7 +4173,7 @@
           const settingOlaKey = document.getElementById('setting-olamaps-key');
           const btnSaveOlaKey = document.getElementById('btn-save-olamaps-key');
           if (settingOlaKey) {
-            settingOlaKey.value = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT';
+            settingOlaKey.value = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP';
           }
           if (btnSaveOlaKey && settingOlaKey) {
             btnSaveOlaKey.onclick = () => {

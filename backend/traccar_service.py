@@ -81,8 +81,8 @@ def init_default_devices():
         
         pos = TraccarPosition(
             deviceId="OP-TRACKER-01",
-            latitude=12.90425,
-            longitude=77.50080,
+            latitude=12.90480,
+            longitude=77.50180,
             altitude=920.0,
             speed=0.0,
             course=0.0,
@@ -505,21 +505,21 @@ BENGALURU_PLACES_CATALOG = [
 
     # Kengeri / BGS Road / Uttarahalli Corridor (Hyper-local PGs, Hotels, Restaurants & Shops)
     {"name": "BGS Gleneagles Global Hospital", "category": "Hospital", "badge": "🏥", "address": "BGS Health & Education City, Uttarahalli Rd, Kengeri, Bengaluru", "lat": 12.9056, "lon": 77.5005, "aliases": ["bgs hospital", "gleneagles", "bgs global"]},
-    {"name": "Super Hotel O Ganakkal Near BGS Hospital", "category": "Hotel", "badge": "🏨", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.9048, "lon": 77.4988, "aliases": ["super hotel o", "ganakkal hotel", "bgs hotel"]},
+    {"name": "Super Hotel O Ganakkal Near BGS Hospital", "category": "Hotel", "badge": "🏨", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.90490, "lon": 77.49990, "aliases": ["super hotel o", "ganakkal hotel", "bgs hotel"]},
     {"name": "Sayooj Restaurant", "category": "Restaurant", "badge": "🍔", "address": "BGS Rd, Kengeri Satellite Town, Bengaluru", "lat": 12.9052, "lon": 77.4980, "aliases": ["sayooj", "fast food", "sayooj restaurant"]},
-    {"name": "OYO Hotel Golden Grand Inn", "category": "Hotel", "badge": "🏨", "address": "Uttarahalli Main Rd, Near BGS Hospital, Bengaluru", "lat": 12.9045, "lon": 77.5015, "aliases": ["golden grand inn", "oyo golden grand"]},
-    {"name": "Stanza Living Debrecan House | Boys PG", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.90425, "lon": 77.50080, "aliases": ["stanza living", "debrecan house", "boys pg"]},
-    {"name": "Abhiman Studio", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Rd, Kengeri, Bengaluru", "lat": 12.9025, "lon": 77.5035, "aliases": ["abhiman studio", "studio kengeri"]},
-    {"name": "FabHotel Silver Leaf Grand", "category": "Hotel", "badge": "🏨", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.9040, "lon": 77.5012, "aliases": ["fabhotel", "silver leaf grand"]},
+    {"name": "OYO Hotel Golden Grand Inn", "category": "Hotel", "badge": "🏨", "address": "Uttarahalli Main Rd, Near BGS Hospital, Bengaluru", "lat": 12.90440, "lon": 77.50135, "aliases": ["golden grand inn", "oyo golden grand"]},
+    {"name": "Stanza Living Debrecan House | Boys PG", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.90480, "lon": 77.50180, "aliases": ["stanza living", "debrecan house", "boys pg"]},
+    {"name": "Abhiman Studio", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Rd, Kengeri, Bengaluru", "lat": 12.90320, "lon": 77.50280, "aliases": ["abhiman studio", "studio kengeri"]},
+    {"name": "FabHotel Silver Leaf Grand", "category": "Hotel", "badge": "🏨", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.90390, "lon": 77.50130, "aliases": ["fabhotel", "silver leaf grand"]},
     {"name": "Fourstack Infotech Pvt. Ltd", "category": "Commercial", "badge": "💻", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.9042, "lon": 77.4990, "aliases": ["fourstack", "infotech", "software"]},
-    {"name": "Dunhill Royal Residency", "category": "Commercial", "badge": "🏢", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.9035, "lon": 77.4995, "aliases": ["dunhill", "dunhill royal residency"]},
-    {"name": "Dunhill Nurture Service Apartments", "category": "Commercial", "badge": "🏢", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.9030, "lon": 77.4992, "aliases": ["dunhill nurture", "service apartments"]},
-    {"name": "Sri SSLV Brindawan Gent's PG", "category": "Commercial", "badge": "🏢", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.9045, "lon": 77.4985, "aliases": ["sslv brindawan", "gents pg"]},
-    {"name": "Lakshmi Srinivasa Deluxe PG for Ladies", "category": "Commercial", "badge": "🏢", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.9040, "lon": 77.4982, "aliases": ["lakshmi srinivasa", "ladies pg"]},
-    {"name": "Sri Sai krishna gents pg", "category": "Commercial", "badge": "🏢", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.9035, "lon": 77.4980, "aliases": ["sai krishna pg", "gents pg"]},
-    {"name": "DREAM CREATIONS", "category": "Commercial", "badge": "🛍️", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.9035, "lon": 77.5010, "aliases": ["dream creations", "kengeri shop"]},
-    {"name": "UrbanNest Boys PG", "category": "Commercial", "badge": "🏢", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.9018, "lon": 77.5010, "aliases": ["urbannest", "boys pg"]},
-    {"name": "Saanthvana Seva old-age home", "category": "Commercial", "badge": "🏢", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.9022, "lon": 77.5005, "aliases": ["saanthvana seva", "old age home"]}
+    {"name": "Dunhill Royal Residency", "category": "Commercial", "badge": "🏢", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.90380, "lon": 77.49980, "aliases": ["dunhill", "dunhill royal residency"]},
+    {"name": "Dunhill Nurture Service Apartments", "category": "Commercial", "badge": "🏢", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.90310, "lon": 77.49940, "aliases": ["dunhill nurture", "service apartments"]},
+    {"name": "Sri SSLV Brindawan Gent's PG", "category": "Commercial", "badge": "🏢", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.90440, "lon": 77.49850, "aliases": ["sslv brindawan", "gents pg"]},
+    {"name": "Lakshmi Srinivasa Deluxe PG for Ladies", "category": "Commercial", "badge": "🏢", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.90390, "lon": 77.49820, "aliases": ["lakshmi srinivasa", "ladies pg"]},
+    {"name": "Sri Sai krishna gents pg", "category": "Commercial", "badge": "🏢", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.90340, "lon": 77.49800, "aliases": ["sai krishna pg", "gents pg"]},
+    {"name": "DREAM CREATIONS", "category": "Commercial", "badge": "🛍️", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.90370, "lon": 77.50165, "aliases": ["dream creations", "kengeri shop"]},
+    {"name": "UrbanNest Boys PG", "category": "Commercial", "badge": "🏢", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.90200, "lon": 77.50120, "aliases": ["urbannest", "boys pg"]},
+    {"name": "Saanthvana Seva old-age home", "category": "Commercial", "badge": "🏢", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.90240, "lon": 77.50080, "aliases": ["saanthvana seva", "old age home"]}
 ]
 
 

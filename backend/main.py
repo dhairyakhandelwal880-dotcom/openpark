@@ -158,7 +158,7 @@ def load_opencity_fallback():
         {"id": 13, "osm_ref": "way/blr_mg_road_metro", "name": "MG Road Boulevard Metro Parking", "city": "Bengaluru", "lat": 12.9754, "lon": 77.6066, "capacity": 110, "price_note": "₹30/hr", "free_spots": 96, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
         {"id": 14, "osm_ref": "way/blr_kr_market", "name": "KR Market Underground Parking Facility", "city": "Bengaluru", "lat": 12.9642, "lon": 77.5765, "capacity": 300, "price_note": "₹20/hr", "free_spots": 40, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
         {"id": 15, "osm_ref": "way/blr_cantonment_station", "name": "Bengaluru Cantonment Railway Station Parking", "city": "Bengaluru", "lat": 12.9937, "lon": 77.5983, "capacity": 180, "price_note": "₹20/hr", "free_spots": 82, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
-        {"id": 16, "osm_ref": "way/blr_kengeri_bgs", "name": "BGS Hospital & Debrecan Smart Parking", "city": "Bengaluru", "lat": 12.9045, "lon": 77.5002, "capacity": 150, "price_note": "₹20/hr", "free_spots": 68, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
+        {"id": 16, "osm_ref": "way/blr_kengeri_bgs", "name": "BGS Hospital & Debrecan Smart Parking", "city": "Bengaluru", "lat": 12.90480, "lon": 77.50180, "capacity": 150, "price_note": "₹20/hr", "free_spots": 68, "source": "sensor", "updated_at": datetime.now(timezone.utc)},
     ]
 
 
@@ -770,7 +770,7 @@ def viewport_places_endpoint(
 # Ola Maps API Integration (https://api.olamaps.io)
 # --------------------------------------------------------------------------
 
-OLAMAPS_DEFAULT_KEY = "QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT"
+OLAMAPS_DEFAULT_KEY = "dZZGLlB7JiE6fylbxaTkHwbm88QPQP"
 
 @app.get("/api/olamaps/autocomplete")
 async def olamaps_autocomplete_endpoint(
