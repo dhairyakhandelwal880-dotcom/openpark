@@ -4881,16 +4881,16 @@
           const shareBtn = document.getElementById('btn-pv-share');
           if (shareBtn) {
             shareBtn.onclick = () => {
-              const shareUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lon}`;
+              const openParkUrl = `${window.location.origin}${window.location.pathname}?dest_lat=${item.lat}&dest_lon=${item.lon}&dest_name=${encodeURIComponent(item.name)}&route=1`;
               if (navigator.share) {
                 navigator.share({
                   title: item.name,
-                  text: `${item.name} - ${item.address}`,
-                  url: shareUrl
+                  text: `${item.name} - OpenPark Route`,
+                  url: openParkUrl
                 }).catch(() => {});
               } else {
-                navigator.clipboard.writeText(`${item.name}, ${item.address} (${shareUrl})`);
-                ParkingApp.showToast("Place location copied to clipboard!");
+                navigator.clipboard.writeText(openParkUrl);
+                ParkingApp.showToast("Navigation link copied to clipboard!");
               }
             };
           }
@@ -5630,6 +5630,35 @@
           // Automatically capture real-time physical device location on app load
           this.startRealtimeDeviceLocation();
           this.loadInitialPois();
+          this.checkUrlDeepLinks();
+        },
+
+        checkUrlDeepLinks() {
+          try {
+            const params = new URLSearchParams(window.location.search);
+            const dLat = parseFloat(params.get('dest_lat') || params.get('lat'));
+            const dLon = parseFloat(params.get('dest_lon') || params.get('lon'));
+            const dName = params.get('dest_name') || params.get('name') || 'Destination';
+            if (Number.isFinite(dLat) && Number.isFinite(dLon)) {
+              const destObj = {
+                id: 'deeplink-' + Date.now(),
+                name: dName,
+                lat: dLat,
+                lon: dLon,
+                address: `Coordinates: ${dLat}, ${dLon}`
+              };
+              setTimeout(() => {
+                MapEngine.setDestinationMarker(destObj);
+                if (params.get('route') === '1' && NavigationEngine.startTrip) {
+                  NavigationEngine.startTrip(destObj);
+                } else if (MapEngine.map) {
+                  MapEngine.map.flyTo({ center: [dLon, dLat], zoom: 16 });
+                }
+              }, 700);
+            }
+          } catch (e) {
+            console.warn("Deep-link check error:", e);
+          }
         },
 
         async loadInitialPois(lat = CONFIG.DEFAULT_COORDS[1], lon = CONFIG.DEFAULT_COORDS[0]) {
