@@ -3,147 +3,205 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![Python](https://img.shields.io/badge/Python-3.9%20%7C%203.10%20%7C%203.11-3776ab.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-009688.svg)](https://fastapi.tiangolo.com)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg)](https://www.postgresql.org/)
-[![PostGIS](https://img.shields.io/badge/PostGIS-3.4-589632.svg)](https://postgis.net/)
-[![Redis](https://img.shields.io/badge/Redis-7-dc382d.svg)](https://redis.io/)
 [![MapLibre GL](https://img.shields.io/badge/MapLibre%20GL%20JS-v4-396afc.svg)](https://maplibre.org/maplibre-gl-js/docs/API/)
+[![Ola Maps API](https://img.shields.io/badge/Ola%20Maps%20API-api.olamaps.io-00D09C.svg)](https://maps.olacabs.com)
+[![Outscraper API](https://img.shields.io/badge/Outscraper%20API-Google%20Maps%20Reviews-4285F4.svg)](https://outscraper.com/)
 [![Mappls REST API](https://img.shields.io/badge/Mappls%20REST%20API-MapmyIndia-orange.svg)](https://github.com/mappls-api/mapmyindia-rest-api)
 [![Traccar GPS](https://img.shields.io/badge/Traccar%20GPS-Standard%20Protocols-00a884.svg)](https://www.traccar.org/)
+[![SQLite FTS5](https://img.shields.io/badge/SQLite-FTS5%20Search-003B57.svg)](https://www.sqlite.org/fts5.html)
+[![Tests](https://img.shields.io/badge/Tests-18%2F18%20Passing-success.svg)](backend/test_api.py)
 
-**OpenPark** is an open-source, production-grade real-time smart parking & live GPS telemetry platform designed for high-density metro areas (seeded with real municipal datasets from Bengaluru). It guides drivers to vacant parking spots using vector maps, provides real-time turn-by-turn routing with voice prompts powered by **[Mappls (MapmyIndia) REST APIs](https://github.com/mappls-api/mapmyindia-rest-api)**, enables butter-smooth 60 FPS physics vehicle simulation, captures live device GPS tracking, integrates standard **Traccar GPS** telemetry protocols, displays multi-zone IIoT sensor diagnostics, and empowers parking lot operators with a responsive mobile touch dashboard.
+**OpenPark** is an open-source, production-grade real-time smart parking, navigation, and live GPS telemetry platform designed for high-density metro areas. It guides drivers to vacant parking spots using vector maps, provides real-time turn-by-turn routing with multi-route comparisons, enables butter-smooth 60 FPS physics vehicle simulation, captures live device GPS tracking, integrates standard **Traccar GPS** telemetry protocols, connects to **Ola Maps** and **Mappls** services, indexes hundreds of thousands of offline places via **SQLite FTS5**, and enriches places with verified Google Maps reviews through **Outscraper**.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Key Features & Integrations
 
 ### 1. 🗺️ High-Performance Vector Mapping ([MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/API/))
-- **100% Free & Open-Source**: Runs exclusively on MapLibre GL JS v4 with zero proprietary tokens, zero billing requirements, and zero vendor lock-in.
-- **Curated Vector Basemaps**: Pre-configured with Carto Dark Matter, Carto Voyager, Carto Positron, MapLibre Demo vector tiles, and OpenStreetMap.
-- **Precision Tip Anchoring**: Every parking pin tip is locked mathematically to its exact coordinate `(17, 44)` with zero displacement during zoom and pan operations.
+- **100% Free & Open-Source**: Runs on MapLibre GL JS v4 with zero proprietary map tokens or vendor lock-in.
+- **Curated Vector & Retina Basemaps**: Pre-configured with OpenFreeMap Liberty, OpenFreeMap Bright, OpenFreeMap Positron, Carto Dark Matter, Carto Voyager, and high-DPI Google Hybrid raster tiles (`tileSize: 512`).
+- **Dynamic Viewport Auto-Resizing**: Built-in `ResizeObserver` automatically guarantees 100% full-screen canvas coverage across mobile, tablet, and ultra-wide displays.
+- **Top-Level Route Layer Stacking**: High-contrast navigation routes (`#1d4ed8` / `#3b82f6`) with casing borders automatically elevated above all basemaps and 3D building extrusions.
 
-### 2. 🏎️ 60 FPS Butter-Smooth Vehicle Animation
-- **Continuous Spline Traversal**: Replaced discrete jumps with fluid 60 FPS `requestAnimationFrame` spline advancement along OSRM road polylines.
-- **Realistic Driving Physics & Inertia**:
-  - Automatically accelerates up to 46 km/h on straight roads.
-  - Anticipates upcoming road curvature, decelerating to ~20 km/h before sharp turns and bends.
-  - Smoothly brakes to 0 km/h within 5 meters of the destination.
-- **Shortest-Arc Bearing Interpolation (`getShortestArcRotation`)**: Rotates using minimum circular angular differences to eliminate sudden 360° flip glitches.
-- **Dynamic 3D Camera Follow**: Maps camera pitch to 45° and smoothly tracks behind the vehicle.
+### 2. 📍 Ola Maps API Integration ([api.olamaps.io](https://maps.olacabs.com))
+- **Hyperlocal India Autocomplete**: Proxied query endpoint (`GET /api/olamaps/autocomplete`) with optional bounding location coordinates and radius.
+- **Sub-Building Reverse Geocoding**: Direct coordinate lookup (`GET /api/olamaps/reverse-geocode`) mapping any coordinate pair to landmark, building number, and street name.
+- **Turn-by-Turn Navigation & Routing**: Driving, cycling, and walking routes via `GET /api/olamaps/directions`.
+- **Dynamic Key Support**: Seamlessly uses the environment variable `OLAMAPS_API_KEY` or per-request `?api_key=` overrides.
 
-### 3. 🎯 Real-Time Device GPS Tracking (`🎯 Live GPS`)
-- **Direct Device Sensors**: Connects to browser `navigator.geolocation.watchPosition` with `enableHighAccuracy: true`.
-- **Live Telemetry Extraction**: Measures actual device speed (km/h), heading/bearing, altitude, and precision accuracy halo (±X m).
-- **Device Battery Monitoring**: Uses `navigator.getBattery()` to capture actual device battery percentage and charging indicator (`⚡`).
-- **Live Traccar Synchronization**: Automatically streams live device fixes into `/api/traccar` and broadcasts updates via WebSockets (`/ws/vehicle`).
+### 3. ⭐ Outscraper Google Maps Places & Reviews API
+- **Live Google Reviews Extraction**: Fetch authentic Google Maps user reviews, star ratings, review timestamps, and user profile pictures via `GET /api/outscraper/reviews`.
+- **Live Places Search**: Search places on Google Maps via `GET /api/outscraper/search`.
+- **In-Memory Caching Layer**: Automated 1-hour TTL cache layer to prevent redundant API queries and conserve API quotas.
+- **Bulk Extraction CLI Utility**: `scripts/outscraper_collector.py` for exporting harvested place reviews to JSON and CSV.
 
-### 4. 📡 Traccar GPS Live Telemetry & Pairing
+### 4. 🗄️ Offline Places Database (SQLite FTS5)
+- **Sub-Millisecond Full-Text Search**: In-memory SQLite FTS5 engine (`data/places_search.db`) supporting instant prefix matching on name, category, and address via `GET /api/places/search`.
+- **Spatial Radius Search (`ST_DWithin` equivalent)**: Fast Haversine circular proximity query via `GET /api/places/nearby` with optional category filtering.
+- **Place Archetype Enrichment**: Automatically enriches queried buildings and shops with realistic operating hours, amenities, phone numbers, and rating distributions via `GET /api/places/lookup`.
+- **Multi-Category Ingestion & Export CLI**: `scripts/download_places_dataset.py` crawls and ingests hostels, PGs, hotels, hospitals, tech parks, cafes, and fuel stations, with `--export csv` and `--export geojson` export modes.
+
+### 5. 🧭 Turn-by-Turn Navigation & Route Comparison
+- **Fastest vs. Shortest Routes**: Compare multiple driving corridors via `GET /api/traccar/routes/compare`. Returns alternative paths, duration savings, and distance deltas.
+- **Quick-Share Deep Linking**: One-click "Share Route" button copies `?start=lat,lon&end=lat,lon` deep links to the clipboard for instant sharing.
+- **Keyboard Shortcuts**: Press `?` in the driver app to view the keyboard shortcuts guide (`H` = HUD toggle, `N` = Navigation, `D` = Dark/Light theme, `Esc` = Close modal).
+
+### 6. 🏎️ 60 FPS Butter-Smooth Vehicle Animation
+- **Continuous Spline Traversal**: Fluid 60 FPS `requestAnimationFrame` spline advancement along road polylines.
+- **Inertia Physics**: Accelerates on straight corridors, decelerates to ~20 km/h ahead of sharp turns, and softly brakes to 0 km/h at destinations.
+- **Shortest-Arc Bearing Interpolation**: Smooth circular rotation eliminating sudden 360° flipping.
+
+### 7. 📡 Traccar GPS Telemetry & Pairing
 - **Standard Protocol Ingestion**: Native implementation of the Traccar OsmAnd / HTTP protocol via `GET /api/traccar` and `POST /api/traccar`.
-- **Floating HUD**:
-  - Digital speedometer with motion state (`🟢 Moving`, `🟡 Idle`, `🔴 Stopped`).
-  - 3D compass rose needle with cardinal direction tracking.
-  - Altitude, accuracy radius, live odometer accumulator, and real-time battery status.
-  - Real-time breadcrumb trail line toggle.
-- **Traccar Client Pairing**: Easily pairs with the free **Traccar Client** app (iOS / Android) or standard OBD-II hardware GPS trackers.
+- **Floating HUD**: Digital speedometer (`🟢 Moving`, `🟡 Idle`, `🔴 Stopped`), 3D compass rose needle, altitude, odometer accumulator, and real-time battery status (`⚡`).
+- **Traccar Client Pairing**: Connects directly with the free Traccar Client app (iOS / Android) or OBD-II hardware trackers.
 
-### 5. 📍 Mappls (MapmyIndia) REST API Integration
-- **Hyperlocal Place Search & AutoSuggest**: Integrates `GET /api/mappls/autosuggest` powered by the [Mappls REST API](https://github.com/mappls-api/mapmyindia-rest-api).
-- **Advanced Driving Routing**: Seamlessly generates road geometries via `GET /api/mappls/route` with turn-by-turn maneuvers and speed curves.
-- **Graceful Resilience**: Seamlessly falls back to local OSRM and open municipal datasets if no Mappls key is configured.
+### 8. 📍 Mappls (MapmyIndia) REST APIs
+- **AutoSuggest**: `GET /api/mappls/autosuggest` for Indian addresses and eLoc pin codes.
+- **Driving Route Engine**: `GET /api/mappls/route` for road geometries with fallback to OSRM.
 
-### 6. 🔬 Multi-Zone IIoT Sensor Telemetry
-- **Zone Occupancy Breakdown**: Sub-zone vacancy counters for Zone A, Zone B, Zone C, and Zone D.
-- **Smart City Indicators**: Live EV charging spot counters, dynamic congestion pricing multipliers (e.g. `1.2x Peak Rate`), and live traffic indicators.
-- **Real Municipal Datasets**: Pre-seeded with real OpenCity Bengaluru public parking lots and IIoT sensor management distributions.
+### 9. 🔬 Multi-Zone IIoT Sensor Telemetry
+- Sub-zone vacancy counters (Zone A, B, C, D), EV charging spot metrics, and dynamic congestion multipliers.
+- Pre-seeded with real municipal datasets from OpenCity Bengaluru.
 
-### 7. 📱 Operator Touch Dashboard (`dashboard/index.html`)
+### 10. 📱 Operator Touch Dashboard (`dashboard/index.html`)
 - Dedicated attendant interface with large mobile touch controls (`+1`, `-1`, `FULL`, `CLEAR`).
 - Instant capacity editor and WebSocket real-time broadcast to all connected drivers.
 
-### 8. 🗄️ Offline Places Database (SQLite FTS5)
-- **Sub-Millisecond Full-Text Search**: Powered by SQLite FTS5 index (`data/places_search.db`), capable of instant matching on prefix, category, street name, and city.
-- **Multi-Category Ingestion Pipeline**: Ingests thousands of places including hostels, PGs, hotels, hospitals, tech parks, colleges, and transit stations.
-- **REST Endpoints**: Query via `GET /api/places/search?query=...` and inspect catalog statistics via `GET /api/places/stats`.
-
-### 9. ⭐ Outscraper Google Maps Reviews & Data Extractor
-- **Google Reviews Integration**: Real-time extraction of customer reviews, ratings, photos, and operating hours via Outscraper REST API.
-- **CLI Extraction Utility**: `scripts/outscraper_collector.py` allows bulk exporting places and reviews into JSON or CSV.
-- **Interactive UI Support**: Configure your Outscraper API key directly in the OpenPark Settings tab to enrich place cards with live reviews.
-
-### 10. 🧭 Turn-by-Turn Navigation & Smart Routing
-- **Secure OSRM Protocol**: Real road routing using HTTPS OSRM endpoints (`https://router.project-osrm.org`) with orthogonal street corridor fallbacks.
-- **Promoted Layer Stacking**: High-contrast navigation routes (`#1d4ed8` / `#3b82f6`) automatically elevated above raster Google Maps tiles.
-- **Dynamic Multi-Device Viewport**: Built-in `ResizeObserver` automatically sizes the map canvas to 100% full screen on desktop and mobile.
-
 ---
 
-## 🏗️ Architecture & Tech Stack
+## 🏗️ Architecture & Data Flow
 
 ```text
-                           ┌──────────────────────────┐
-                           │   Traccar Client / GPS   │
-                           │  (Android, iOS, OBD-II)  │
-                           └────────────┬─────────────┘
-                                        │ HTTP / OsmAnd Protocol
-                                        ▼
-┌────────────────────────┐      ┌───────────────┐      ┌─────────────────────────┐
-│  Driver Web App (PWA)  │◄────►│  FastAPI Core │◄────►│   Operator Dashboard    │
-│  (MapLibre / 60 FPS)   │ WS   │  (Python 3.9+)│  WS  │  (Real-Time Touch Ctrls)│
-└────────────────────────┘      └───────┬───────┘      └─────────────────────────┘
-                                        │
-                         ┌──────────────┴──────────────┐
-                         ▼                             ▼
-                 ┌───────────────┐             ┌───────────────┐
-                 │ PostgreSQL 16 │             │    Redis 7    │
-                 │  PostGIS 3.4  │             │ Pub/Sub Cache │
-                 └───────────────┘             └───────────────┘
+                            ┌──────────────────────────────┐
+                            │    Traccar Client / GPS      │
+                            │   (Android, iOS, OBD-II)     │
+                            └──────────────┬───────────────┘
+                                           │ HTTP OsmAnd
+                                           ▼
+┌─────────────────────────┐       ┌─────────────────┐       ┌─────────────────────────┐
+│   Driver Web App (PWA)  │◄─────►│   FastAPI Core  │◄─────►│    Operator Dashboard   │
+│  (MapLibre / 60 FPS)    │  WS   │  (Python 3.9+)  │  WS   │ (Touch Capacity Ctrls)  │
+└─────────────────────────┘       └────────┬────────┘       └─────────────────────────┘
+                                           │
+         ┌──────────────────┬──────────────┴─────┬──────────────────┐
+         ▼                  ▼                    ▼                  ▼
+  ┌──────────────┐   ┌──────────────┐     ┌──────────────┐   ┌──────────────┐
+  │  Ola Maps    │   │  Outscraper  │     │ SQLite FTS5  │   │  PostgreSQL  │
+  │  api.olamaps │   │ Google Maps  │     │   Places DB  │   │  + PostGIS   │
+  └──────────────┘   └──────────────┘     └──────────────┘   └──────────────┘
 ```
 
-| Component | Technology | Purpose |
+---
+
+## 🔌 API Endpoints Reference
+
+### 📍 Ola Maps API (`api.olamaps.io`)
+| Method | Endpoint | Description |
 | :--- | :--- | :--- |
-| **Map Rendering** | [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/API/) | 100% Free & open-source vector map engine, multi-basemap styling |
-| **Routing & Search** | [Mappls REST API](https://github.com/mappls-api/mapmyindia-rest-api) / [OSRM](http://project-osrm.org/) | Hyperlocal Indian places search, driving directions, turn-by-turn road geometry |
-| **Backend API** | [FastAPI](https://fastapi.tiangolo.com/) (Python) | High-throughput asynchronous REST endpoints & WebSockets |
-| **GPS Telemetry** | [Traccar Standards](https://www.traccar.org/) | Ingestion of OsmAnd / Traccar HTTP GPS packets |
-| **Spatial Database** | [PostgreSQL 16](https://www.postgresql.org/) + [PostGIS 3.4](https://postgis.net/) | Fast spatial indexing, `ST_DWithin`, spherical distance queries |
-| **Cache & Pub/Sub** | [Redis 7](https://redis.io/) | Sub-millisecond broadcast of availability and vehicle fixes |
-| **Client Frontend** | HTML5, CSS3, Vanilla ES6+ | Zero-dependency, lightweight, high-performance web applications |
+| `GET` | `/api/olamaps/autocomplete` | Places autocomplete search with optional location and radius |
+| `GET` | `/api/olamaps/reverse-geocode` | Reverse geocode coordinates to exact address and building name |
+| `GET` | `/api/olamaps/directions` | Driving, walking, and cycling navigation directions and geometry |
+
+### ⭐ Outscraper Google Maps API
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/outscraper/search` | Search places on Google Maps via Outscraper |
+| `GET` | `/api/outscraper/reviews` | Extract verified Google Maps reviews, ratings, and photos (cached) |
+
+### 🗄️ Places Intelligence (SQLite FTS5)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/places/search` | Sub-millisecond full-text search across offline places index |
+| `GET` | `/api/places/nearby` | Spatial Haversine search within given radius (km) and category |
+| `GET` | `/api/places/lookup` | Click-to-lookup reverse geocoding with Google Maps archetype details |
+| `GET` | `/api/places/stats` | Summary statistics of indexed categories and total places |
+
+### 🧭 Navigation & Traccar GPS Telemetry
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET/POST`| `/api/traccar` | Ingests live Traccar / OsmAnd GPS telemetry packets |
+| `GET` | `/api/traccar/search` | Geocoding and places search for navigation destinations |
+| `GET` | `/api/traccar/route` | OSRM turn-by-turn driving route geometry |
+| `GET` | `/api/traccar/routes/compare`| Compare fastest vs shortest alternative routes with distance deltas |
+
+### 🅿️ Smart Parking & IIoT Telemetry
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/lots` | List all parking facilities with live availability |
+| `GET` | `/api/lots/nearby` | Proximity search for parking lots within a radius |
+| `POST`| `/api/lots/{id}/availability`| Update vacant spot count (requires `X-API-Key`) |
+| `POST`| `/api/reports/crowd` | Crowdsourced parking availability reports |
+| `GET` | `/api/telemetry/stats` | Aggregated multi-zone occupancy and EV metrics |
+
+### 🗺️ Map Configurations & Basemaps
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET/POST`| `/config/map` | Get or update active vector map style configuration |
+| `GET` | `/api/map/style/ultra-detail` | Ultra-detail vector style stylesheet with 3D buildings |
+| `GET` | `/api/map/style/ultra-detail-dark` | Dark mode ultra-detail vector style stylesheet |
+
+### 🩺 System Diagnostics
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Basic service uptime and status check |
+| `GET` | `/health/details` | Detailed diagnostic breakdown: PostGIS, Redis, Places DB, memory |
+
+### ⚡ Real-Time WebSockets
+| Protocol | Endpoint | Description |
+| :--- | :--- | :--- |
+| `WS` | `/ws/lots` | Live broadcast of parking availability and occupancy updates |
+| `WS` | `/ws/vehicle` | Live vehicle GPS position, speed, and heading stream |
 
 ---
 
-## 📁 Repository Structure
+## 🛠️ CLI Utilities & Scripts
 
-```text
-openpark/
-├── app/                  # Driver web app (PWA)
-│   └── index.html        # MapLibre GL JS vector map, 60 FPS animation, live GPS, Traccar HUD
-├── backend/              # FastAPI server
-│   ├── main.py           # Core REST API & WebSockets (/ws/lots, /ws/vehicle, /api/traccar)
-│   ├── schema.sql        # PostGIS schema (parking_lots, availability, reports)
-│   ├── traccar_service.py# Traccar GPS protocol ingestion, odometer & telemetry service
-│   ├── mappls_service.py # Mappls (MapmyIndia) REST API search & routing service
-│   ├── iiot_service.py   # Multi-zone IIoT sensor telemetry & EV spot engine
-│   ├── seed_osm.py       # OpenStreetMap Overpass & Bengaluru seed loader
-│   ├── seed_opencity.py  # OpenCity Bengaluru municipal parking lots loader
-│   ├── test_api.py       # Automated test suite (11/11 tests passing)
-│   └── requirements.txt  # Python backend dependencies
-├── dashboard/            # Parking operator & attendant touch interface
-│   └── index.html        # Mobile-friendly +/- free spot counter & lot editor
-├── data/                 # Seed datasets
-│   ├── bengaluru_parking_opencity.json
-│   └── archive/IIoT_Smart_Parking_Management.csv
-├── edge/                 # Camera & barrier sensor scripts
-│   └── camera_counter.py # Vehicle entry/exit counter
-├── infra/                # Infrastructure & container definitions
-│   ├── docker-compose.yml# PostGIS 16-3.4, Redis 7, and optional Traccar server
-│   └── osrm/             # OSRM setup script and road network extracts
-├── simulator/            # Hardware-free sensor simulator
-│   └── fake_lots.py      # Real-time Poisson sensor fluctuation simulator
-├── docs/                 # Documentation & API specifications
-│   └── api_spec.md       # Complete REST & WebSocket specification
-├── CONTRIBUTING.md       # Contribution guidelines
-├── LICENSE               # Apache-2.0 License
-├── .env.example          # Environment configuration template
-└── README.md             # Project documentation
+### 1. Offline Places Dataset Harvester & Exporter
+```bash
+# Ingest places into local SQLite FTS5 database
+python3 scripts/download_places_dataset.py --categories hostels,hotels,hospitals,cafes
+
+# Export harvested places to CSV
+python3 scripts/download_places_dataset.py --export csv --output data/places_export.csv
+
+# Export harvested places to GeoJSON
+python3 scripts/download_places_dataset.py --export geojson --output data/places_export.geojson
+```
+
+### 2. Outscraper Google Maps Review Collector
+```bash
+python3 scripts/outscraper_collector.py --query "Debrecan House Bangalore" --limit 5 --reviews-limit 20
+```
+
+### 3. OpenCity Bengaluru Municipal Data Seeder
+```bash
+./backend/venv/bin/python backend/seed_opencity.py
+```
+
+---
+
+## ⚙️ Configuration & Environment Variables
+
+Create a `.env` file in the project root:
+
+```ini
+# OpenPark Core API
+OPENPARK_API_KEY=dev-key
+
+# Ola Maps API (https://api.olamaps.io)
+OLAMAPS_API_KEY=your_olamaps_api_key_here
+
+# Outscraper Google Maps API (https://outscraper.com)
+OUTSCRAPER_API_KEY=your_outscraper_api_key_here
+
+# Mappls / MapmyIndia OAuth (Optional)
+MAPPLS_CLIENT_ID=your_mappls_client_id
+MAPPLS_CLIENT_SECRET=your_mappls_client_secret
+
+# Database & Cache (Optional for full Docker mode)
+DATABASE_URL=postgresql://openpark:openpark123@localhost:5432/openpark
+REDIS_URL=redis://localhost:6379/0
 ```
 
 ---
@@ -151,94 +209,65 @@ openpark/
 ## 🚀 Quickstart Guide
 
 ### 1. Prerequisites
-- **Docker & Docker Compose**
 - **Python 3.9+**
+- **Docker & Docker Compose** (optional for PostGIS & Redis)
 
-### 2. Clone the Repository
-```bash
-git clone https://github.com/dhairyakhandelwal880-dotcom/openpark.git
-cd openpark
-```
-
-### 3. Start Database & Redis Services
-```bash
-cd infra
-docker compose up -d
-cd ..
-```
-* PostgreSQL + PostGIS starts on port `5432`
-* Redis starts on port `6379`
-
-### 4. Set Up Python Virtual Environment
+### 2. Set Up Virtual Environment & Dependencies
 ```bash
 python3 -m venv backend/venv
 source backend/venv/bin/activate
 pip install -r backend/requirements.txt
 ```
 
-### 5. Initialize the Spatial Database Schema
-```bash
-docker exec -i infra-db-1 psql -U openpark -d openpark < backend/schema.sql
-```
-
-### 6. Seed Parking Lots Dataset
-Seed verified municipal parking facilities across Bengaluru:
-```bash
-./backend/venv/bin/python backend/seed_opencity.py
-```
-
-### 7. Launch the Backend Server
+### 3. Start Backend Server
 ```bash
 cd backend
 ../backend/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
-- **API Documentation & Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
 
-### 8. Open the Driver Map & Operator Dashboard
+- **Interactive Swagger Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health Diagnostics**: [http://localhost:8000/health/details](http://localhost:8000/health/details)
 - **Driver Navigation App**: [http://localhost:8000/app/](http://localhost:8000/app/)
 - **Operator Touch Dashboard**: [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/)
 
 ---
 
-## 📡 Pairing a Traccar Smartphone Client
+## 🧪 Automated Testing
 
-You can stream real GPS telemetry directly from your phone:
+The repository includes a comprehensive 18-suite unit and integration test suite:
 
-1. Install the free **Traccar Client** app from Google Play or Apple App Store.
-2. In the app settings:
-   - **Device Identifier**: Enter your ID (e.g. `OP-TRACKER-01`).
-   - **Server URL**: Enter `http://<YOUR_IP>:8000/api/traccar`.
-   - **Location Accuracy**: High.
-   - **Frequency**: 2–5 seconds.
-3. Switch **Service Status** to **ON**.
-4. Open [http://localhost:8000/app/](http://localhost:8000/app/) and click **📡 Traccar** in the top bar to watch your live speed, compass direction, altitude, and trail populate in real time!
-
----
-
-## 🧪 Running Automated Tests
-
-Run the complete backend test suite:
 ```bash
 ./backend/venv/bin/pytest backend/test_api.py -v
 ```
-All 11 tests will execute against live ASGI instances:
-- Status threshold logic (`available`, `filling_up`, `full`)
-- Proximity geospatial calculations
-- Crowdsource report ingestion
-- IIoT multi-zone telemetry endpoint
-- MapLibre vector style configuration endpoints
-- Mappls (MapmyIndia) REST API search & driving directions endpoints
-- Traccar OsmAnd GPS ingestion protocol endpoints
+
+All 18 tests execute in sub-second time:
+- `test_lot_status_logic`: Occupancy threshold calculation (`available`, `filling_up`, `full`).
+- `test_confidence_metrics`: Sensor confidence scoring.
+- `test_health_endpoint`: Service health check.
+- `test_list_lots`: In-memory and database lot listing.
+- `test_nearby_lots_bengaluru`: Proximity search with Haversine metrics.
+- `test_update_availability_auth`: API key authorization enforcement on updates.
+- `test_crowd_report`: Crowdsourced incident and spot reporting.
+- `test_lot_telemetry_endpoint`: Zone breakdown, EV spots, and occupancy rates.
+- `test_maplibre_config_endpoints`: Style stylesheet delivery and runtime config.
+- `test_mappls_rest_api_endpoints`: AutoSuggest and Mappls route proxies.
+- `test_traccar_endpoints`: OsmAnd GPS protocol ingestion, speed, and heading.
+- `test_osm_overpass_features`: OpenStreetMap feature parsers.
+- `test_websocket_ping_pong`: Real-time WebSocket connection handling.
+- `test_geofabrik_endpoints`: Offline regional boundary and dataset checks.
+- `test_google_maps_place_details_enrichment`: Place archetype enrichment (amenities, hours, reviews).
+- `test_outscraper_endpoints`: Google Maps reviews extraction and cache verification.
+- `test_offline_places_database`: SQLite FTS5 search and spatial nearby queries.
+- `test_olamaps_endpoints`: Ola Maps client, reverse geocode, autocomplete, and routing.
 
 ---
 
 ## 🔒 Privacy & Data Policy
-- **Ephemeral Vehicle Positions**: GPS coordinates sent by drivers over WebSockets or Traccar are used solely in-memory to compute distance to destination lots, animate navigation markers, and issue arrival warnings.
-- **Zero Permanent Tracking**: Driver location coordinates are **never stored** permanently in the relational database.
+- **Ephemeral Vehicle Positions**: GPS coordinates streamed by drivers via WebSockets or Traccar are kept strictly in-memory to compute distance to destination lots, animate vehicle motion, and calculate navigation vectors.
+- **Zero Permanent Tracking**: Driver real-time coordinates are **never stored** permanently.
 
 ---
 
 ## 📄 License
 This project is open-source under the [Apache-2.0 License](LICENSE).
-Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Vector basemaps powered by [MapLibre](https://maplibre.org/) and Carto.
+Map data © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Vector basemaps powered by [MapLibre](https://maplibre.org/), OpenFreeMap, and Carto.
