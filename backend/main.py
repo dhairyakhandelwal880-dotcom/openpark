@@ -666,6 +666,27 @@ async def places_search_endpoint(
     return {"status": "ok", "query": query, "total": len(results), "results": results}
 
 
+@app.get("/api/places/nearby")
+async def places_nearby_endpoint(
+    lat: float = Query(..., ge=-90.0, le=90.0),
+    lon: float = Query(..., ge=-180.0, le=180.0),
+    radius_km: float = Query(5.0, ge=0.1, le=50.0),
+    category: Optional[str] = Query(None),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """Finds places within a given radius (km) with optional category filtering."""
+    from places_db import search_places_nearby
+    results = search_places_nearby(lat=lat, lon=lon, radius_km=radius_km, category=category, limit=limit)
+    return {
+        "status": "ok",
+        "center": {"lat": lat, "lon": lon},
+        "radius_km": radius_km,
+        "category": category,
+        "total": len(results),
+        "results": results
+    }
+
+
 @app.get("/api/places/stats")
 def places_stats_endpoint():
     """Returns total place counts and category breakdowns in the offline dataset."""
