@@ -633,15 +633,54 @@ async def traccar_route_endpoint(
     start_lat: float = Query(...),
     start_lon: float = Query(...),
     dest_lat: float = Query(...),
-    dest_lon: float = Query(...)
+    dest_lon: float = Query(...),
+    alternatives: bool = Query(False)
 ):
     """Traccar OSRM Driving Road Routing Engine."""
     return await get_traccar_route(
         start_lat=start_lat,
         start_lon=start_lon,
         dest_lat=dest_lat,
-        dest_lon=dest_lon
+        dest_lon=dest_lon,
+        alternatives=alternatives
     )
+
+
+@app.get("/api/traccar/routes/compare")
+async def traccar_routes_compare_endpoint(
+    start_lat: float = Query(...),
+    start_lon: float = Query(...),
+    dest_lat: float = Query(...),
+    dest_lon: float = Query(...)
+):
+    """Compares primary vs alternative navigation routes."""
+    res = await get_traccar_route(
+        start_lat=start_lat,
+        start_lon=start_lon,
+        dest_lat=dest_lat,
+        dest_lon=dest_lon,
+        alternatives=True
+    )
+    routes = res.get("routes", [])
+    if not routes and "distance_km" in res:
+        routes = [{
+            "route_index": 0,
+            "tag": "Primary Route",
+            "distance_km": res["distance_km"],
+            "duration_min": res["duration_min"],
+            "coordinates": res["coordinates"]
+        }]
+
+    return {
+        "status": "ok",
+        "total_routes": len(routes),
+        "primary": routes[0] if routes else None,
+        "alternatives": routes[1:] if len(routes) > 1 else [],
+        "comparison": {
+            "fastest_min": min((r["duration_min"] for r in routes), default=0),
+            "shortest_km": min((r["distance_km"] for r in routes), default=0)
+        }
+    }
 
 
 @app.get("/api/traccar/search")
