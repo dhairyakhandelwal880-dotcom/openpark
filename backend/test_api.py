@@ -451,6 +451,24 @@ def test_offline_places_database():
     assert "Debrecan" in found["name"]
     assert "Uttarahalli" in found["address"]
 
+    # 3. Nearby spatial endpoint
+    r_near = client.get("/api/places/nearby?lat=12.9048&lon=77.5018&radius_km=3.0")
+    assert r_near.status_code == 200
+    d_near = r_near.json()
+    assert d_near["status"] == "ok"
+    assert d_near["total"] > 0
+    # verify distance ordering
+    distances = [p["distance_km"] for p in d_near["results"]]
+    assert distances == sorted(distances)
+
+    # 4. Nearby with category filter
+    r_cat = client.get("/api/places/nearby?lat=12.9048&lon=77.5018&radius_km=5.0&category=Hospital")
+    assert r_cat.status_code == 200
+    d_cat = r_cat.json()
+    assert d_cat["status"] == "ok"
+    if d_cat["total"] > 0:
+        assert any("hospital" in p["category"].lower() or "hospital" in p["name"].lower() for p in d_cat["results"])
+
 
 
 
