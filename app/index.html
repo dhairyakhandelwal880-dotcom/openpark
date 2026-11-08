@@ -2188,7 +2188,11 @@
           showHud: true,
           showBreadcrumbs: true,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
-          activeStyle: localStorage.getItem('openpark_map_style') || 'google-roadmap',
+          activeStyle: (() => {
+            const s = localStorage.getItem('openpark_map_style');
+            if (!s || s === 'ola-maps' || s === 'ola') return 'google-roadmap';
+            return s;
+          })(),
           olaMapsKey: localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP',
           outscraperKey: localStorage.getItem('openpark_outscraper_key') || ''
         },
@@ -2221,7 +2225,7 @@
                 'https://mt2.google.com/vt/lyrs=m&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
                 'https://mt3.google.com/vt/lyrs=m&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}'
               ],
-              tileSize: 256,
+              tileSize: 512,
               maxzoom: 22,
               attribution: '© Google Maps'
             }
@@ -2239,7 +2243,7 @@
                 'https://mt2.google.com/vt/lyrs=m,traffic&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
                 'https://mt3.google.com/vt/lyrs=m,traffic&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}'
               ],
-              tileSize: 256,
+              tileSize: 512,
               maxzoom: 22,
               attribution: '© Google Maps'
             }
@@ -2257,7 +2261,7 @@
                 'https://mt2.google.com/vt/lyrs=y&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}',
                 'https://mt3.google.com/vt/lyrs=y&hl=en&gl=IN&scale=2&x={x}&y={y}&z={z}'
               ],
-              tileSize: 256,
+              tileSize: 512,
               maxzoom: 22,
               attribution: '© Google Maps'
             }
@@ -3507,6 +3511,25 @@
             attributionControl: false
           });
 
+          // Ensure map viewport always resizes to 100% full screen
+          const viewportEl = document.getElementById('map-viewport');
+          if (viewportEl && window.ResizeObserver) {
+            if (this._resizeObserver) {
+              try { this._resizeObserver.disconnect(); } catch (e) {}
+            }
+            this._resizeObserver = new ResizeObserver(() => {
+              if (this.map) this.map.resize();
+            });
+            this._resizeObserver.observe(viewportEl);
+          }
+
+          if (!this._hasWindowResizeListener) {
+            this._hasWindowResizeListener = true;
+            window.addEventListener('resize', () => {
+              if (this.map) this.map.resize();
+            });
+          }
+
           this.map.on('error', (err) => {
             const errStr = String((err && err.error && err.error.message) || (err && err.status) || (err && err.message) || '');
             if (errStr.includes('401') || errStr.includes('Unauthorized') || (err && err.status === 401)) {
@@ -3532,6 +3555,8 @@
           this.map.on('load', () => {
             this.setupRouteSource();
             this.createVehicleMarker();
+            if (this.map) this.map.resize();
+            setTimeout(() => { if (this.map) this.map.resize(); }, 250);
 
             const cur = STATE.userLocation;
             if (cur && (cur.lat !== CONFIG.DEFAULT_COORDS[1] || cur.lng !== CONFIG.DEFAULT_COORDS[0])) {
@@ -3676,50 +3701,67 @@
         },
 
         setupRouteSource() {
-          this.map.addSource('route', {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] }
-          });
+          if (!this.map) return;
+          if (!this.map.getSource('route')) {
+            this.map.addSource('route', {
+              type: 'geojson',
+              data: { type: 'FeatureCollection', features: [] }
+            });
+          }
 
-          this.map.addLayer({
-            id: 'route-casing',
-            type: 'line',
-            source: 'route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': '#38bdf8',
-              'line-width': 8,
-              'line-opacity': 0.5
-            }
-          });
+          if (!this.map.getLayer('route-casing')) {
+            this.map.addLayer({
+              id: 'route-casing',
+              type: 'line',
+              source: 'route',
+              layout: { 'line-join': 'round', 'line-cap': 'round' },
+              paint: {
+                'line-color': '#1d4ed8',
+                'line-width': 10,
+                'line-opacity': 0.7
+              }
+            });
+          }
 
-          this.map.addLayer({
-            id: 'route-line',
-            type: 'line',
-            source: 'route',
-            layout: { 'line-join': 'round', 'line-cap': 'round' },
-            paint: {
-              'line-color': '#2563eb',
-              'line-width': 5,
-              'line-opacity': 0.95
-            }
-          });
+          if (!this.map.getLayer('route-line')) {
+            this.map.addLayer({
+              id: 'route-line',
+              type: 'line',
+              source: 'route',
+              layout: { 'line-join': 'round', 'line-cap': 'round' },
+              paint: {
+                'line-color': '#3b82f6',
+                'line-width': 6,
+                'line-opacity': 1.0
+              }
+            });
+          }
+
+          // Move route layers to the very top so they are never hidden under raster Google tiles
+          try {
+            if (this.map.getLayer('route-casing')) this.map.moveLayer('route-casing');
+            if (this.map.getLayer('route-line')) this.map.moveLayer('route-line');
+          } catch (e) {}
 
           // Breadcrumb Trail Layer
-          this.map.addSource('breadcrumbs', {
-            type: 'geojson',
-            data: { type: 'FeatureCollection', features: [] }
-          });
-          this.map.addLayer({
-            id: 'breadcrumb-line',
-            type: 'line',
-            source: 'breadcrumbs',
-            paint: {
-              'line-color': '#38bdf8',
-              'line-width': 3,
-              'line-opacity': 0.85
-            }
-          });
+          if (!this.map.getSource('breadcrumbs')) {
+            this.map.addSource('breadcrumbs', {
+              type: 'geojson',
+              data: { type: 'FeatureCollection', features: [] }
+            });
+          }
+          if (!this.map.getLayer('breadcrumb-line')) {
+            this.map.addLayer({
+              id: 'breadcrumb-line',
+              type: 'line',
+              source: 'breadcrumbs',
+              paint: {
+                'line-color': '#38bdf8',
+                'line-width': 4,
+                'line-opacity': 0.85
+              }
+            });
+          }
         },
 
         async setupOverpassLayers() {
@@ -4058,6 +4100,7 @@
             toggleBtn.innerHTML = isCollapsed 
               ? '<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>'
               : '<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>';
+            setTimeout(() => { if (MapEngine.map) MapEngine.map.resize(); }, 260);
           };
 
           // Mobile Sheet Drag Handler
@@ -5002,10 +5045,31 @@
         },
 
         async loadRoute(origin, destination) {
+          if (!origin || !destination) return;
+
+          // Normalize coordinates safely
+          const origLat = Number(origin.lat !== undefined ? origin.lat : origin.latitude);
+          const origLon = Number(origin.lng !== undefined ? origin.lng : (origin.lon !== undefined ? origin.lon : origin.longitude));
+
+          const destLat = Number(destination.lat !== undefined ? destination.lat : destination.latitude);
+          const destLon = Number(destination.lon !== undefined ? destination.lon : (destination.lng !== undefined ? destination.lng : destination.longitude));
+
+          if (!Number.isFinite(origLat) || !Number.isFinite(origLon)) {
+            console.warn("Invalid origin coordinates for route:", origin);
+            return;
+          }
+          if (!Number.isFinite(destLat) || !Number.isFinite(destLon)) {
+            console.warn("Invalid destination coordinates for route:", destination);
+            return;
+          }
+
           // Clear any previously shown route lot markers
           MapEngine.clearRouteLotMarkers();
 
-          const routeData = await API.getTraccarRoute(origin.lat, origin.lng, destination.lat, destination.lon);
+          // Ensure destination pin is always visible at the destination
+          MapEngine.setDestinationMarker({ lat: destLat, lon: destLon, name: destination.name || 'Destination' });
+
+          const routeData = await API.getTraccarRoute(origLat, origLon, destLat, destLon);
 
           let coords = [];
           let steps = [];
@@ -5013,27 +5077,32 @@
           if (routeData && routeData.coordinates && routeData.coordinates.length > 1) {
             coords = routeData.coordinates;
             steps = routeData.steps || [];
-            document.getElementById('trip-routing-badge').innerText = `Route: ${routeData.source === 'traccar_osrm' ? 'Traccar OSRM Engine' : 'Traccar Road Network'}`;
-            if (routeData.distance_km) document.getElementById('trip-rem-dist').innerText = routeData.distance_km;
-            if (routeData.duration_min) document.getElementById('trip-rem-time').innerText = routeData.duration_min;
+            const rBadge = document.getElementById('trip-routing-badge');
+            if (rBadge) rBadge.innerText = `Route: ${routeData.source === 'traccar_osrm' ? 'Traccar OSRM Engine' : 'Traccar Road Network'}`;
+            if (routeData.distance_km) {
+              const dEl = document.getElementById('trip-rem-dist');
+              if (dEl) dEl.innerText = routeData.distance_km;
+            }
+            if (routeData.duration_min) {
+              const tEl = document.getElementById('trip-rem-time');
+              if (tEl) tEl.innerText = routeData.duration_min;
+            }
           } else {
             // Real Orthogonal Street-Grid Road Fallback (Follows street centerlines with intersection turns)
-            const destLat = destination.lat;
-            const destLon = destination.lon;
-            const midLat = origin.lat + (destLat - origin.lat) * 0.45;
-            const midLon = origin.lng + (destLon - origin.lng) * 0.55;
+            const midLat = origLat + (destLat - origLat) * 0.45;
+            const midLon = origLon + (destLon - origLon) * 0.55;
 
-            // Leg 1: origin -> (origin.lng, midLat)
+            // Leg 1: origin -> (origLon, midLat)
             const n1 = 25;
             for (let i = 0; i < n1; i++) {
               const t = i / n1;
-              coords.push([origin.lng, origin.lat + (midLat - origin.lat) * t]);
+              coords.push([origLon, origLat + (midLat - origLat) * t]);
             }
-            // Leg 2: (origin.lng, midLat) -> (destLon, midLat)
+            // Leg 2: (origLon, midLat) -> (destLon, midLat)
             const n2 = 35;
             for (let i = 0; i < n2; i++) {
               const t = i / n2;
-              coords.push([origin.lng + (destLon - origin.lng) * t, midLat]);
+              coords.push([origLon + (destLon - origLon) * t, midLat]);
             }
             // Leg 3: (destLon, midLat) -> (destLon, destLat)
             const n3 = 25;
@@ -5042,40 +5111,66 @@
               coords.push([destLon, midLat + (destLat - midLat) * t]);
             }
 
-            const totalM = calculateDistanceMeters(origin.lat, origin.lng, midLat, origin.lng) +
-                           calculateDistanceMeters(midLat, origin.lng, midLat, destLon) +
+            const totalM = calculateDistanceMeters(origLat, origLon, midLat, origLon) +
+                           calculateDistanceMeters(midLat, origLon, midLat, destLon) +
                            calculateDistanceMeters(midLat, destLon, destLat, destLon);
             const distKm = (totalM / 1000).toFixed(1);
 
             steps = [
-              { instruction: "Head straight along main road corridor", dist: `${Math.round(calculateDistanceMeters(origin.lat, origin.lng, midLat, origin.lng))} m` },
-              { instruction: "Turn onto connecting cross avenue", dist: `${Math.round(calculateDistanceMeters(midLat, origin.lng, midLat, destLon))} m` },
-              { instruction: "Turn towards parking entrance", dist: `${Math.round(calculateDistanceMeters(midLat, destLon, destLat, destLon))} m` },
-              { instruction: "Arrive at parking entrance", dist: "Destination on right" }
+              { instruction: `Head along ${destination.address ? destination.address.split(',')[0] : 'main road corridor'}`, dist: `${Math.round(calculateDistanceMeters(origLat, origLon, midLat, origLon))} m` },
+              { instruction: "Turn onto connecting cross avenue", dist: `${Math.round(calculateDistanceMeters(midLat, origLon, midLat, destLon))} m` },
+              { instruction: `Arrive at ${destination.name || 'destination'}`, dist: "Destination ahead" }
             ];
-            document.getElementById('trip-routing-badge').innerText = 'Route: Traccar Road Network';
-            document.getElementById('trip-rem-dist').innerText = distKm;
-            document.getElementById('trip-rem-time').innerText = Math.max(2, Math.ceil(distKm / 0.4));
+            const rBadge = document.getElementById('trip-routing-badge');
+            if (rBadge) rBadge.innerText = 'Route: Traccar Road Network';
+            const dEl = document.getElementById('trip-rem-dist');
+            if (dEl) dEl.innerText = distKm;
+            const tEl = document.getElementById('trip-rem-time');
+            if (tEl) tEl.innerText = Math.max(2, Math.ceil(distKm / 0.4));
           }
 
           this.routePoints = coords;
           this.routeSteps = steps;
 
           // Render Route GeoJSON Line on Map
-          const geojson = {
-            type: 'Feature',
-            geometry: { type: 'LineString', coordinates: coords }
-          };
-          MapEngine.map.getSource('route').setData(geojson);
+          MapEngine.setupRouteSource();
+          const rSource = MapEngine.map ? MapEngine.map.getSource('route') : null;
+          if (rSource) {
+            rSource.setData({
+              type: 'Feature',
+              geometry: { type: 'LineString', coordinates: coords }
+            });
+          }
+
+          // Move route layers to the very top so they are never hidden under raster Google tiles
+          try {
+            if (MapEngine.map.getLayer('route-casing')) MapEngine.map.moveLayer('route-casing');
+            if (MapEngine.map.getLayer('route-line')) MapEngine.map.moveLayer('route-line');
+          } catch (e) {}
 
           // Fit bounds to show entire route from device location to destination
           if (MapEngine.map && coords.length > 1) {
-            const bounds = coords.reduce((b, pt) => b.extend(pt), new maplibregl.LngLatBounds(coords[0], coords[0]));
-            MapEngine.map.fitBounds(bounds, {
-              padding: { top: 110, bottom: 110, left: 70, right: 70 },
-              maxZoom: 16.5,
-              duration: 650
-            });
+            try {
+              const bounds = coords.reduce((b, pt) => {
+                if (Number.isFinite(pt[0]) && Number.isFinite(pt[1])) {
+                  return b.extend(pt);
+                }
+                return b;
+              }, new maplibregl.LngLatBounds(coords[0], coords[0]));
+
+              const isDesktop = window.innerWidth > 768;
+              const sidebarEl = document.getElementById('sidebar');
+              const isCollapsed = sidebarEl && sidebarEl.classList.contains('is-collapsed');
+              const padLeft = (isDesktop && !isCollapsed) ? 420 : 70;
+
+              MapEngine.map.fitBounds(bounds, {
+                padding: { top: 120, bottom: 90, left: padLeft, right: 70 },
+                maxZoom: 16.5,
+                duration: 700
+              });
+            } catch (e) {
+              console.warn("fitBounds notice:", e);
+            }
           }
 
           this.renderStepList();
@@ -5119,6 +5214,7 @@
         },
 
         trimRouteFrom(curLng, curLat) {
+          if (!this.isSimulating && (!STATE.userLocation || (STATE.userLocation.speed || 0) < 3)) return;
           if (!this.routePoints || this.routePoints.length < 2) return;
           const rSource = MapEngine.map ? MapEngine.map.getSource('route') : null;
           if (!rSource) return;
@@ -5134,13 +5230,15 @@
             }
           }
 
-          // Erase the path traveled before: only retain from current position forward
-          const remaining = [[curLng, curLat], ...this.routePoints.slice(closestIdx + 1)];
-          if (remaining.length >= 2) {
-            rSource.setData({
-              type: 'Feature',
-              geometry: { type: 'LineString', coordinates: remaining }
-            });
+          // If device is actively moving along route, trim passed segments
+          if (closestIdx > 0 && minD < 40) {
+            const remaining = [[curLng, curLat], ...this.routePoints.slice(closestIdx)];
+            if (remaining.length >= 2) {
+              rSource.setData({
+                type: 'Feature',
+                geometry: { type: 'LineString', coordinates: remaining }
+              });
+            }
           }
         },
 

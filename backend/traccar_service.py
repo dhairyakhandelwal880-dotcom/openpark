@@ -301,7 +301,7 @@ async def get_traccar_route(
     (https://router.project-osrm.org/) as standard in Traccar.
     Falls back to high-resolution orthogonal street network routing if offline.
     """
-    osrm_url = os.getenv("OSRM_URL", "http://router.project-osrm.org")
+    osrm_url = os.getenv("OSRM_URL", "https://router.project-osrm.org")
     route_url = f"{osrm_url}/route/v1/driving/{start_lon},{start_lat};{dest_lon},{dest_lat}?overview=full&geometries=geojson&steps=true"
 
     try:
