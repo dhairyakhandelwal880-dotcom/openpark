@@ -794,6 +794,30 @@ async def search_traccar_places(
     results: List[Dict[str, Any]] = []
     seen_names = set()
 
+    # 0. Query Offline SQLite FTS5 Places Database (Instant local matches)
+    try:
+        from places_db import search_places_fts
+        local_matches = search_places_fts(raw_query, limit=10)
+        for p in local_matches:
+            p_lat = float(p["lat"])
+            p_lon = float(p["lon"])
+            norm_key = f"{p['name'].lower()}_{round(p_lat, 3)}_{round(p_lon, 3)}"
+            if norm_key not in seen_names:
+                seen_names.add(norm_key)
+                dist = calculate_haversine_km(lat, lon, p_lat, p_lon)
+                results.append({
+                    "name": p["name"],
+                    "badge": p.get("badge") or "🏢",
+                    "category": p.get("category") or "Place",
+                    "address": p.get("address") or f"Coordinates: {round(p_lat, 4)}, {round(p_lon, 4)}",
+                    "lat": p_lat,
+                    "lon": p_lon,
+                    "distance_km": round(dist, 1),
+                    "source": "local_places_db"
+                })
+    except Exception:
+        pass
+
     # 1. Query Photon Geocoder (Fast OpenStreetMap Search with location proximity bias)
     if len(raw_query) >= 2:
         try:

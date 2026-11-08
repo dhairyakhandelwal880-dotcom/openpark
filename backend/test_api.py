@@ -424,6 +424,28 @@ def test_outscraper_endpoints():
     assert "Outscraper API key not configured" in d2["message"]
 
 
+def test_offline_places_database():
+    """Verify local SQLite FTS5 places database search and stats endpoints."""
+    # 1. Stats endpoint
+    r_stats = client.get("/api/places/stats")
+    assert r_stats.status_code == 200
+    d_stats = r_stats.json()
+    assert d_stats["status"] == "ok"
+    assert "stats" in d_stats
+    assert d_stats["stats"]["total_places"] > 0
+
+    # 2. Search endpoint
+    r_search = client.get("/api/places/search?query=Debrecan")
+    assert r_search.status_code == 200
+    d_search = r_search.json()
+    assert d_search["status"] == "ok"
+    assert d_search["total"] >= 1
+    found = d_search["results"][0]
+    assert "Debrecan" in found["name"]
+    assert "Uttarahalli" in found["address"]
+
+
+
 
 
 

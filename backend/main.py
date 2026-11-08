@@ -631,6 +631,24 @@ async def traccar_search_endpoint(
     return {"status": "ok", "query": query, "results": results}
 
 
+@app.get("/api/places/search")
+async def places_search_endpoint(
+    query: str = Query(..., min_length=1),
+    limit: int = Query(15, ge=1, le=50)
+):
+    """Searches the offline SQLite FTS5 database of all places."""
+    from places_db import search_places_fts
+    results = search_places_fts(query=query, limit=limit)
+    return {"status": "ok", "query": query, "total": len(results), "results": results}
+
+
+@app.get("/api/places/stats")
+def places_stats_endpoint():
+    """Returns total place counts and category breakdowns in the offline dataset."""
+    from places_db import get_places_stats
+    return {"status": "ok", "stats": get_places_stats()}
+
+
 @app.get("/api/traccar/devices/{device_id}/trail")
 def traccar_device_trail_endpoint(device_id: str):
     """Returns recorded road trail breadcrumbs as GeoJSON FeatureCollection."""
