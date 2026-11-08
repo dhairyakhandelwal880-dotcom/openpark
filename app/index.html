@@ -214,6 +214,11 @@
       color: var(--accent-subtle);
     }
 
+    .cluster-btn#btn-compass-north.has-bearing {
+      color: #60a5fa;
+      background: rgba(59, 130, 246, 0.18);
+    }
+
     .cluster-btn.active-pulse::after {
       content: "";
       position: absolute;
@@ -3636,13 +3641,25 @@
             this.tracker.start();
           });
 
-          this.map.on('rotate', () => {
+          const updateCompassState = () => {
             const bearing = this.map.getBearing();
             const compass = document.getElementById('compass-icon');
+            const compassBtn = document.getElementById('btn-compass-north');
             if (compass) compass.style.transform = `rotate(${-bearing}deg)`;
+            if (compassBtn) {
+              compassBtn.classList.toggle('has-bearing', Math.abs(bearing) > 1);
+            }
+          };
+
+          this.map.on('rotate', () => {
+            updateCompassState();
             if (this.vehicleMarker && STATE.userLocation) {
               this.updateVehicle(STATE.userLocation);
             }
+          });
+
+          this.map.on('pitch', () => {
+            updateCompassState();
           });
 
           // User map interaction breaks camera follow during navigation
@@ -4167,7 +4184,18 @@
           document.getElementById('btn-zoom-out').onclick = () => MapEngine.map.zoomOut({ duration: 250 });
           
           document.getElementById('btn-compass-north').onclick = () => {
-            MapEngine.map.easeTo({ bearing: 0, pitch: STATE.is3D ? CONFIG.PITCH_3D : 0, duration: 400 });
+            const currentBearing = MapEngine.map.getBearing();
+            const currentPitch = MapEngine.map.getPitch();
+            if (Math.abs(currentBearing) < 0.5 && (!STATE.is3D || Math.abs(currentPitch - CONFIG.PITCH_3D) < 0.5)) {
+              ParkingApp.showToast("Map already oriented North (0°)", "info");
+              return;
+            }
+            MapEngine.map.easeTo({
+              bearing: 0,
+              pitch: STATE.is3D ? CONFIG.PITCH_3D : 0,
+              duration: 500
+            });
+            ParkingApp.showToast("Re-oriented North (0°)", "success");
           };
 
           document.getElementById('btn-tilt-3d').onclick = () => {
