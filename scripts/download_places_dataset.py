@@ -1,189 +1,277 @@
 #!/usr/bin/env python3
 """
 Places Dataset Downloader & Local Search Indexer
-Downloads and populates the offline Places Database (SQLite FTS5) with searchable places,
-buildings, amenities, and POIs across Bengaluru and India.
+Downloads, ingests, and populates the offline Places Database (SQLite FTS5)
+with thousands of real-world places, buildings, amenities, PGs, and POIs across
+Bengaluru, Karnataka, and India.
 
 Usage:
-    # 1. Seed database with local Bengaluru places & parking catalog
-    python3 scripts/download_places_dataset.py --seed
+    # Build complete offline places dataset
+    python3 scripts/download_places_dataset.py --all
 
-    # 2. Download live POIs for a specific city/area from OpenStreetMap Overpass
-    python3 scripts/download_places_dataset.py --city "Kengeri, Bengaluru" --limit 500
-
-    # 3. Check database stats
-    python3 scripts/download_places_dataset.py --stats
+    # Search the database
+    python3 scripts/download_places_dataset.py --search "Debrecan"
 """
 
 import os
 import sys
 import argparse
 import json
+import time
 import urllib.request
 import urllib.parse
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Set
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend")))
 
 from places_db import init_places_db, insert_places_batch, get_places_stats, search_places_fts
-from traccar_service import BENGALURU_PLACES_CATALOG, load_opencity_places
+from traccar_service import BENGALURU_PLACES_CATALOG, load_opencity_places, resolve_place_badge
 
 
-def seed_local_places():
-    """Seeds the catalog places and OpenCity places into the local SQLite database."""
-    print("📦 Seeding local Bengaluru Places & Municipal Parking catalog...")
+def seed_local_and_cached_places() -> int:
+    """Ingests curated places catalog, municipal lots, and local cached GeoJSON."""
+    print("📦 Step 1: Ingesting local Bengaluru Catalogs & Municipal Datasets...")
     places: List[Dict[str, Any]] = []
+    seen: Set[str] = set()
 
-    # 1. Local Bengaluru Catalog (Hospitals, PGs, Hotels, IT Parks)
+    # 1. Local Bengaluru Catalog (Debrecan House, OYO Golden Grand, BGS Hospital, etc.)
     for p in BENGALURU_PLACES_CATALOG:
-        places.append({
-            "id": f"cat_{p.get('lat')}_{p.get('lon')}",
-            "name": p.get("name"),
-            "category": p.get("category", "Commercial"),
-            "badge": p.get("badge", "🏢"),
-            "address": p.get("address", "Bengaluru, Karnataka"),
-            "city": "Bengaluru",
-            "state": "Karnataka",
-            "lat": p.get("lat"),
-            "lon": p.get("lon"),
-            "source": "curated_catalog"
-        })
+        key = f"{p.get('name')}_{round(p.get('lat', 0), 4)}_{round(p.get('lon', 0), 4)}"
+        if key not in seen:
+            seen.add(key)
+            places.append({
+                "id": f"cat_{round(p.get('lat', 0), 5)}_{round(p.get('lon', 0), 5)}",
+                "name": p.get("name"),
+                "category": p.get("category", "Commercial"),
+                "badge": p.get("badge", "🏢"),
+                "address": p.get("address", "Uttarahalli Main Rd, Kengeri, Bengaluru"),
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "lat": p.get("lat"),
+                "lon": p.get("lon"),
+                "source": "curated_catalog"
+            })
 
     # 2. OpenCity 147 Bengaluru Municipal Parking and civic lots
     opencity_lots = load_opencity_places()
     for lot in opencity_lots:
-        places.append({
-            "id": f"opencity_{lot.get('lat')}_{lot.get('lon')}",
-            "name": lot.get("name"),
-            "category": "Parking & Civic Facility",
-            "badge": "🅿️",
-            "address": lot.get("address", "Bengaluru"),
-            "city": "Bengaluru",
-            "state": "Karnataka",
-            "lat": lot.get("lat"),
-            "lon": lot.get("lon"),
-            "source": "opencity_bengaluru"
-        })
+        key = f"{lot.get('name')}_{round(lot.get('lat', 0), 4)}_{round(lot.get('lon', 0), 4)}"
+        if key not in seen:
+            seen.add(key)
+            places.append({
+                "id": f"opencity_{round(lot.get('lat', 0), 5)}_{round(lot.get('lon', 0), 5)}",
+                "name": lot.get("name"),
+                "category": "Parking & Civic Facility",
+                "badge": "🅿️",
+                "address": lot.get("address", "Bengaluru"),
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "lat": lot.get("lat"),
+                "lon": lot.get("lon"),
+                "source": "opencity_bengaluru"
+            })
+
+    # 3. Cached Overpass GeoJSON
+    geojson_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "data", "osm_overpass_cache.geojson")
+    )
+    if os.path.exists(geojson_path):
+        try:
+            with open(geojson_path, "r", encoding="utf-8") as f:
+                geo_data = json.load(f)
+                features = geo_data.get("features", [])
+                for feat in features:
+                    props = feat.get("properties", {})
+                    name = props.get("name") or props.get("lot_name")
+                    lat = props.get("lat") or props.get("latitude")
+                    lon = props.get("lon") or props.get("longitude")
+                    if not (lat and lon) and feat.get("geometry"):
+                        coords = feat["geometry"].get("coordinates")
+                        if coords:
+                            # If Polygon, take centroid or first point
+                            if feat["geometry"].get("type") == "Polygon" and coords[0]:
+                                lon, lat = coords[0][0][0], coords[0][0][1]
+                            elif feat["geometry"].get("type") == "Point":
+                                lon, lat = coords[0], coords[1]
+                    if name and lat and lon:
+                        key = f"{name}_{round(lat, 4)}_{round(lon, 4)}"
+                        if key not in seen:
+                            seen.add(key)
+                            places.append({
+                                "id": f"cached_geo_{feat.get('id', len(places))}",
+                                "name": name,
+                                "category": props.get("amenity") or "Parking Facility",
+                                "badge": "🅿️",
+                                "address": props.get("address") or "Bengaluru, Karnataka",
+                                "city": "Bengaluru",
+                                "state": "Karnataka",
+                                "lat": float(lat),
+                                "lon": float(lon),
+                                "source": "osm_cache"
+                            })
+        except Exception as e:
+            print(f"⚠️ Notice: could not load local geojson cache: {e}")
 
     inserted = insert_places_batch(places)
-    print(f"✅ Successfully seeded {inserted} places into local FTS5 database!")
+    print(f"✅ Ingested {inserted} local places into offline search index.")
     return inserted
 
 
-def download_overpass_places(city_bbox: str = "12.85,77.45,12.95,77.55", limit: int = 500) -> int:
+def download_live_photon_dataset() -> int:
     """
-    Downloads places (amenities, shops, tourism, offices, buildings) via Overpass API
-    for a bounding box (default: Kengeri / South-West Bengaluru).
+    Downloads comprehensive POIs from Photon Geocoder covering all categories:
+    PGs, Hostels, Hotels, Hospitals, Clinics, Colleges, Schools, Restaurants,
+    Cafes, Malls, Tech Parks, Supermarkets, Fuel Stations, and Metro Stations.
     """
-    print(f"🌐 Fetching POIs from OpenStreetMap Overpass (BBox: {city_bbox})...")
-    query = f"""
-    [out:json][timeout:25];
-    (
-      node["amenity"]({city_bbox});
-      node["shop"]({city_bbox});
-      node["tourism"]({city_bbox});
-      node["office"]({city_bbox});
-      node["building"]({city_bbox});
-    );
-    out body {limit};
-    """
-    url = "https://overpass-api.de/api/interpreter"
-    data = urllib.parse.urlencode({"data": query}).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=data,
-        headers={"User-Agent": "OpenParkPlacesDataset/2.0 (openpark.blr)"}
-    )
+    print("\n🌐 Step 2: Downloading Comprehensive Places Dataset via Photon (OpenStreetMap)...")
 
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            res_json = json.loads(resp.read().decode("utf-8"))
-            elements = res_json.get("elements", [])
-            print(f"📥 Received {len(elements)} raw OpenStreetMap nodes.")
+    # Categories to harvest with high density
+    queries = [
+        # Accommodation & PGs
+        ("pg boys kengeri", 12.9048, 77.5018),
+        ("pg ladies kengeri", 12.9048, 77.5018),
+        ("stanza living bangalore", 12.9048, 77.5018),
+        ("hostel kengeri", 12.9048, 77.5018),
+        ("hotel uttarahalli", 12.9048, 77.5018),
+        ("hotel kengeri", 12.9048, 77.5018),
+        ("hotel bangalore", 12.9716, 77.5946),
+        ("resort bangalore", 12.9716, 77.5946),
+        # Healthcare
+        ("hospital kengeri", 12.9048, 77.5018),
+        ("bgs hospital bangalore", 12.9048, 77.5018),
+        ("hospital bangalore", 12.9716, 77.5946),
+        ("clinic bangalore", 12.9716, 77.5946),
+        ("pharmacy bangalore", 12.9048, 77.5018),
+        # Dining & Food
+        ("restaurant kengeri", 12.9048, 77.5018),
+        ("cafe kengeri", 12.9048, 77.5018),
+        ("restaurant bangalore", 12.9716, 77.5946),
+        ("cafe bangalore", 12.9716, 77.5946),
+        ("bakery bangalore", 12.9716, 77.5946),
+        # Education & Tech
+        ("college kengeri", 12.9048, 77.5018),
+        ("school kengeri", 12.9048, 77.5018),
+        ("university bangalore", 12.9716, 77.5946),
+        ("tech park bangalore", 12.9716, 77.5946),
+        ("manyata tech park", 13.0450, 77.6200),
+        ("itpl whitefield", 12.9866, 77.7381),
+        ("electronic city bangalore", 12.8450, 77.6600),
+        # Shopping & Transit
+        ("mall bangalore", 12.9716, 77.5946),
+        ("supermarket kengeri", 12.9048, 77.5018),
+        ("metro station bangalore", 12.9716, 77.5946),
+        ("railway station bangalore", 12.9716, 77.5946),
+        ("petrol pump bangalore", 12.9048, 77.5018),
+        ("temple bangalore", 12.9716, 77.5946),
+        ("park bangalore", 12.9716, 77.5946),
+        # Major Indian Cities Landmark Centers
+        ("hospital delhi", 28.6139, 77.2090),
+        ("hotel mumbai", 19.0760, 72.8777),
+        ("mall hyderabad", 17.3850, 78.4867),
+        ("hotel chennai", 13.0827, 80.2707)
+    ]
 
-            places = []
-            for el in elements:
-                tags = el.get("tags", {})
-                name = tags.get("name")
-                if not name:
-                    continue
-                cat = tags.get("amenity") or tags.get("shop") or tags.get("tourism") or tags.get("office") or "Building"
-                badge = "🏢"
-                if "hospital" in cat or "clinic" in cat or "pharmacy" in cat:
-                    badge = "🏥"
-                elif "restaurant" in cat or "cafe" in cat or "fast_food" in cat:
-                    badge = "🍔"
-                elif "hotel" in cat or "hostel" in cat or "guest_house" in cat:
-                    badge = "🏨"
-                elif "fuel" in cat:
-                    badge = "⛽"
-                elif "school" in cat or "college" in cat or "university" in cat:
-                    badge = "🎓"
-                elif "shop" in tags:
-                    badge = "🛍️"
+    total_fetched = 0
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+    }
 
-                addr = tags.get("addr:full") or tags.get("addr:street") or "Bengaluru, Karnataka"
-                places.append({
-                    "id": f"osm_node_{el.get('id')}",
-                    "name": name,
-                    "category": cat.replace("_", " ").title(),
-                    "badge": badge,
-                    "address": addr,
-                    "city": tags.get("addr:city", "Bengaluru"),
-                    "state": "Karnataka",
-                    "lat": el.get("lat"),
-                    "lon": el.get("lon"),
-                    "phone": tags.get("phone") or tags.get("contact:phone", ""),
-                    "website": tags.get("website") or "",
-                    "source": "openstreetmap_overpass"
-                })
+    for idx, (q, lat, lon) in enumerate(queries, 1):
+        url = f"https://photon.komoot.io/api/?q={urllib.parse.quote(q)}&lat={lat}&lon={lon}&limit=35"
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=8.0) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                features = data.get("features", [])
+                places = []
+                for feat in features:
+                    props = feat.get("properties", {})
+                    name = props.get("name")
+                    if not name:
+                        continue
+                    coords = feat.get("geometry", {}).get("coordinates", [])
+                    if len(coords) < 2:
+                        continue
+                    p_lon, p_lat = float(coords[0]), float(coords[1])
+                    osm_val = props.get("osm_value", "")
+                    osm_key = props.get("osm_key", "")
+                    badge = resolve_place_badge(osm_val, osm_key)
 
-            if places:
-                inserted = insert_places_batch(places)
-                print(f"✅ Successfully inserted {inserted} named places into search index!")
-                return inserted
-            else:
-                print("⚠️ No named places found in this query response.")
-                return 0
-    except Exception as e:
-        print(f"❌ Failed to fetch from Overpass: {e}")
-        return 0
+                    addr_parts = []
+                    if props.get("street"):
+                        addr_parts.append(f"{props.get('housenumber', '')} {props['street']}".strip())
+                    if props.get("district") or props.get("locality"):
+                        addr_parts.append(props.get("locality") or props.get("district"))
+                    if props.get("city"):
+                        addr_parts.append(props["city"])
+                    if props.get("state"):
+                        addr_parts.append(props["state"])
+
+                    full_addr = ", ".join(addr_parts) if addr_parts else f"Coordinates: {round(p_lat, 4)}, {round(p_lon, 4)}"
+                    cat = (props.get("osm_value") or props.get("type") or "Commercial").replace("_", " ").title()
+
+                    places.append({
+                        "id": f"photon_{props.get('osm_id', f'{p_lat}_{p_lon}')}",
+                        "name": name,
+                        "category": cat,
+                        "badge": badge,
+                        "address": full_addr,
+                        "city": props.get("city", "Bengaluru"),
+                        "state": props.get("state", "Karnataka"),
+                        "lat": p_lat,
+                        "lon": p_lon,
+                        "source": "photon_openstreetmap"
+                    })
+
+                if places:
+                    c = insert_places_batch(places)
+                    total_fetched += c
+                    print(f" [{idx}/{len(queries)}] '{q}': +{c} places (Running Total: {total_fetched})")
+            time.sleep(0.3)  # Gentle rate limiting
+        except Exception as e:
+            print(f" [{idx}/{len(queries)}] '{q}' notice: {e}")
+
+    print(f"\n🎉 Successfully downloaded and indexed {total_fetched} live places!")
+    return total_fetched
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Places Dataset Downloader & Local Indexer")
-    parser.add_argument("--seed", action="store_true", help="Seed database with local curated places and municipal parking")
-    parser.add_argument("--download-osm", action="store_true", help="Download OSM places for Kengeri / Bengaluru bbox")
-    parser.add_argument("--bbox", default="12.85,77.45,12.95,77.55", help="Bounding box: min_lat,min_lon,max_lat,max_lon")
-    parser.add_argument("--limit", type=int, default=500, help="Max records to fetch (default: 500)")
-    parser.add_argument("--stats", action="store_true", help="Show database place counts and categories")
-    parser.add_argument("--search", "-s", default="", help="Test full-text search against the database")
+    parser = argparse.ArgumentParser(description="Build and Search Offline Places Database")
+    parser.add_argument("--all", action="store_true", help="Download and build the complete places dataset")
+    parser.add_argument("--seed", action="store_true", help="Ingest local catalogs only")
+    parser.add_argument("--search", "-s", default="", help="Search places in the database")
+    parser.add_argument("--stats", action="store_true", help="Display database summary")
 
     args = parser.parse_args()
 
-    if args.seed:
-        seed_local_places()
-
-    if args.download_osm:
-        download_overpass_places(city_bbox=args.bbox, limit=args.limit)
-
-    if args.search:
-        results = search_places_fts(args.search, limit=5)
-        print(f"\n🔍 Search Results for '{args.search}': ({len(results)} found)")
-        for idx, r in enumerate(results, 1):
-            print(f" {idx}. {r['badge']} {r['name']} ({r['category']}) - {r['address']} [{r['lat']}, {r['lon']}]")
-
-    if args.stats or (not args.seed and not args.download_osm and not args.search):
+    if args.all:
+        seed_local_and_cached_places()
+        download_live_photon_dataset()
         stats = get_places_stats()
         print("\n" + "="*50)
-        print("📊 OpenPark Offline Places Database Stats")
+        print("📊 DATASET READY: Database Statistics")
         print("="*50)
-        print(f"Total Searchable Places: {stats['total_places']}")
-        print(f"Database Path: {stats['database_path']}")
+        print(f"Total Places in Database: {stats['total_places']}")
         print("Top Categories:")
         for cat, cnt in stats["top_categories"].items():
             print(f"  • {cat}: {cnt}")
-        print("="*50 + "\n")
+        print("="*50)
+        return
+
+    if args.seed:
+        seed_local_and_cached_places()
+
+    if args.search:
+        results = search_places_fts(args.search, limit=8)
+        print(f"\n🔍 Results for '{args.search}': ({len(results)} found)")
+        for idx, r in enumerate(results, 1):
+            print(f" {idx}. {r['badge']} {r['name']} [{r['category']}] - {r['address']} ({r['lat']}, {r['lon']})")
+
+    if args.stats or (not args.all and not args.seed and not args.search):
+        stats = get_places_stats()
+        print(f"\nTotal Places: {stats['total_places']}")
+        print(f"Database: {stats['database_path']}")
 
 
 if __name__ == "__main__":
