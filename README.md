@@ -59,6 +59,21 @@
 - Dedicated attendant interface with large mobile touch controls (`+1`, `-1`, `FULL`, `CLEAR`).
 - Instant capacity editor and WebSocket real-time broadcast to all connected drivers.
 
+### 8. 🗄️ Offline Places Database (SQLite FTS5)
+- **Sub-Millisecond Full-Text Search**: Powered by SQLite FTS5 index (`data/places_search.db`), capable of instant matching on prefix, category, street name, and city.
+- **Multi-Category Ingestion Pipeline**: Ingests thousands of places including hostels, PGs, hotels, hospitals, tech parks, colleges, and transit stations.
+- **REST Endpoints**: Query via `GET /api/places/search?query=...` and inspect catalog statistics via `GET /api/places/stats`.
+
+### 9. ⭐ Outscraper Google Maps Reviews & Data Extractor
+- **Google Reviews Integration**: Real-time extraction of customer reviews, ratings, photos, and operating hours via Outscraper REST API.
+- **CLI Extraction Utility**: `scripts/outscraper_collector.py` allows bulk exporting places and reviews into JSON or CSV.
+- **Interactive UI Support**: Configure your Outscraper API key directly in the OpenPark Settings tab to enrich place cards with live reviews.
+
+### 10. 🧭 Turn-by-Turn Navigation & Smart Routing
+- **Secure OSRM Protocol**: Real road routing using HTTPS OSRM endpoints (`https://router.project-osrm.org`) with orthogonal street corridor fallbacks.
+- **Promoted Layer Stacking**: High-contrast navigation routes (`#1d4ed8` / `#3b82f6`) automatically elevated above raster Google Maps tiles.
+- **Dynamic Multi-Device Viewport**: Built-in `ResizeObserver` automatically sizes the map canvas to 100% full screen on desktop and mobile.
+
 ---
 
 ## 🏗️ Architecture & Tech Stack
