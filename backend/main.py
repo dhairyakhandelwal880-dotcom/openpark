@@ -813,6 +813,36 @@ async def olamaps_reverse_geocode_endpoint(
 
 
 # --------------------------------------------------------------------------
+# Outscraper Google Maps Places & Reviews API Integration
+# --------------------------------------------------------------------------
+
+@app.get("/api/outscraper/search")
+async def outscraper_search_endpoint(
+    query: str = Query(..., description="Place name, category, or address"),
+    limit: int = Query(5, ge=1, le=50),
+    api_key: Optional[str] = Query(None)
+):
+    """Searches Google Maps places via Outscraper."""
+    from outscraper_service import OutscraperClient
+    client = OutscraperClient(api_key=api_key)
+    return await client.search_places(query=query, limit=limit)
+
+
+@app.get("/api/outscraper/reviews")
+async def outscraper_reviews_endpoint(
+    query: str = Query(..., description="Place name or Place ID"),
+    reviews_limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(1, ge=1, le=10),
+    api_key: Optional[str] = Query(None)
+):
+    """Extracts verified Google Maps user reviews for any place."""
+    from outscraper_service import OutscraperClient
+    client = OutscraperClient(api_key=api_key)
+    return await client.get_place_reviews(query_or_place_id=query, reviews_limit=reviews_limit, limit=limit)
+
+
+
+# --------------------------------------------------------------------------
 # Building & Place Reverse Lookup API (Click any building in India for details)
 # --------------------------------------------------------------------------
 
@@ -935,6 +965,28 @@ async def place_lookup_endpoint(
         "distance_km": 0.0,
         "source": source
     }
+
+    # Enrich with live Google Maps user reviews via Outscraper if API key is present
+    outscraper_key = os.getenv("OUTSCRAPER_API_KEY", "")
+    if outscraper_key and place_name:
+        try:
+            from outscraper_service import OutscraperClient
+            osc = OutscraperClient(api_key=outscraper_key)
+            ores = await osc.get_place_reviews(query_or_place_id=f"{place_name} {place_address}", reviews_limit=5, limit=1)
+            if ores.get("status") == "success" and ores.get("data"):
+                op = ores["data"][0]
+                if op.get("rating"):
+                    raw_item["rating"] = op["rating"]
+                if op.get("reviews_count"):
+                    raw_item["reviews_count"] = op["reviews_count"]
+                if op.get("reviews"):
+                    raw_item["reviews"] = op["reviews"]
+                if op.get("phone"):
+                    raw_item["phone"] = op["phone"]
+                if op.get("website"):
+                    raw_item["website"] = op["website"]
+        except Exception:
+            pass
 
     enriched = enrich_place_details(raw_item)
     return {"status": "ok", "place": enriched}

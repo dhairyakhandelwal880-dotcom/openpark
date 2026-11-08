@@ -408,6 +408,23 @@ def test_google_maps_place_details_enrichment():
     assert "reviews" in first
 
 
+def test_outscraper_endpoints():
+    """Verify Outscraper search and reviews endpoints."""
+    # Test without API key gives friendly error
+    r1 = client.get("/api/outscraper/search?query=Debrecan+House")
+    assert r1.status_code == 200
+    d1 = r1.json()
+    assert d1["status"] == "error"
+    assert "Outscraper API key not configured" in d1["message"]
+
+    r2 = client.get("/api/outscraper/reviews?query=Debrecan+House")
+    assert r2.status_code == 200
+    d2 = r2.json()
+    assert d2["status"] == "error"
+    assert "Outscraper API key not configured" in d2["message"]
+
+
+
 
 
 

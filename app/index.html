@@ -1911,6 +1911,17 @@
               <button class="btn-pill-secondary" id="btn-save-olamaps-key" style="padding: 6px 14px; font-size: 13px; width: auto;">Save</button>
             </div>
           </div>
+
+          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+              <span>Outscraper API Key (Google Reviews & Places)</span>
+              <a href="https://app.outscraper.com" target="_blank" style="color: var(--color-primary); font-size: 12px; text-decoration: underline;">app.outscraper.com</a>
+            </div>
+            <div style="display: flex; gap: 8px; width: 100%;">
+              <input type="password" id="setting-outscraper-key" class="styled-input" style="flex: 1;" placeholder="Enter Outscraper API Key" />
+              <button class="btn-pill-secondary" id="btn-save-outscraper-key" style="padding: 6px 14px; font-size: 13px; width: auto;">Save</button>
+            </div>
+          </div>
         </div>
 
         <div class="setting-group">
@@ -2178,7 +2189,8 @@
           showBreadcrumbs: true,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
           activeStyle: localStorage.getItem('openpark_map_style') || 'google-roadmap',
-          olaMapsKey: localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP'
+          olaMapsKey: localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP',
+          outscraperKey: localStorage.getItem('openpark_outscraper_key') || ''
         },
         watchId: null,
         animationFrameId: null,
@@ -4190,6 +4202,21 @@
                 MapEngine.map.remove();
                 MapEngine.init();
               }
+            };
+          }
+
+          // Settings Tab: Outscraper API Key Configuration
+          const settingOutscraperKey = document.getElementById('setting-outscraper-key');
+          const btnSaveOutscraperKey = document.getElementById('btn-save-outscraper-key');
+          if (settingOutscraperKey) {
+            settingOutscraperKey.value = STATE.config.outscraperKey || localStorage.getItem('openpark_outscraper_key') || '';
+          }
+          if (btnSaveOutscraperKey && settingOutscraperKey) {
+            btnSaveOutscraperKey.onclick = () => {
+              const k = settingOutscraperKey.value.trim();
+              STATE.config.outscraperKey = k;
+              localStorage.setItem('openpark_outscraper_key', k);
+              ParkingApp.showToast(k ? 'Outscraper API Key saved! Live Google reviews enabled.' : 'Outscraper API Key cleared.');
             };
           }
 
