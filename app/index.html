@@ -1892,6 +1892,7 @@
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
             <span>Map Style & Detail Level</span>
             <select id="select-map-style" class="styled-input" style="width: 100%;">
+              <option value="ola-maps">Ola Maps India Vector (api.olamaps.io)</option>
               <option value="google-roadmap">Google Maps Full Detail Retina (Roads, Buildings, PGs & Shops) (Default)</option>
               <option value="google-traffic">Google Maps Live Traffic & Congestion Flow</option>
               <option value="google-hybrid">Google Maps Satellite Hybrid</option>
@@ -1899,6 +1900,16 @@
               <option value="osm-standard">OpenStreetMap Standard</option>
               <option value="carto-voyager">Carto Voyager Retina @2x</option>
             </select>
+          </div>
+          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+              <span>Ola Maps API Key</span>
+              <a href="https://cloud.olakrutrim.com" target="_blank" style="color: var(--color-primary); font-size: 12px; text-decoration: underline;">cloud.olakrutrim.com</a>
+            </div>
+            <div style="display: flex; gap: 8px; width: 100%;">
+              <input type="text" id="setting-olamaps-key" class="styled-input" style="flex: 1;" placeholder="api_key value" value="QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT" />
+              <button class="btn-pill-secondary" id="btn-save-olamaps-key" style="padding: 6px 14px; font-size: 13px; width: auto;">Save</button>
+            </div>
           </div>
         </div>
 
@@ -2166,7 +2177,8 @@
           showHud: true,
           showBreadcrumbs: true,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
-          activeStyle: localStorage.getItem('openpark_map_style') || 'google-roadmap'
+          activeStyle: localStorage.getItem('openpark_map_style') || 'ola-maps',
+          olaMapsKey: localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT'
         },
         watchId: null,
         animationFrameId: null,
@@ -2181,9 +2193,11 @@
       } catch (e) {}
 
       // --------------------------------------------------------------------------
-      // 5.3 Google Maps & OpenStreetMap Ultra-Detail Map Styles Configuration
+      // 5.3 Google Maps, Ola Maps & OpenStreetMap Ultra-Detail Map Styles
       // --------------------------------------------------------------------------
       const MAP_STYLES = {
+        'ola-maps': 'https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=' + (localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT'),
+        'ola-maps-dark': 'https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=' + (localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT'),
         'google-roadmap': {
           version: 8,
           sources: {
@@ -2304,6 +2318,15 @@
       };
 
       function resolveMapStyleUrl(styleKey) {
+        if (styleKey === 'ola-maps' || styleKey === 'ola') {
+          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT';
+          const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          return `https://api.olamaps.io/tiles/vector/v1/styles/${isDark ? 'default-dark-standard' : 'default-light-standard'}/style.json?api_key=${encodeURIComponent(key)}`;
+        }
+        if (styleKey === 'ola-maps-dark') {
+          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT';
+          return `https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=${encodeURIComponent(key)}`;
+        }
         if (!styleKey || styleKey === 'google-roadmap' || styleKey === 'google-maps' || styleKey === 'openfreemap-auto' || styleKey === 'auto') {
           return MAP_STYLES['google-roadmap'];
         }
@@ -3472,6 +3495,15 @@
             attributionControl: false
           });
 
+          this.map.on('error', (err) => {
+            const errStr = String((err && err.error && err.error.message) || (err && err.status) || (err && err.message) || '');
+            if (errStr.includes('401') || errStr.includes('Unauthorized')) {
+              if (STATE.config.activeStyle === 'ola-maps') {
+                ParkingApp.showToast('Ola Maps key unauthorized. Enter active key from cloud.olakrutrim.com');
+              }
+            }
+          });
+
           this.map.on('load', () => {
             this.setupRouteSource();
             this.createVehicleMarker();
@@ -4037,9 +4069,10 @@
             document.getElementById('btn-tilt-3d').classList.toggle('active-blue', STATE.is3D);
           };
 
-          // One-click Map Detail Switcher (Google Maps Retina -> Live Traffic -> Satellite Hybrid -> Vector -> OSM)
-          const styleCycle = ['google-roadmap', 'google-traffic', 'google-hybrid', 'openfreemap-vector', 'osm-standard', 'carto-voyager'];
+          // One-click Map Detail Switcher (Ola Maps -> Google Maps Retina -> Live Traffic -> Satellite Hybrid -> Vector -> OSM)
+          const styleCycle = ['ola-maps', 'google-roadmap', 'google-traffic', 'google-hybrid', 'openfreemap-vector', 'osm-standard', 'carto-voyager'];
           const styleLabels = {
+            'ola-maps': 'Ola Maps India Vector (api.olamaps.io)',
             'google-roadmap': 'Google Maps Full Detail Retina (Roads, Buildings, PGs & Shops)',
             'google-traffic': 'Google Maps Live Traffic & Congestion Flow',
             'google-hybrid': 'Google Maps Satellite Hybrid',
@@ -4122,6 +4155,30 @@
             MapEngine.map.remove();
             MapEngine.init();
           };
+
+          // Settings Tab: Ola Maps API Key Configuration
+          const settingOlaKey = document.getElementById('setting-olamaps-key');
+          const btnSaveOlaKey = document.getElementById('btn-save-olamaps-key');
+          if (settingOlaKey) {
+            settingOlaKey.value = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT';
+          }
+          if (btnSaveOlaKey && settingOlaKey) {
+            btnSaveOlaKey.onclick = () => {
+              const k = settingOlaKey.value.trim();
+              if (k) {
+                STATE.config.olaMapsKey = k;
+                localStorage.setItem('openpark_olamaps_key', k);
+                ParkingApp.showToast('Ola Maps API key saved! Loading map...');
+                STATE.config.activeStyle = 'ola-maps';
+                localStorage.setItem('openpark_map_style', 'ola-maps');
+                const sel = document.getElementById('select-map-style');
+                if (sel) sel.value = 'ola-maps';
+                MapEngine.clearPoiMarkers();
+                MapEngine.map.remove();
+                MapEngine.init();
+              }
+            };
+          }
 
           // Settings Tab: Traccar Server URL & Device Identifier
           const settingTraccarUrl = document.getElementById('setting-traccar-server-url');

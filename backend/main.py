@@ -767,6 +767,52 @@ def viewport_places_endpoint(
 
 
 # --------------------------------------------------------------------------
+# Ola Maps API Integration (https://api.olamaps.io)
+# --------------------------------------------------------------------------
+
+OLAMAPS_DEFAULT_KEY = "QUxMIFIPVVlgQkFTRSBBKUkUgQkVMT05HIFRPIFVT"
+
+@app.get("/api/olamaps/autocomplete")
+async def olamaps_autocomplete_endpoint(
+    input: str = Query(...),
+    api_key: Optional[str] = Query(None)
+):
+    """Proxies Ola Maps Places Autocomplete with API Key."""
+    key = api_key or os.getenv("OLAMAPS_API_KEY", OLAMAPS_DEFAULT_KEY)
+    import httpx
+    import urllib.parse
+    url = f"https://api.olamaps.io/places/v1/autocomplete?input={urllib.parse.quote(input)}&api_key={key}"
+    try:
+        async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                return resp.json()
+            return {"status": "error", "code": resp.status_code, "message": "Ola Maps API key required or unauthorized"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/olamaps/reverse-geocode")
+async def olamaps_reverse_geocode_endpoint(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    api_key: Optional[str] = Query(None)
+):
+    """Proxies Ola Maps Reverse Geocoding with API Key."""
+    key = api_key or os.getenv("OLAMAPS_API_KEY", OLAMAPS_DEFAULT_KEY)
+    import httpx
+    url = f"https://api.olamaps.io/places/v1/reverse-geocode?latlng={lat},{lon}&api_key={key}"
+    try:
+        async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                return resp.json()
+            return {"status": "error", "code": resp.status_code, "message": "Ola Maps reverse geocode unauthorized"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# --------------------------------------------------------------------------
 # Building & Place Reverse Lookup API (Click any building in India for details)
 # --------------------------------------------------------------------------
 
@@ -788,6 +834,25 @@ async def place_lookup_endpoint(
     place_badge = "🏢"
     place_address = f"Coordinates: {round(lat, 5)}, {round(lon, 5)}"
     source = "coordinate_fallback"
+
+    # 0. Check Ola Maps reverse geocoding
+    ola_key = os.getenv("OLAMAPS_API_KEY", OLAMAPS_DEFAULT_KEY)
+    try:
+        ola_url = f"https://api.olamaps.io/places/v1/reverse-geocode?latlng={lat},{lon}&api_key={ola_key}"
+        async with httpx.AsyncClient(timeout=2.0, verify=False) as client:
+            ola_resp = await client.get(ola_url)
+            if ola_resp.status_code == 200:
+                ola_data = ola_resp.json()
+                results = ola_data.get("results", [])
+                if results:
+                    r0 = results[0]
+                    name_cand = r0.get("name") or (r0.get("formatted_address", "").split(",")[0] if r0.get("formatted_address") else None)
+                    if name_cand:
+                        place_name = name_cand
+                        place_address = r0.get("formatted_address", place_address)
+                        source = "ola_maps"
+    except Exception:
+        pass
 
     # 1. Reverse lookup via Photon (covers every building, shop, and address in India)
     try:
