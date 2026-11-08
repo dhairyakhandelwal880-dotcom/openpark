@@ -4161,6 +4161,33 @@
             MapEngine.init();
           };
 
+          // Global Keyboard Navigation Shortcuts
+          window.addEventListener('keydown', (e) => {
+            const inInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT';
+            if (e.key === 'Escape') {
+              const modal = document.getElementById('modal-report');
+              if (modal) modal.classList.remove('active');
+              const box = document.getElementById('search-autocomplete-box');
+              if (box) box.classList.remove('open');
+              return;
+            }
+            if (inInput) return;
+
+            if (e.key === '/') {
+              e.preventDefault();
+              const sInput = document.getElementById('search-input');
+              if (sInput) { sInput.focus(); sInput.select(); }
+            } else if (e.key === 'm' || e.key === 'M') {
+              const btn = document.getElementById('btn-toggle-layers');
+              if (btn) btn.click();
+            } else if (e.key === 'l' || e.key === 'L') {
+              const btn = document.getElementById('btn-my-location');
+              if (btn) btn.click();
+            } else if (e.key === '?') {
+              ParkingApp.showToast('Keyboard: [/] Search  [M] Map Layers  [L] Live Location  [Esc] Close');
+            }
+          });
+
           document.getElementById('btn-my-location').onclick = () => {
             ParkingApp.toggleLiveLocation();
           };
