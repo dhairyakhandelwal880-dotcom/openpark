@@ -439,6 +439,27 @@ def test_outscraper_endpoints():
     assert d2["status"] == "error"
     assert "Outscraper API key not configured" in d2["message"]
 
+    # Test cache mechanism
+    from outscraper_service import OutscraperClient, _REVIEWS_CACHE
+    OutscraperClient.clear_cache()
+    assert OutscraperClient.get_cache_size() == 0
+
+    # Inject mock entry
+    import time
+    mock_key = "debrecan house_5_1"
+    _REVIEWS_CACHE[mock_key] = (time.time(), {
+        "status": "success",
+        "query": "Debrecan House",
+        "total_places": 1,
+        "data": [{"name": "Debrecan House", "rating": 4.5, "reviews": []}]
+    })
+    client_inst = OutscraperClient(api_key="mock_key")
+    import asyncio
+    cached_res = asyncio.run(client_inst.get_place_reviews("Debrecan House", reviews_limit=5, limit=1))
+    assert cached_res["status"] == "success"
+    assert cached_res["cached"] is True
+    OutscraperClient.clear_cache()
+
 
 def test_offline_places_database():
     """Verify local SQLite FTS5 places database search and stats endpoints."""
