@@ -81,23 +81,23 @@ def init_default_devices():
         
         pos = TraccarPosition(
             deviceId="OP-TRACKER-01",
-            latitude=12.9716,
-            longitude=77.5840,
+            latitude=12.90425,
+            longitude=77.50080,
             altitude=920.0,
-            speed=38.5,
-            course=115.0,
+            speed=0.0,
+            course=0.0,
             accuracy=2.8,
             attributes={
-                "batteryLevel": 89.0,
-                "charging": True,
-                "motion": True,
-                "odometer": 12.4,
-                "satellites": 11,
+                "batteryLevel": 98.0,
+                "charging": False,
+                "motion": False,
+                "odometer": 0.0,
+                "satellites": 12,
             }
         )
         LATEST_POSITIONS["OP-TRACKER-01"] = pos
         POSITION_HISTORY["OP-TRACKER-01"] = [pos]
-        ODOMETERS["OP-TRACKER-01"] = 12.4
+        ODOMETERS["OP-TRACKER-01"] = 0.0
 
 
 # Initialize on import
@@ -508,7 +508,7 @@ BENGALURU_PLACES_CATALOG = [
     {"name": "Super Hotel O Ganakkal Near BGS Hospital", "category": "Hotel", "badge": "🏨", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.9048, "lon": 77.4988, "aliases": ["super hotel o", "ganakkal hotel", "bgs hotel"]},
     {"name": "Sayooj Restaurant", "category": "Restaurant", "badge": "🍔", "address": "BGS Rd, Kengeri Satellite Town, Bengaluru", "lat": 12.9052, "lon": 77.4980, "aliases": ["sayooj", "fast food", "sayooj restaurant"]},
     {"name": "OYO Hotel Golden Grand Inn", "category": "Hotel", "badge": "🏨", "address": "Uttarahalli Main Rd, Near BGS Hospital, Bengaluru", "lat": 12.9045, "lon": 77.5015, "aliases": ["golden grand inn", "oyo golden grand"]},
-    {"name": "Stanza Living Debrecan House | Boys PG", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.9050, "lon": 77.5025, "aliases": ["stanza living", "debrecan house", "boys pg"]},
+    {"name": "Stanza Living Debrecan House | Boys PG", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.90425, "lon": 77.50080, "aliases": ["stanza living", "debrecan house", "boys pg"]},
     {"name": "Abhiman Studio", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Rd, Kengeri, Bengaluru", "lat": 12.9025, "lon": 77.5035, "aliases": ["abhiman studio", "studio kengeri"]},
     {"name": "FabHotel Silver Leaf Grand", "category": "Hotel", "badge": "🏨", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.9040, "lon": 77.5012, "aliases": ["fabhotel", "silver leaf grand"]},
     {"name": "Fourstack Infotech Pvt. Ltd", "category": "Commercial", "badge": "💻", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.9042, "lon": 77.4990, "aliases": ["fourstack", "infotech", "software"]},

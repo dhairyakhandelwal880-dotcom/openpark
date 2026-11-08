@@ -2110,8 +2110,8 @@
       // 5.1 Config & Constants
       // --------------------------------------------------------------------------
       const CONFIG = {
-        DEFAULT_COORDS: [77.5946, 12.9716], // Bengaluru Core (Traccar Tracking Hub)
-        INITIAL_ZOOM: 14.5,
+        DEFAULT_COORDS: [77.50080, 12.90425], // Stanza Living Debrecan House, Kengeri, Bengaluru
+        INITIAL_ZOOM: 17.0,
         PITCH_3D: 42,
         RADIUS_METERS: 3500,
         WS_RECONNECT_MS: 3000
@@ -2436,13 +2436,15 @@
         }
       }
 
-      const activeGpsFilter = new GpsFilter({ maxAccuracy: 40, maxSpeed: 70, alpha: 0.35, minHeadingSpeed: 1 });
+      const activeGpsFilter = new GpsFilter({ maxAccuracy: 1500, maxSpeed: 70, alpha: 0.35, minHeadingSpeed: 1 });
 
       const GPSFilter = {
         filterFix(rawFix) {
           if (!rawFix) return null;
           const lat = Number(rawFix.lat !== undefined ? rawFix.lat : rawFix.latitude);
           const lon = Number(rawFix.lng !== undefined ? rawFix.lng : (rawFix.lon !== undefined ? rawFix.lon : rawFix.longitude));
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+
           let ts = rawFix.timestamp || rawFix.time || rawFix.fixTime;
           if (typeof ts === 'string') {
             const parsed = new Date(ts).getTime();
@@ -2460,19 +2462,26 @@
             heading: rawFix.heading
           });
 
-          if (!res.ok) {
-            console.debug('[GPSFilter] Rejected fix:', res.reason);
-            return null;
+          if (res && res.ok && res.fix) {
+            return {
+              lat: res.fix.lat,
+              lng: res.fix.lon,
+              heading: Math.round(res.fix.heading || 0),
+              speed: (res.fix.speed || 0) * 3.6,
+              accuracy: res.fix.accuracy || 5,
+              altitude: rawFix.altitude || 920,
+              timestamp: res.fix.ts
+            };
           }
 
           return {
-            lat: res.fix.lat,
-            lng: res.fix.lon,
-            heading: Math.round(res.fix.heading || 0),
-            speed: (res.fix.speed || 0) * 3.6,
-            accuracy: res.fix.accuracy || 5,
+            lat,
+            lng: lon,
+            heading: Math.round(rawFix.heading || 0),
+            speed: (speedMs || 0) * 3.6,
+            accuracy: rawFix.accuracy || 10,
             altitude: rawFix.altitude || 920,
-            timestamp: res.fix.ts
+            timestamp: ts
           };
         }
       };
@@ -2605,8 +2614,8 @@
           const id = pos.id ?? pos.deviceId ?? m.id ?? m.deviceId;
           if (this.o.deviceId && id !== undefined && String(id) !== String(this.o.deviceId)) return;
 
-          // If local native GPS is actively providing updates, ignore echoed WebSocket positions to avoid stutter
-          if (this.lastLocalFixTs && (Date.now() - this.lastLocalFixTs < 2500)) {
+          // If local native GPS is actively providing updates, ignore echoed WebSocket positions
+          if (STATE.isTrackingLocation || (this.lastLocalFixTs && (Date.now() - this.lastLocalFixTs < 8000))) {
             return;
           }
 
@@ -3569,6 +3578,20 @@
 
         async loadViewportPois() {
           if (!this.map) return;
+
+          // When Google Maps native styles are active, Google's tiles already render all
+          // places, buildings, PGs, shops, and roads with 100% millimeter-precise accuracy.
+          // We clear floating HTML DOM markers to avoid duplicate / misaligned pointers.
+          const isGoogleStyle = !STATE.config.activeStyle || 
+            STATE.config.activeStyle === 'google-roadmap' || 
+            STATE.config.activeStyle === 'google-traffic' || 
+            STATE.config.activeStyle === 'google-hybrid';
+
+          if (isGoogleStyle) {
+            this.clearPoiMarkers();
+            return;
+          }
+
           const zoom = this.map.getZoom();
           // Hide all POIs only at extreme regional zoom below 9
           if (zoom < 9) {
