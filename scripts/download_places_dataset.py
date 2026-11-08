@@ -236,14 +236,79 @@ def download_live_photon_dataset() -> int:
     return total_fetched
 
 
+def export_database_csv(output_path: str):
+    import csv
+    from places_db import get_db_connection
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM places ORDER BY name")
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    if rows:
+        fieldnames = list(rows[0].keys())
+        with open(output_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+    print(f"📁 Exported {len(rows)} places to CSV: {output_path}")
+
+
+def export_database_geojson(output_path: str):
+    from places_db import get_db_connection
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM places ORDER BY name")
+    rows = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    features = []
+    for r in rows:
+        features.append({
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [r["lon"], r["lat"]]
+            },
+            "properties": {
+                "id": r["id"],
+                "name": r["name"],
+                "category": r["category"],
+                "badge": r["badge"],
+                "address": r["address"],
+                "city": r["city"],
+                "phone": r.get("phone", ""),
+                "website": r.get("website", ""),
+                "rating": r.get("rating", 4.5),
+                "reviews_count": r.get("reviews_count", 0)
+            }
+        })
+
+    os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump({"type": "FeatureCollection", "features": features}, f, indent=2, ensure_ascii=False)
+    print(f"📁 Exported {len(features)} places to GeoJSON: {output_path}")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Build and Search Offline Places Database")
     parser.add_argument("--all", action="store_true", help="Download and build the complete places dataset")
     parser.add_argument("--seed", action="store_true", help="Ingest local catalogs only")
     parser.add_argument("--search", "-s", default="", help="Search places in the database")
     parser.add_argument("--stats", action="store_true", help="Display database summary")
+    parser.add_argument("--export-csv", default="", help="Export entire places database to CSV file")
+    parser.add_argument("--export-geojson", default="", help="Export entire places database to GeoJSON file")
 
     args = parser.parse_args()
+
+    if args.export_csv:
+        export_database_csv(args.export_csv)
+        return
+
+    if args.export_geojson:
+        export_database_geojson(args.export_geojson)
+        return
 
     if args.all:
         seed_local_and_cached_places()
