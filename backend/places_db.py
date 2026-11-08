@@ -148,6 +148,63 @@ def search_places_fts(query: str, limit: int = 15, db_path: str = DB_PATH) -> Li
     return results
 
 
+def search_places_nearby(
+    lat: float,
+    lon: float,
+    radius_km: float = 5.0,
+    category: Optional[str] = None,
+    limit: int = 20,
+    db_path: str = DB_PATH
+) -> List[Dict[str, Any]]:
+    """
+    Finds places within a given radius (km) of coordinates using Haversine calculation.
+    Supports optional category filtering (e.g. 'Hospital', 'Hotel', 'Restaurant', 'Parking').
+    """
+    import math
+    init_places_db(db_path)
+    conn = get_db_connection(db_path)
+    cur = conn.cursor()
+
+    # Bounding box rough pre-filter (~111 km per latitude degree, ~108 km per longitude at 13 deg N)
+    d_lat = radius_km / 111.0
+    d_lon = radius_km / (111.0 * math.cos(math.radians(lat)))
+
+    query = """
+        SELECT * FROM places
+        WHERE lat BETWEEN ? AND ?
+          AND lon BETWEEN ? AND ?
+    """
+    params = [lat - d_lat, lat + d_lat, lon - d_lon, lon + d_lon]
+
+    if category:
+        query += " AND (category LIKE ? OR name LIKE ?)"
+        params.extend([f"%{category}%", f"%{category}%"])
+
+    cur.execute(query, params)
+    candidates = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    # Exact Haversine distance filtering and ranking
+    results = []
+    r_earth = 6371.0
+    for p in candidates:
+        p_lat = p["lat"]
+        p_lon = p["lon"]
+        dlat = math.radians(p_lat - lat)
+        dlon = math.radians(p_lon - lon)
+        a = (math.sin(dlat / 2) ** 2 +
+             math.cos(math.radians(lat)) * math.cos(math.radians(p_lat)) *
+             math.sin(dlon / 2) ** 2)
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        dist_km = r_earth * c
+        if dist_km <= radius_km:
+            p["distance_km"] = round(dist_km, 2)
+            results.append(p)
+
+    results.sort(key=lambda x: x["distance_km"])
+    return results[:limit]
+
+
 def get_places_stats(db_path: str = DB_PATH) -> Dict[str, Any]:
     """Returns total count and summary of indexed places."""
     init_places_db(db_path)
