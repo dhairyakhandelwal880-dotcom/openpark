@@ -294,42 +294,59 @@ async def get_traccar_route(
     start_lat: float,
     start_lon: float,
     dest_lat: float,
-    dest_lon: float
+    dest_lon: float,
+    alternatives: bool = False
 ) -> Dict[str, Any]:
     """
     Computes driving navigation route using the official OpenStreetMap OSRM Routing Engine:
     (https://router.project-osrm.org/) as standard in Traccar.
-    Falls back to high-resolution orthogonal street network routing if offline.
+    Supports multi-route alternatives and falls back to high-resolution orthogonal street network routing if offline.
     """
     osrm_url = os.getenv("OSRM_URL", "https://router.project-osrm.org")
-    route_url = f"{osrm_url}/route/v1/driving/{start_lon},{start_lat};{dest_lon},{dest_lat}?overview=full&geometries=geojson&steps=true"
+    alt_param = "&alternatives=true" if alternatives else ""
+    route_url = f"{osrm_url}/route/v1/driving/{start_lon},{start_lat};{dest_lon},{dest_lat}?overview=full&geometries=geojson&steps=true{alt_param}"
 
     try:
         async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
             res = await client.get(route_url, headers={"User-Agent": "OpenPark-Traccar/5.12"})
             if res.status_code == 200:
                 data = res.json()
-                if data.get("routes"):
-                    r = data["routes"][0]
-                    coords = r.get("geometry", {}).get("coordinates", [])
-                    steps = []
-                    for leg in r.get("legs", []):
-                        for st in leg.get("steps", []):
-                            man = st.get("maneuver", {})
-                            instr = man.get("instruction") or f"Continue along {st.get('name') or 'road'}"
-                            d = st.get("distance", 0)
-                            steps.append({
-                                "instruction": instr,
-                                "dist": f"{int(d)} m" if d < 1000 else f"{d/1000:.1f} km"
-                            })
-                    return {
+                routes = data.get("routes", [])
+                if routes:
+                    parsed_routes = []
+                    for idx, r in enumerate(routes):
+                        coords = r.get("geometry", {}).get("coordinates", [])
+                        steps = []
+                        for leg in r.get("legs", []):
+                            for st in leg.get("steps", []):
+                                man = st.get("maneuver", {})
+                                instr = man.get("instruction") or f"Continue along {st.get('name') or 'road'}"
+                                d = st.get("distance", 0)
+                                steps.append({
+                                    "instruction": instr,
+                                    "dist": f"{int(d)} m" if d < 1000 else f"{d/1000:.1f} km"
+                                })
+                        parsed_routes.append({
+                            "route_index": idx,
+                            "tag": "Fastest Route" if idx == 0 else f"Alternative Route {idx}",
+                            "coordinates": coords,
+                            "distance_km": round(r.get("distance", 0) / 1000.0, 2),
+                            "duration_min": max(1, math.ceil(r.get("duration", 0) / 60.0)),
+                            "steps": steps
+                        })
+
+                    r0 = parsed_routes[0]
+                    res_dict = {
                         "status": "ok",
                         "source": "traccar_osrm",
-                        "coordinates": coords,
-                        "distance_km": round(r.get("distance", 0) / 1000.0, 2),
-                        "duration_min": max(1, math.ceil(r.get("duration", 0) / 60.0)),
-                        "steps": steps
+                        "coordinates": r0["coordinates"],
+                        "distance_km": r0["distance_km"],
+                        "duration_min": r0["duration_min"],
+                        "steps": r0["steps"]
                     }
+                    if alternatives:
+                        res_dict["routes"] = parsed_routes
+                    return res_dict
     except Exception:
         pass
 
