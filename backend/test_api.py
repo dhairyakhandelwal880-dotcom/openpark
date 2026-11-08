@@ -259,6 +259,15 @@ def test_traccar_endpoints():
     assert "steps" in route_data
     assert "distance_km" in route_data
 
+    # 11. Test Route Comparison Endpoint
+    comp_res = client.get("/api/traccar/routes/compare?start_lat=12.9048&start_lon=77.5018&dest_lat=12.9056&dest_lon=77.5005")
+    assert comp_res.status_code == 200
+    comp_data = comp_res.json()
+    assert comp_data["status"] == "ok"
+    assert comp_data["total_routes"] >= 1
+    assert "comparison" in comp_data
+    assert "fastest_min" in comp_data["comparison"]
+
     # 11. Test Traccar Places Search (OSM Nominatim + Local Catalog)
     search_res = client.get("/api/traccar/search?query=Koramangala")
     assert search_res.status_code == 200
