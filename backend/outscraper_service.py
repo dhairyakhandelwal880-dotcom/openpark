@@ -7,13 +7,18 @@ via Outscraper REST API (https://api.app.outscraper.com).
 import os
 import csv
 import json
+import time
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 import httpx
 
 logger = logging.getLogger("openpark.outscraper")
 
 OUTSCRAPER_API_BASE = "https://api.app.outscraper.com"
+
+# In-memory LRU/TTL Cache: key -> (timestamp, data)
+_REVIEWS_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+CACHE_TTL_SECONDS = 86400  # 24 Hours
 
 
 class OutscraperClient:
@@ -22,6 +27,14 @@ class OutscraperClient:
 
     def is_configured(self) -> bool:
         return bool(self.api_key and len(self.api_key.strip()) > 5)
+
+    @classmethod
+    def get_cache_size(cls) -> int:
+        return len(_REVIEWS_CACHE)
+
+    @classmethod
+    def clear_cache(cls):
+        _REVIEWS_CACHE.clear()
 
     async def search_places(
         self,
@@ -83,7 +96,16 @@ class OutscraperClient:
     ) -> Dict[str, Any]:
         """
         Extracts verified Google Maps user reviews for any place.
+        Utilizes 24h caching to preserve API quota.
         """
+        cache_key = f"{query_or_place_id.lower().strip()}_{reviews_limit}_{limit}"
+        now = time.time()
+        if cache_key in _REVIEWS_CACHE:
+            cached_time, cached_data = _REVIEWS_CACHE[cache_key]
+            if now - cached_time < CACHE_TTL_SECONDS:
+                cached_data["cached"] = True
+                return cached_data
+
         if not self.is_configured():
             return {
                 "status": "error",
@@ -109,12 +131,15 @@ class OutscraperClient:
                 if resp.status_code == 200:
                     raw_data = resp.json()
                     results = self._normalize_reviews_data(raw_data)
-                    return {
+                    payload = {
                         "status": "success",
                         "query": query_or_place_id,
                         "total_places": len(results),
-                        "data": results
+                        "data": results,
+                        "cached": False
                     }
+                    _REVIEWS_CACHE[cache_key] = (now, payload)
+                    return payload
                 return {
                     "status": "error",
                     "code": resp.status_code,
