@@ -962,7 +962,48 @@
       background: var(--color-hover);
     }
 
-    /* Toast notification */
+    /* Toast notification & Toast Stack */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 8px;
+      z-index: 9999;
+      pointer-events: none;
+      align-items: center;
+    }
+    .toast-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #f8fafc;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      pointer-events: auto;
+      opacity: 0;
+      transform: translateY(16px) scale(0.96);
+      transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .toast-pill.show {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .toast-pill.toast-success { border-left: 3px solid #10b981; }
+    .toast-pill.toast-warning { border-left: 3px solid #f59e0b; }
+    .toast-pill.toast-error { border-left: 3px solid #ef4444; }
+    .toast-pill.toast-info { border-left: 3px solid #3b82f6; }
+    .toast-pill .toast-icon { font-size: 14px; line-height: 1; }
+
     #toast {
       position: absolute;
       bottom: 24px;
@@ -2118,7 +2159,8 @@
     <span>Re-center</span>
   </button>
 
-  <!-- Toast Notification Pill -->
+  <!-- Toast Notification Pill & Dynamic Stack Container -->
+  <div id="toast-container" aria-live="polite"></div>
   <div id="toast" role="status">Report submitted. Thank you!</div>
 
   <!-- ==========================================================================
@@ -5846,11 +5888,29 @@
           }
         },
 
-        showToast(message) {
-          const toast = document.getElementById('toast');
-          toast.innerText = message;
-          toast.classList.add('show');
-          setTimeout(() => toast.classList.remove('show'), 2600);
+        showToast(message, type = 'info', duration = 3000) {
+          const container = document.getElementById('toast-container');
+          if (container) {
+            const pill = document.createElement('div');
+            const icons = { success: '✓', warning: '⚠', error: '✕', info: 'ℹ' };
+            const icon = icons[type] || 'ℹ';
+            pill.className = `toast-pill toast-${type}`;
+            pill.innerHTML = `<span class="toast-icon">${icon}</span><span>${message}</span>`;
+            container.appendChild(pill);
+            // trigger animation
+            requestAnimationFrame(() => pill.classList.add('show'));
+            setTimeout(() => {
+              pill.classList.remove('show');
+              setTimeout(() => { if (pill.parentNode) pill.parentNode.removeChild(pill); }, 300);
+            }, duration);
+          } else {
+            const toast = document.getElementById('toast');
+            if (toast) {
+              toast.innerText = message;
+              toast.classList.add('show');
+              setTimeout(() => toast.classList.remove('show'), duration);
+            }
+          }
         }
       };
 
