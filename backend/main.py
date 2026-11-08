@@ -872,26 +872,19 @@ def viewport_places_endpoint(
 # Ola Maps API Integration (https://api.olamaps.io)
 # --------------------------------------------------------------------------
 
-OLAMAPS_DEFAULT_KEY = "dZZGLlB7JiE6fylbxaTkHwbm88QPQP"
+from olamaps_service import OlaMapsClient, DEFAULT_OLAMAPS_KEY
+OLAMAPS_DEFAULT_KEY = DEFAULT_OLAMAPS_KEY
 
 @app.get("/api/olamaps/autocomplete")
 async def olamaps_autocomplete_endpoint(
     input: str = Query(...),
+    location: Optional[str] = Query(None),
+    radius: Optional[int] = Query(None),
     api_key: Optional[str] = Query(None)
 ):
     """Proxies Ola Maps Places Autocomplete with API Key."""
-    key = api_key or os.getenv("OLAMAPS_API_KEY", OLAMAPS_DEFAULT_KEY)
-    import httpx
-    import urllib.parse
-    url = f"https://api.olamaps.io/places/v1/autocomplete?input={urllib.parse.quote(input)}&api_key={key}"
-    try:
-        async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200:
-                return resp.json()
-            return {"status": "error", "code": resp.status_code, "message": "Ola Maps API key required or unauthorized"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    client = OlaMapsClient(api_key=api_key)
+    return await client.autocomplete(query=input, location=location, radius=radius)
 
 
 @app.get("/api/olamaps/reverse-geocode")
@@ -901,17 +894,20 @@ async def olamaps_reverse_geocode_endpoint(
     api_key: Optional[str] = Query(None)
 ):
     """Proxies Ola Maps Reverse Geocoding with API Key."""
-    key = api_key or os.getenv("OLAMAPS_API_KEY", OLAMAPS_DEFAULT_KEY)
-    import httpx
-    url = f"https://api.olamaps.io/places/v1/reverse-geocode?latlng={lat},{lon}&api_key={key}"
-    try:
-        async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
-            resp = await client.get(url)
-            if resp.status_code == 200:
-                return resp.json()
-            return {"status": "error", "code": resp.status_code, "message": "Ola Maps reverse geocode unauthorized"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    client = OlaMapsClient(api_key=api_key)
+    return await client.reverse_geocode(lat=lat, lon=lon)
+
+
+@app.get("/api/olamaps/directions")
+async def olamaps_directions_endpoint(
+    origin: str = Query(..., description="lat,lng coordinate pair"),
+    destination: str = Query(..., description="lat,lng coordinate pair"),
+    mode: str = Query("driving", description="driving, walking, or cycling"),
+    api_key: Optional[str] = Query(None)
+):
+    """Proxies Ola Maps Navigation Directions."""
+    client = OlaMapsClient(api_key=api_key)
+    return await client.get_directions(origin=origin, destination=destination, mode=mode)
 
 
 # --------------------------------------------------------------------------

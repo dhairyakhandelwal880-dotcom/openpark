@@ -500,6 +500,35 @@ def test_offline_places_database():
         assert any("hospital" in p["category"].lower() or "hospital" in p["name"].lower() for p in d_cat["results"])
 
 
+def test_olamaps_endpoints():
+    """Verify Ola Maps integration client and endpoints."""
+    from olamaps_service import OlaMapsClient
+
+    # Test client instantiation
+    custom_client = OlaMapsClient(api_key="custom_test_key")
+    assert custom_client.api_key == "custom_test_key"
+    assert custom_client.base_url == "https://api.olamaps.io"
+
+    # Test autocomplete endpoint response structure
+    r_auto = client.get("/api/olamaps/autocomplete?input=Bangalore")
+    assert r_auto.status_code == 200
+    d_auto = r_auto.json()
+    assert isinstance(d_auto, dict)
+
+    # Test reverse-geocode endpoint response structure
+    r_rev = client.get("/api/olamaps/reverse-geocode?lat=12.9716&lon=77.5946")
+    assert r_rev.status_code == 200
+    d_rev = r_rev.json()
+    assert isinstance(d_rev, dict)
+
+    # Test directions endpoint response structure
+    r_dir = client.get("/api/olamaps/directions?origin=12.97,77.59&destination=12.93,77.62")
+    assert r_dir.status_code == 200
+    d_dir = r_dir.json()
+    assert isinstance(d_dir, dict)
+
+
+
 
 
 
