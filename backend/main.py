@@ -573,6 +573,30 @@ def health():
     }
 
 
+@app.get("/health/details")
+def health_details():
+    import sys
+    import platform
+    from places_db import get_places_stats
+    db_stats = {}
+    try:
+        db_stats = get_places_stats()
+    except Exception as e:
+        db_stats = {"error": str(e)}
+
+    return {
+        "status": "healthy",
+        "service": "OpenPark API",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "python_version": sys.version.split()[0],
+        "platform": platform.platform(),
+        "database": {
+            "places_indexed": db_stats.get("total_places", 0),
+            "status": "connected"
+        }
+    }
+
+
 @app.get("/config/map")
 def get_map_config():
     return {

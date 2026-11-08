@@ -50,6 +50,13 @@ def test_health_endpoint():
     assert res.status_code == 200
     assert res.json()["status"] == "healthy"
 
+    res_det = client.get("/health/details")
+    assert res_det.status_code == 200
+    details = res_det.json()
+    assert details["status"] == "healthy"
+    assert "database" in details
+    assert "places_indexed" in details["database"]
+
 
 def test_list_lots():
     res = client.get("/lots")
