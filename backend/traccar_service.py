@@ -81,8 +81,8 @@ def init_default_devices():
         
         pos = TraccarPosition(
             deviceId="OP-TRACKER-01",
-            latitude=12.90480,
-            longitude=77.50180,
+            latitude=12.90310,
+            longitude=77.49750,
             altitude=920.0,
             speed=0.0,
             course=0.0,
@@ -525,7 +525,7 @@ BENGALURU_PLACES_CATALOG = [
     {"name": "Super Hotel O Ganakkal Near BGS Hospital", "category": "Hotel", "badge": "🏨", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.90490, "lon": 77.49990, "aliases": ["super hotel o", "ganakkal hotel", "bgs hotel"]},
     {"name": "Sayooj Restaurant", "category": "Restaurant", "badge": "🍔", "address": "BGS Rd, Kengeri Satellite Town, Bengaluru", "lat": 12.9052, "lon": 77.4980, "aliases": ["sayooj", "fast food", "sayooj restaurant"]},
     {"name": "OYO Hotel Golden Grand Inn", "category": "Hotel", "badge": "🏨", "address": "Uttarahalli Main Rd, Near BGS Hospital, Bengaluru", "lat": 12.90440, "lon": 77.50135, "aliases": ["golden grand inn", "oyo golden grand"]},
-    {"name": "Stanza Living Debrecan House | Boys PG", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Main Rd, Kengeri, Bengaluru", "lat": 12.90480, "lon": 77.50180, "aliases": ["stanza living", "debrecan house", "boys pg"]},
+    {"name": "Stanza Living Debrecan House | Boys PG", "category": "Commercial", "badge": "🏢", "address": "1st Cross, Sapthagiri County Layout, Near BGS Hospital Circle, Srinivaspura, Kengeri / Uttarahalli Rd, Bengaluru 560060", "lat": 12.90310, "lon": 77.49750, "aliases": ["stanza living", "debrecan house", "boys pg", "debrecan"]},
     {"name": "Abhiman Studio", "category": "Commercial", "badge": "🏢", "address": "Uttarahalli Rd, Kengeri, Bengaluru", "lat": 12.90320, "lon": 77.50280, "aliases": ["abhiman studio", "studio kengeri"]},
     {"name": "FabHotel Silver Leaf Grand", "category": "Hotel", "badge": "🏨", "address": "2nd Main Rd, Kengeri, Bengaluru", "lat": 12.90390, "lon": 77.50130, "aliases": ["fabhotel", "silver leaf grand"]},
     {"name": "Fourstack Infotech Pvt. Ltd", "category": "Commercial", "badge": "💻", "address": "BGS Rd, Kengeri, Bengaluru", "lat": 12.9042, "lon": 77.4990, "aliases": ["fourstack", "infotech", "software"]},
