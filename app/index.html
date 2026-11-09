@@ -876,9 +876,20 @@
       border-radius: 10px;
       background: var(--text-contrast-layer);
       border: 1px solid var(--color-border-subtle);
+      cursor: pointer;
+      transition: all 180ms ease;
+    }
+    .trip-turn-item:hover {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.35);
+      transform: translateX(3px);
+    }
+    .trip-turn-item.is-current {
+      border-color: rgba(59, 130, 246, 0.6);
+      background: rgba(37, 99, 235, 0.16);
     }
     .trip-turn-item.passed {
-      opacity: 0.5;
+      opacity: 0.45;
     }
 
     /* More / Settings View */
@@ -5738,17 +5749,44 @@
 
         renderStepList() {
           const container = document.getElementById('trip-step-list');
+          if (!container) return;
           container.innerHTML = '';
+
           this.routeSteps.forEach((st, idx) => {
-            container.innerHTML += `
-              <div class="trip-turn-item ${idx < this.currentStepIndex ? 'passed' : ''}">
-                <svg class="svg-icon" style="color:var(--accent-subtle);" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                <div style="flex:1;">
-                  <div style="font-weight:600; font-size:var(--font-size-sec);">${st.instruction}</div>
-                  <div style="font-size:12px; color:var(--color-text-secondary);">${st.dist}</div>
-                </div>
+            const item = document.createElement('div');
+            const isCurrent = idx === this.currentStepIndex;
+            item.className = `trip-turn-item ${idx < this.currentStepIndex ? 'passed' : ''} ${isCurrent ? 'is-current' : ''}`;
+
+            const instructionLower = (st.instruction || '').toLowerCase();
+            let iconText = '↑';
+            if (instructionLower.includes('left')) iconText = '↰';
+            else if (instructionLower.includes('right')) iconText = '↱';
+            else if (instructionLower.includes('arrive') || instructionLower.includes('destination')) iconText = '🏁';
+            else if (instructionLower.includes('roundabout') || instructionLower.includes('rotary')) iconText = '🔄';
+
+            item.innerHTML = `
+              <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)'}; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: ${isCurrent ? '#60a5fa' : '#cbd5e1'}; flex-shrink: 0;">
+                ${iconText}
               </div>
+              <div style="flex:1;">
+                <div style="font-weight:600; font-size:var(--font-size-sec); color: ${isCurrent ? '#f1f5f9' : '#cbd5e1'};">${st.instruction}</div>
+                <div style="font-size:12px; color:var(--color-text-secondary);">${st.dist}</div>
+              </div>
+              <span style="font-size: 11px; color: #64748b;" title="Preview step location">🔍</span>
             `;
+
+            // Step click camera jump
+            item.onclick = () => {
+              if (MapEngine.map && this.routePoints.length > 0) {
+                const fraction = Math.min(1.0, idx / Math.max(1, this.routeSteps.length - 1));
+                const targetIdx = Math.min(this.routePoints.length - 1, Math.floor(fraction * this.routePoints.length));
+                const targetCoord = this.routePoints[targetIdx];
+                MapEngine.map.flyTo({ center: targetCoord, zoom: 17, pitch: 45, duration: 800 });
+                ParkingApp.showToast(`Previewing: ${st.instruction}`, "info");
+              }
+            };
+
+            container.appendChild(item);
           });
         },
 
