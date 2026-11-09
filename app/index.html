@@ -2065,6 +2065,11 @@
     <button class="cluster-btn" id="btn-toggle-layers" aria-label="Toggle map detail layers" title="Cycle Detail Styles (Google Maps Vector / OSM Full Detail / Carto Voyager)">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
     </button>
+    <button class="cluster-btn" id="btn-fullscreen" aria-label="Toggle full screen mode" title="Toggle Fullscreen">
+      <svg class="svg-icon" id="fullscreen-icon" viewBox="0 0 24 24">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+      </svg>
+    </button>
   </div>
 
   <!-- Bottom-Left Desktop Telemetry HUD -->
@@ -4297,6 +4302,31 @@
             MapEngine.map.remove();
             MapEngine.init();
           };
+
+          // Native Fullscreen API handler
+          const fsBtn = document.getElementById('btn-fullscreen');
+          if (fsBtn) {
+            fsBtn.onclick = () => {
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().then(() => {
+                  ParkingApp.showToast("Entered Fullscreen mode", "info");
+                  fsBtn.classList.add('active-blue');
+                }).catch(() => {
+                  ParkingApp.showToast("Fullscreen request not permitted", "warning");
+                });
+              } else {
+                if (document.exitFullscreen) {
+                  document.exitFullscreen().then(() => {
+                    ParkingApp.showToast("Exited Fullscreen mode", "info");
+                    fsBtn.classList.remove('active-blue');
+                  });
+                }
+              }
+            };
+            document.addEventListener('fullscreenchange', () => {
+              fsBtn.classList.toggle('active-blue', !!document.fullscreenElement);
+            });
+          }
 
           // Global Keyboard Navigation Shortcuts
           window.addEventListener('keydown', (e) => {
