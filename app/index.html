@@ -1813,6 +1813,10 @@
               <div><span id="trip-rem-time" style="font-size: 20px; color: var(--accent-subtle);">4</span> min</div>
               <div><span id="trip-rem-dist" style="font-size: 20px;">1.2</span> km</div>
             </div>
+            <div id="trip-eta-badge" style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding: 6px 10px; border-radius: 8px; background: rgba(37, 99, 235, 0.12); border: 1px solid rgba(59, 130, 246, 0.25); font-size: 12px;">
+              <span style="color: #93c5fd; font-weight: 500;">⏱ Live ETA</span>
+              <span id="trip-live-eta-time" style="color: #60a5fa; font-weight: 700;">Arrival at --:--</span>
+            </div>
             <div style="margin-top: 6px; font-size: 11px; color: var(--color-text-tertiary);" id="trip-routing-badge">
               Route: Traccar OSRM Engine
             </div>
@@ -5238,6 +5242,18 @@
           this.isSimulating = false;
         },
 
+        updateEtaDisplay(durationMinutes) {
+          const etaEl = document.getElementById('trip-live-eta-time');
+          if (!etaEl) return;
+          const mins = Math.max(1, Math.round(durationMinutes));
+          const etaDate = new Date(Date.now() + mins * 60 * 1000);
+          const hours = etaDate.getHours();
+          const minutes = etaDate.getMinutes().toString().padStart(2, '0');
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          const formattedHours = hours % 12 || 12;
+          etaEl.innerText = `Arrival at ${formattedHours}:${minutes} ${ampm} (${mins} min)`;
+        },
+
         async loadRoute(origin, destination) {
           if (!origin || !destination) return;
 
@@ -5280,6 +5296,7 @@
             if (routeData.duration_min) {
               const tEl = document.getElementById('trip-rem-time');
               if (tEl) tEl.innerText = routeData.duration_min;
+              this.updateEtaDisplay(routeData.duration_min);
             }
           } else {
             // Real Orthogonal Street-Grid Road Fallback (Follows street centerlines with intersection turns)
@@ -5320,7 +5337,9 @@
             const dEl = document.getElementById('trip-rem-dist');
             if (dEl) dEl.innerText = distKm;
             const tEl = document.getElementById('trip-rem-time');
-            if (tEl) tEl.innerText = Math.max(2, Math.ceil(distKm / 0.4));
+            const fallbackMin = Math.max(2, Math.ceil(distKm / 0.4));
+            if (tEl) tEl.innerText = fallbackMin;
+            this.updateEtaDisplay(fallbackMin);
           }
 
           this.routePoints = coords;
