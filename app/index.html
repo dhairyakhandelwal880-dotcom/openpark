@@ -2058,6 +2058,13 @@
           </div>
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+              <span>3D Camera Pitch Angle</span>
+              <span id="label-pitch-angle" style="font-weight: 700; color: var(--accent-subtle); font-family: ui-monospace, monospace;">45°</span>
+            </div>
+            <input type="range" id="slider-pitch-angle" min="20" max="65" value="45" style="width: 100%; accent-color: var(--accent-subtle); cursor: pointer;" />
+          </div>
+          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
               <span>Ola Maps API Key</span>
               <a href="https://cloud.olakrutrim.com" target="_blank" style="color: var(--color-primary); font-size: 12px; text-decoration: underline;">cloud.olakrutrim.com</a>
             </div>
@@ -4517,6 +4524,26 @@
             MapEngine.map.remove();
             MapEngine.init();
           };
+
+          const pitchSlider = document.getElementById('slider-pitch-angle');
+          const pitchLabel = document.getElementById('label-pitch-angle');
+          if (pitchSlider) {
+            const savedPitch = localStorage.getItem('openpark_pitch_angle');
+            if (savedPitch) {
+              CONFIG.PITCH_3D = parseInt(savedPitch, 10);
+              pitchSlider.value = savedPitch;
+              if (pitchLabel) pitchLabel.innerText = `${savedPitch}°`;
+            }
+            pitchSlider.oninput = (e) => {
+              const val = parseInt(e.target.value, 10);
+              CONFIG.PITCH_3D = val;
+              if (pitchLabel) pitchLabel.innerText = `${val}°`;
+              localStorage.setItem('openpark_pitch_angle', String(val));
+              if (STATE.is3D && MapEngine.map) {
+                MapEngine.map.easeTo({ pitch: val, duration: 200 });
+              }
+            };
+          }
 
           // Settings Tab: Ola Maps API Key Configuration
           const settingOlaKey = document.getElementById('setting-olamaps-key');
