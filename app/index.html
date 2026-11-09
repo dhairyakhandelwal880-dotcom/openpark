@@ -236,6 +236,40 @@
       100% { transform: scale(0.9); opacity: 0.9; }
     }
 
+    /* Map Coordinates & Zoom Badge */
+    .map-coords-pill {
+      position: absolute;
+      bottom: 8px;
+      left: 12px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #94a3b8;
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      user-select: none;
+      transition: all 180ms ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      pointer-events: auto;
+    }
+    .map-coords-pill:hover {
+      background: rgba(15, 23, 42, 0.95);
+      color: #f1f5f9;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    @media (max-width: 640px) {
+      .map-coords-pill {
+        display: none;
+      }
+    }
+
     /* Attribution */
     .map-attribution {
       position: absolute;
@@ -1576,7 +1610,10 @@
   <!-- Fullscreen Map Engine Container -->
   <div id="map-viewport" role="region" aria-label="Interactive city parking map"></div>
 
-  <!-- Map Attribution -->
+  <!-- Map Attribution & Coordinates Badge -->
+  <div id="map-coords-badge" class="map-coords-pill" title="Click to copy current coordinates">
+    <span id="coords-text">Zoom: 14.0 • 12.9716, 77.5946</span>
+  </div>
   <div class="map-attribution">
     <a href="https://maplibre.org" target="_blank" rel="noreferrer">MapLibre</a> | 
     <a href="https://www.traccar.org/" target="_blank" rel="noreferrer">Traccar GPS Engine</a> |
@@ -3715,6 +3752,36 @@
           this.map.on('zoomend', loadViewportPois);
           this.map.once('idle', () => this.loadViewportPois());
           this.loadViewportPois();
+
+          // Live Zoom & Coordinates pill handler
+          const updateCoordsDisplay = () => {
+            const center = this.map.getCenter();
+            const zoom = this.map.getZoom().toFixed(1);
+            const el = document.getElementById('coords-text');
+            if (el) {
+              el.innerText = `Zoom: ${zoom} • ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
+            }
+          };
+          this.map.on('move', updateCoordsDisplay);
+          this.map.on('zoom', updateCoordsDisplay);
+          updateCoordsDisplay();
+
+          const badgeEl = document.getElementById('map-coords-badge');
+          if (badgeEl) {
+            badgeEl.onclick = () => {
+              const center = this.map.getCenter();
+              const text = `${center.lat.toFixed(5)}, ${center.lng.toFixed(5)}`;
+              if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                  ParkingApp.showToast(`Copied coordinates: ${text}`, 'success');
+                }).catch(() => {
+                  ParkingApp.showToast(`Coordinates: ${text}`, 'info');
+                });
+              } else {
+                ParkingApp.showToast(`Coordinates: ${text}`, 'info');
+              }
+            };
+          }
         },
 
         async loadViewportPois() {
