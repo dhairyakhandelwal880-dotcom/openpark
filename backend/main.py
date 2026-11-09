@@ -733,6 +733,26 @@ def places_stats_endpoint():
     return {"status": "ok", "stats": get_places_stats()}
 
 
+@app.post("/api/places/calibrate")
+def calibrate_place_endpoint(
+    name: str = Query(..., description="Place name to calibrate, e.g. Debrecan"),
+    lat: float = Query(..., ge=-90.0, le=90.0),
+    lon: float = Query(..., ge=-180.0, le=180.0)
+):
+    """Calibrate and update coordinates for a place in the offline database and runtime catalog."""
+    from places_db import update_place_coordinates
+    ok = update_place_coordinates(name, lat, lon)
+    try:
+        from traccar_service import BENGALURU_PLACES_CATALOG
+        for p in BENGALURU_PLACES_CATALOG:
+            if name.lower() in p["name"].lower():
+                p["lat"] = lat
+                p["lon"] = lon
+    except Exception:
+        pass
+    return {"status": "ok" if ok else "not_found", "name": name, "lat": lat, "lon": lon}
+
+
 @app.get("/api/traccar/devices/{device_id}/trail")
 def traccar_device_trail_endpoint(device_id: str):
     """Returns recorded road trail breadcrumbs as GeoJSON FeatureCollection."""

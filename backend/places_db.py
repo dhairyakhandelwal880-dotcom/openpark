@@ -228,3 +228,15 @@ def get_places_stats(db_path: str = DB_PATH) -> Dict[str, Any]:
         "database_path": db_path,
         "top_categories": top_categories
     }
+
+
+def update_place_coordinates(name_query: str, lat: float, lon: float, db_path: str = DB_PATH) -> bool:
+    """Updates the latitude and longitude of a place by name in the SQLite database."""
+    init_places_db(db_path)
+    conn = get_db_connection(db_path)
+    cur = conn.cursor()
+    cur.execute("UPDATE places SET lat = ?, lon = ? WHERE name LIKE ?", (lat, lon, f"%{name_query}%"))
+    changed = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return changed

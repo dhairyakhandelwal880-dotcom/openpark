@@ -499,6 +499,11 @@ def test_offline_places_database():
     if d_cat["total"] > 0:
         assert any("hospital" in p["category"].lower() or "hospital" in p["name"].lower() for p in d_cat["results"])
 
+    # 5. Calibrate place endpoint
+    r_cal = client.post("/api/places/calibrate?name=Debrecan&lat=12.9031&lon=77.4975")
+    assert r_cal.status_code == 200
+    assert r_cal.json()["status"] == "ok"
+
 
 def test_olamaps_endpoints():
     """Verify Ola Maps integration client and endpoints."""

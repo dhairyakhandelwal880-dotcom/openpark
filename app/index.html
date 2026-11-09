@@ -2440,8 +2440,21 @@
       // --------------------------------------------------------------------------
       // 5.1 Config & Constants
       // --------------------------------------------------------------------------
+      // Restore user-calibrated Debrecan coordinates or last known device GPS fix
+      let savedDebrecan = null;
+      try {
+        const raw = localStorage.getItem('openpark_debrecan_coords');
+        if (raw) savedDebrecan = JSON.parse(raw);
+      } catch {}
+
+      let lastKnownFix = null;
+      try {
+        const rawFix = localStorage.getItem('openpark_last_device_fix');
+        if (rawFix) lastKnownFix = JSON.parse(rawFix);
+      } catch {}
+
       const CONFIG = {
-        DEFAULT_COORDS: [77.49750, 12.90310], // Stanza Living Debrecan House, Kengeri / Uttarahalli Rd, Bengaluru 560060
+        DEFAULT_COORDS: savedDebrecan ? [savedDebrecan.lng, savedDebrecan.lat] : [77.49750, 12.90310],
         INITIAL_ZOOM: 17.5,
         PITCH_3D: 42,
         RADIUS_METERS: 3500,
@@ -2471,13 +2484,14 @@
       // 5.2 Application State
       // --------------------------------------------------------------------------
       const STATE = {
+        hasRealDeviceFix: !!lastKnownFix,
         userLocation: {
-          lng: CONFIG.DEFAULT_COORDS[0],
-          lat: CONFIG.DEFAULT_COORDS[1],
-          heading: 0,
+          lng: lastKnownFix ? lastKnownFix.lng : CONFIG.DEFAULT_COORDS[0],
+          lat: lastKnownFix ? lastKnownFix.lat : CONFIG.DEFAULT_COORDS[1],
+          heading: lastKnownFix ? (lastKnownFix.heading || 0) : 0,
           speed: 0,
           altitude: 920,
-          accuracy: 5
+          accuracy: lastKnownFix ? (lastKnownFix.accuracy || 5) : 5
         },
         targetLocation: null,
         isTrackingLocation: false,
@@ -2959,8 +2973,8 @@
           const id = pos.id ?? pos.deviceId ?? m.id ?? m.deviceId;
           if (this.o.deviceId && id !== undefined && String(id) !== String(this.o.deviceId)) return;
 
-          // If local native GPS is actively providing updates, ignore echoed WebSocket positions
-          if (STATE.isTrackingLocation || (this.lastLocalFixTs && (Date.now() - this.lastLocalFixTs < 8000))) {
+          // If local device GPS has acquired a fix or is actively tracking, NEVER let server echo overwrite local physical device location!
+          if (STATE.hasRealDeviceFix || STATE.isTrackingLocation || (this.lastLocalFixTs && (Date.now() - this.lastLocalFixTs < 60000))) {
             return;
           }
 
@@ -3188,10 +3202,10 @@
             const spd = Math.round((this.shown.speed || 0) * 3.6);
             speedPill.innerText = spd > 1 ? `${spd} km/h` : 'Stopped';
           }
-          if (this.o.follow) {
+          if (this.o.follow && STATE.isCameraFollowing) {
             if (STATE.activeTrip) {
               this.map.jumpTo({ center: [this.shown.lon, this.shown.lat], bearing: this.shown.heading, pitch: 48 });
-            } else if (STATE.isTrackingLocation && (this.shown.speed || 0) > 1.0) {
+            } else {
               this.map.jumpTo({ center: [this.shown.lon, this.shown.lat] });
             }
           }
@@ -4637,11 +4651,12 @@
               const btn = document.getElementById('btn-my-location');
               if (btn) btn.click();
             } else if (e.key === 'c' || e.key === 'C') {
-              ParkingApp.snapToDebrecan();
+              if (e.shiftKey) ParkingApp.calibrateDebrecanHouse();
+              else ParkingApp.snapToDebrecan();
             } else if (e.key === 'v' || e.key === 'V') {
               ParkingApp.toggleVariableMotion();
             } else if (e.key === '?') {
-              ParkingApp.showToast('Keyboard: [/] Search  [M] Layers  [L] Live GPS  [V] Variable Motion  [C] Debrecan  [Esc] Close');
+              ParkingApp.showToast('Keyboard: [/] Search  [M] Layers  [L] Live GPS  [V] Variable Motion  [C] Snap Debrecan  [Shift+C] Calibrate  [Esc] Close');
             }
           });
 
@@ -4651,8 +4666,17 @@
 
           const snapBtn = document.getElementById('btn-snap-debrecan');
           if (snapBtn) {
-            snapBtn.onclick = () => {
-              ParkingApp.snapToDebrecan();
+            snapBtn.title = "Snap to Stanza Living Debrecan House [Click: Snap • Shift+Click: Calibrate • Shortcut: C]";
+            snapBtn.onclick = (e) => {
+              if (e.shiftKey || e.altKey) {
+                ParkingApp.calibrateDebrecanHouse();
+              } else {
+                ParkingApp.snapToDebrecan();
+              }
+            };
+            snapBtn.oncontextmenu = (e) => {
+              e.preventDefault();
+              ParkingApp.calibrateDebrecanHouse();
             };
           }
 
@@ -6529,8 +6553,8 @@
         startRealtimeDeviceLocation() {
           const locBtn = document.getElementById('btn-my-location');
           if (!('geolocation' in navigator)) {
-            console.warn('[Geolocation] Geolocation API not supported by this browser');
-            ParkingApp.showToast("Geolocation not supported by browser", "warning");
+            console.warn('[Geolocation] Geolocation API not supported');
+            this.fallbackToIpLocation();
             return;
           }
 
@@ -6539,104 +6563,127 @@
           STATE.isTrackingLocation = true;
           WakeLockManager.acquire();
 
-          // 1. Rapid initial device location lock (maximumAge: 0, high accuracy)
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
-              const fix = {
-                lat: latitude,
-                lng: longitude,
-                speed: (speed || 0) * 3.6,
-                speedMs: speed || 0,
-                heading: (heading !== null && !isNaN(heading)) ? heading : (STATE.userLocation.heading || 0),
-                altitude: altitude || 920,
-                accuracy: Math.round(accuracy || 5),
-                timestamp: pos.timestamp || Date.now()
-              };
+          const applyPositionFix = (pos, source = 'gps') => {
+            if (!pos || !pos.coords) return;
+            const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
 
-              STATE.userLocation = fix;
-              GPSMonitor.onValidFix();
-              if (MapEngine.tracker) {
-                MapEngine.tracker.feedDirectFix(fix);
-              } else {
-                MapEngine.updateVehicle(fix);
-              }
+            const fix = {
+              lat: latitude,
+              lng: longitude,
+              speed: (speed || 0) * 3.6,
+              speedMs: speed || 0,
+              heading: (heading !== null && !isNaN(heading)) ? heading : (STATE.userLocation.heading || 0),
+              altitude: altitude || 920,
+              accuracy: Math.round(accuracy || 5),
+              timestamp: pos.timestamp || Date.now()
+            };
 
-              if (MapEngine.map) {
-                MapEngine.map.flyTo({
-                  center: [fix.lng, fix.lat],
-                  zoom: 17.5,
-                  duration: 800
-                });
-              }
-              ParkingApp.loadNearbyLots(fix.lat, fix.lng);
-              API.sendTraccarPing(fix);
+            const isFirstFix = !STATE.hasRealDeviceFix;
+            STATE.hasRealDeviceFix = true;
+            STATE.userLocation = fix;
+            STATE.isTrackingLocation = true;
+            try {
+              localStorage.setItem('openpark_last_device_fix', JSON.stringify({ lat: fix.lat, lng: fix.lng, heading: fix.heading, accuracy: fix.accuracy, ts: Date.now() }));
+            } catch {}
+
+            GPSMonitor.onValidFix();
+            if (locBtn) locBtn.classList.add('active-blue', 'active-pulse');
+
+            if (NavigationEngine.isSimulating) {
               TelemetryController.update(fix);
-              ParkingApp.showToast(`📍 Live GPS active (±${fix.accuracy}m)`, 'success', 2500);
-            },
+              API.sendTraccarPing(fix);
+              return;
+            }
+
+            if (MapEngine.tracker) {
+              MapEngine.tracker.feedDirectFix(fix);
+            } else {
+              MapEngine.updateVehicle(fix);
+            }
+
+            if (STATE.isCameraFollowing && MapEngine.map) {
+              MapEngine.map.flyTo({
+                center: [fix.lng, fix.lat],
+                zoom: Math.max(MapEngine.map.getZoom(), 17.5),
+                duration: isFirstFix ? 700 : 400
+              });
+            }
+
+            ParkingApp.loadNearbyLots(fix.lat, fix.lng);
+            API.sendTraccarPing(fix);
+            TelemetryController.update(fix);
+
+            if (STATE.activeTrip && NavigationEngine.trimRouteFrom) {
+              NavigationEngine.trimRouteFrom(fix.lng, fix.lat);
+            }
+
+            if (isFirstFix) {
+              ParkingApp.showToast(`📍 Tracking Device: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}] (±${fix.accuracy}m)`, 'success', 3000);
+            }
+          };
+
+          // Tier 1: Fast cached / network fix (< 300ms)
+          navigator.geolocation.getCurrentPosition(
+            (pos) => applyPositionFix(pos, 'fast-gps'),
+            (err) => console.debug('[Geolocation] fast lock skip:', err.message),
+            { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
+          );
+
+          // Tier 2: Precision GPS hardware lock
+          navigator.geolocation.getCurrentPosition(
+            (pos) => applyPositionFix(pos, 'high-acc-gps'),
             (err) => {
-              console.warn('[Geolocation] Initial lock warning:', err.message);
+              console.warn('[Geolocation] Precision lock notice:', err.message);
               if (err.code === 1) { // PERMISSION_DENIED
                 if (locBtn) locBtn.classList.remove('active-blue', 'active-pulse');
                 STATE.isTrackingLocation = false;
-                ParkingApp.showToast("GPS permission denied. Enable location in browser settings.", "warning", 4000);
+                ParkingApp.showToast("Location permission denied. Click map or drag pointer to set position.", "warning", 4000);
+                this.fallbackToIpLocation();
+              } else if (!STATE.hasRealDeviceFix) {
+                this.fallbackToIpLocation();
               }
             },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
           );
 
-          // 2. Continuous real-time device location watching
+          // Tier 3: Continuous watching with automatic fallback
           if (STATE.watchId) navigator.geolocation.clearWatch(STATE.watchId);
           STATE.watchId = navigator.geolocation.watchPosition(
-            (pos) => {
-              const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
-              const fix = {
-                lat: latitude,
-                lng: longitude,
-                speed: (speed || 0) * 3.6,
-                speedMs: speed || 0,
-                heading: (heading !== null && !isNaN(heading)) ? heading : (STATE.userLocation.heading || 0),
-                altitude: altitude || 920,
-                accuracy: Math.round(accuracy || 5),
-                timestamp: pos.timestamp || Date.now()
-              };
-
-              GPSMonitor.onValidFix();
-              STATE.isTrackingLocation = true;
-              if (locBtn) locBtn.classList.add('active-blue', 'active-pulse');
-
-              // Don't override simulation position with real GPS during simulated drive
-              if (NavigationEngine.isSimulating) {
-                TelemetryController.update(fix);
-                API.sendTraccarPing(fix);
-                return;
-              }
-
-              STATE.userLocation = fix;
-
-              if (MapEngine.tracker) {
-                MapEngine.tracker.feedDirectFix(fix);
-              } else {
-                MapEngine.updateVehicle(fix);
-              }
-
-              TelemetryController.update(fix);
-              API.sendTraccarPing(fix);
-
-              // Dynamically erase traveled path if currently navigating a route
-              if (STATE.activeTrip && NavigationEngine.trimRouteFrom) {
-                NavigationEngine.trimRouteFrom(fix.lng, fix.lat);
-              }
-            },
+            (pos) => applyPositionFix(pos, 'live-gps'),
             (err) => {
               console.warn('[Geolocation] watchPosition warning:', err.message);
               if (err.code === 1) {
                 if (locBtn) locBtn.classList.remove('active-blue', 'active-pulse');
                 STATE.isTrackingLocation = false;
+              } else if (err.code === 3 && !STATE.watchRetried) {
+                STATE.watchRetried = true;
+                navigator.geolocation.clearWatch(STATE.watchId);
+                STATE.watchId = navigator.geolocation.watchPosition(
+                  (pos) => applyPositionFix(pos, 'watch-fallback'),
+                  () => {},
+                  { enableHighAccuracy: false, maximumAge: 5000 }
+                );
               }
             },
-            { enableHighAccuracy: true, timeout: 15000, maximumAge: 1000 }
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 2000 }
           );
+        },
+
+        async fallbackToIpLocation() {
+          if (STATE.hasRealDeviceFix) return;
+          try {
+            const resp = await fetch('https://freeipapi.com/api/json');
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data && data.latitude && data.longitude) {
+                this.setUserLocation(data.latitude, data.longitude, 'ip');
+                this.showToast(`📍 Approximate Network Location: ${data.cityName || 'Bengaluru'} (Drag pin to adjust)`, 'info', 4000);
+              }
+            }
+          } catch (e) {
+            console.debug('[IP Geolocation] unavailable:', e);
+          }
         },
 
         async loadNearbyLots(lat = CONFIG.DEFAULT_COORDS[1], lon = CONFIG.DEFAULT_COORDS[0]) {
@@ -6699,9 +6746,11 @@
         },
 
         snapToDebrecan() {
+          const lat = CONFIG.DEFAULT_COORDS[1];
+          const lng = CONFIG.DEFAULT_COORDS[0];
           const debrecanFix = {
-            lat: 12.90310,
-            lng: 77.49750,
+            lat,
+            lng,
             speed: 0,
             speedMs: 0,
             heading: 0,
@@ -6718,7 +6767,34 @@
               duration: 800
             });
           }
-          this.showToast("📍 Placed at Stanza Living Debrecan House (12.90310, 77.49750)", "success", 3000);
+          this.showToast(`📍 Centered at Stanza Living Debrecan House: [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 3000);
+        },
+
+        calibrateDebrecanHouse() {
+          const currentLat = STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1];
+          const currentLng = STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0];
+
+          const input = prompt(
+            "📍 Calibrate Stanza Living Debrecan House\n\n" +
+            "Current position: " + currentLat.toFixed(5) + ", " + currentLng.toFixed(5) + "\n\n" +
+            "Click OK to save current device GPS as Debrecan House, or enter exact Google Maps coordinates (lat, lon):",
+            `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`
+          );
+
+          if (!input) return;
+          const parts = input.split(',').map(s => parseFloat(s.trim()));
+          if (parts.length === 2 && Number.isFinite(parts[0]) && Number.isFinite(parts[1])) {
+            const [newLat, newLng] = parts;
+            CONFIG.DEFAULT_COORDS = [newLng, newLat];
+            try {
+              localStorage.setItem('openpark_debrecan_coords', JSON.stringify({ lat: newLat, lng: newLng }));
+            } catch {}
+            this.setUserLocation(newLat, newLng, 'calibrated');
+            fetch(`/api/places/calibrate?name=Debrecan&lat=${newLat}&lon=${newLng}`, { method: 'POST' }).catch(() => {});
+            this.showToast(`✓ Stanza Living Debrecan House updated to [${newLat.toFixed(5)}, ${newLng.toFixed(5)}]`, 'success', 3500);
+          } else {
+            this.showToast("Invalid coordinates format. Please enter as: latitude, longitude", "error", 3000);
+          }
         },
 
         setUserLocation(lat, lng, source = 'manual') {
