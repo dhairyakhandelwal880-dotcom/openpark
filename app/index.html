@@ -1853,10 +1853,15 @@
             <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
             Start Traccar Navigation
           </button>
-          <button class="btn-pill-secondary" id="btn-report-status">
-            <svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Report Status
-          </button>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-pill-secondary" id="btn-hold-spot" style="flex: 1; border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 600;">
+              <span id="btn-hold-spot-text">⏳ Hold Spot (15m)</span>
+            </button>
+            <button class="btn-pill-secondary" id="btn-report-status" style="flex: 1;">
+              <svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Report
+            </button>
+          </div>
         </div>
       </div>
 
@@ -4485,6 +4490,55 @@
               NavigationEngine.startTrip(STATE.selectedLot);
             }
           };
+
+          let holdInterval = null;
+          let holdRemaining = 0;
+          const holdBtn = document.getElementById('btn-hold-spot');
+          const holdText = document.getElementById('btn-hold-spot-text');
+          if (holdBtn) {
+            holdBtn.onclick = () => {
+              if (holdInterval) {
+                clearInterval(holdInterval);
+                holdInterval = null;
+                holdRemaining = 0;
+                if (holdText) holdText.innerText = "⏳ Hold Spot (15m)";
+                holdBtn.style.color = "#34d399";
+                if (STATE.selectedLot) {
+                  STATE.selectedLot.free_spots++;
+                  const fsEl = document.getElementById('dt-free-spots');
+                  if (fsEl) fsEl.innerText = STATE.selectedLot.free_spots;
+                }
+                ParkingApp.showToast("Spot hold released", "info");
+              } else {
+                if (!STATE.selectedLot || STATE.selectedLot.free_spots <= 0) {
+                  ParkingApp.showToast("No vacant spots available to hold", "warning");
+                  return;
+                }
+                STATE.selectedLot.free_spots--;
+                const fsEl = document.getElementById('dt-free-spots');
+                if (fsEl) fsEl.innerText = STATE.selectedLot.free_spots;
+                holdRemaining = 15 * 60;
+                ParkingApp.showToast(`Spot held at ${STATE.selectedLot.name} for 15 mins!`, "success");
+
+                const updateHold = () => {
+                  const m = Math.floor(holdRemaining / 60);
+                  const s = (holdRemaining % 60).toString().padStart(2, '0');
+                  if (holdText) holdText.innerText = `⏳ Held: ${m}:${s}`;
+                  holdBtn.style.color = "#fbbf24";
+                  if (holdRemaining <= 0) {
+                    clearInterval(holdInterval);
+                    holdInterval = null;
+                    if (holdText) holdText.innerText = "⏳ Hold Expired";
+                    holdBtn.style.color = "#ef4444";
+                    ParkingApp.showToast("Spot reservation expired", "warning");
+                  }
+                  holdRemaining--;
+                };
+                updateHold();
+                holdInterval = setInterval(updateHold, 1000);
+              }
+            };
+          }
 
           document.getElementById('btn-report-status').onclick = () => {
             document.getElementById('modal-report').classList.add('active');
