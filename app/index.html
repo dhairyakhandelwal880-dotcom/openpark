@@ -1825,6 +1825,22 @@
           </div>
         </div>
 
+        <!-- Hourly Occupancy Trends Sparkline -->
+        <div class="contrast-card" style="padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 5px;">
+              <span>📊 Typical Occupancy Trend</span>
+            </span>
+            <span id="dt-peak-time-badge" style="font-size: 11px; color: #f59e0b; background: rgba(245, 158, 11, 0.12); padding: 2px 7px; border-radius: 9999px; font-weight: 600;">Peak: 12 PM - 3 PM</span>
+          </div>
+          <div id="dt-sparkline-bars" style="display: flex; align-items: flex-end; justify-content: space-between; height: 38px; gap: 5px; padding: 2px 0;">
+            <!-- Generated via JS -->
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 5px; font-size: 10px; color: #64748b;">
+            <span>8 AM</span><span>11 AM</span><span>2 PM</span><span>5 PM</span><span>8 PM</span><span>11 PM</span>
+          </div>
+        </div>
+
         <!-- Sensor telemetry block (Rendered only if endpoint returns telemetry) -->
         <div id="dt-sensor-box" style="display: flex; flex-direction: column; gap: 8px;">
           <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--color-text-tertiary);">Live IIoT Sensor Telemetry</div>
@@ -4910,6 +4926,33 @@
               this.updateFeeEstimator(lot, parseInt(b.dataset.hours, 10));
             };
           });
+
+          // Render Hourly Occupancy Sparkline Bars
+          const barsContainer = document.getElementById('dt-sparkline-bars');
+          if (barsContainer) {
+            barsContainer.innerHTML = '';
+            const currentHour = new Date().getHours();
+            const pattern = [25, 45, 75, 88, 92, 85, 70, 62, 78, 84, 55, 30];
+            pattern.forEach((basePct, i) => {
+              const hourForBar = 8 + i;
+              const isCurrentHour = Math.abs(currentHour - hourForBar) <= 1;
+              const bar = document.createElement('div');
+              bar.style.flex = '1';
+              bar.style.height = `${basePct}%`;
+              bar.style.borderRadius = '3px 3px 0 0';
+              bar.style.transition = 'all 200ms ease';
+              let barBg = '#3b82f6';
+              if (basePct > 80) barBg = '#f59e0b';
+              if (basePct > 90) barBg = '#ef4444';
+              if (isCurrentHour) {
+                barBg = '#38bdf8';
+                bar.style.boxShadow = '0 0 8px rgba(56, 189, 248, 0.6)';
+              }
+              bar.style.background = barBg;
+              bar.title = `${hourForBar}:00 - ~${basePct}% occupancy`;
+              barsContainer.appendChild(bar);
+            });
+          }
 
           // Switch internal view
           document.getElementById('view-explore').style.display = 'none';
