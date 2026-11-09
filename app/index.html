@@ -2182,7 +2182,10 @@
   <div id="telemetry-hud" class="glass-surface active" aria-live="polite">
     <div class="hud-title-bar">
       <span>Traccar GPS Telemetry</span>
-      <span id="hud-status-badge" style="color: var(--status-available);">Stopped</span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span id="hud-speed-limit" style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #ef4444; background: #ffffff; color: #0f172a; font-size: 10px; font-weight: 800; font-family: ui-monospace, monospace;" title="Corridor Speed Limit">50</span>
+        <span id="hud-status-badge" style="color: var(--status-available);">Stopped</span>
+      </div>
     </div>
     <div class="hud-grid">
       <div class="hud-stat-box">
@@ -6098,8 +6101,22 @@
       // --------------------------------------------------------------------------
       const TelemetryController = {
         update(pos) {
-          document.getElementById('hud-speed').innerHTML = `${Math.round(pos.speed || 0)} <span style="font-size: 11px; font-weight: 400;">km/h</span>`;
+          const speedVal = Math.round(pos.speed || 0);
+          document.getElementById('hud-speed').innerHTML = `${speedVal} <span style="font-size: 11px; font-weight: 400;">km/h</span>`;
           
+          const limitEl = document.getElementById('hud-speed-limit');
+          const speedEl = document.getElementById('hud-speed');
+          const isOverLimit = speedVal > 50;
+          if (limitEl) {
+            limitEl.style.borderColor = isOverLimit ? '#ef4444' : '#64748b';
+            limitEl.style.background = isOverLimit ? '#fef2f2' : '#ffffff';
+            limitEl.style.transform = isOverLimit ? 'scale(1.15)' : 'scale(1)';
+            limitEl.style.boxShadow = isOverLimit ? '0 0 10px rgba(239, 68, 68, 0.6)' : 'none';
+          }
+          if (speedEl) {
+            speedEl.style.color = isOverLimit ? '#ef4444' : '';
+          }
+
           const cardinals = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
           const headingDeg = Math.round(pos.heading || 0);
           const cardinal = cardinals[Math.round(headingDeg / 45) % 8];
