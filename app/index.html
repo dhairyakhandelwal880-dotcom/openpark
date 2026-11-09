@@ -1157,7 +1157,7 @@
       transform: scale(1.15) translateY(-3px);
     }
 
-    /* Google Maps 3D Navigation Puck & Arrowhead Pointer */
+    /* Google Maps 3D Navigation Puck & Arrowhead Pointer (Draggable & Interactive) */
     .vehicle-marker-root {
       position: absolute !important;
       top: 0 !important;
@@ -1166,11 +1166,18 @@
       height: 54px !important;
       margin: 0 !important;
       padding: 0 !important;
-      pointer-events: none;
+      pointer-events: auto !important;
+      cursor: grab !important;
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 90;
+      user-select: none;
+      touch-action: none;
+    }
+    .vehicle-marker-root:active,
+    .vehicle-marker-root.dragging {
+      cursor: grabbing !important;
     }
     .vehicle-accuracy-ring {
       position: absolute;
@@ -2196,6 +2203,9 @@
     <button class="cluster-btn" id="btn-snap-debrecan" aria-label="Snap to Debrecan House" title="Calibrate / Snap to Stanza Living Debrecan House (12.90310, 77.49750) [Shortcut: C]">
       <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </button>
+    <button class="cluster-btn" id="btn-variable-motion" aria-label="Toggle live variable GPS motion" title="Toggle Live Variable Walking Motion / Drift [Shortcut: V]">
+      <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </button>
     <button class="cluster-btn" id="btn-compass-north" aria-label="Reset orientation north" title="Reset North">
       <svg class="svg-icon" id="compass-icon" viewBox="0 0 24 24">
         <polygon points="12 2 15 11 12 8 9 11 12 2" fill="currentColor"/>
@@ -2739,15 +2749,12 @@
           // Speed: device value if present, otherwise derived.
           const speed = isFiniteNum(p.speed) && p.speed >= 0 ? p.speed : implied;
 
-          // Stationary deadband: when vehicle speed is below minHeadingSpeed (1 m/s),
-          // filter out micro GPS noise/jitter (< 12m) so the pointer stays solidly pinned in place.
+          // Dynamic EMA update (responsive to real walking & device motion)
           if (!this.smooth) {
             this.smooth = { lat: p.lat, lon: p.lon };
           } else {
             const distFromSmooth = haversine(this.smooth.lat, this.smooth.lon, p.lat, p.lon);
-            if (speed < this.minHeadingSpeed && distFromSmooth < 12.0) {
-              // Stationary jitter: keep pointer pinned at current smooth coordinates
-            } else {
+            if (distFromSmooth > 0.2) {
               this.smooth.lat += this.alpha * (p.lat - this.smooth.lat);
               this.smooth.lon += this.alpha * (p.lon - this.smooth.lon);
             }
@@ -3027,20 +3034,18 @@
           if (!r.ok) { console.debug('[tracker] rejected:', r.reason); return; }
           this.lastFixAt = Date.now();
 
-          // Stationary deadband: when stationary or position jitter is minimal (< 12m while stationary),
-          // keep the vehicle pointer firmly pinned without restarting glide animation loop
+          // Responsive motion update without artificial stationary freeze
           if (this.shown) {
             const dMeters = haversine(this.shown.lat, this.shown.lon, r.fix.lat, r.fix.lon);
-            const isStationary = (r.fix.speed || 0) < 1.0;
-            if (dMeters < 0.8 || (isStationary && dMeters < 12.0)) {
+            if (dMeters < 0.25) {
               this.shown.speed = r.fix.speed || 0;
-              if (r.fix.heading !== undefined && (r.fix.speed || 0) > 1.0) {
+              if (r.fix.heading !== undefined && (r.fix.speed || 0) > 0.5) {
                 this.shown.heading = r.fix.heading;
               }
               const speedPill = this.el?.querySelector('#v-speed-pill');
               if (speedPill) {
                 const spd = Math.round((this.shown.speed || 0) * 3.6);
-                speedPill.innerText = spd > 1 ? `${spd} km/h` : 'Stopped';
+                speedPill.innerText = spd > 1 ? `${spd} km/h` : 'Live';
               }
               this._emit();
               this.o.onFix?.(r.fix);
@@ -3109,7 +3114,11 @@
               '</svg>' +
             '</div>' +
             '<div class="vehicle-speed-pill" id="v-speed-pill">Device Location</div>';
-          this.marker = new maplibregl.Marker({ element: this.el, anchor: 'center' });
+          this.marker = new maplibregl.Marker({ element: this.el, anchor: 'center', draggable: true });
+          this.marker.on('dragend', () => {
+            const lngLat = this.marker.getLngLat();
+            ParkingApp.setUserLocation(lngLat.lat, lngLat.lng, 'drag');
+          });
         }
 
         _makeBanner() {
@@ -3954,9 +3963,15 @@
           } catch (e) {}
 
           // Click anywhere on map / any building to inspect & get full Google Maps place details
+          // Shift+click or Alt+click instantly sets your device location to that spot
           this.map.on('click', async (e) => {
             const clickLng = e.lngLat.lng;
             const clickLat = e.lngLat.lat;
+
+            if (e.originalEvent && (e.originalEvent.shiftKey || e.originalEvent.altKey)) {
+              ParkingApp.setUserLocation(clickLat, clickLng, 'shift-click');
+              return;
+            }
 
             // Immediately drop clean red destination pin without any loading text
             this.setDestinationMarker({
@@ -3976,6 +3991,12 @@
             } catch (err) {
               console.warn('[MapEngine] building lookup error:', err);
             }
+          });
+
+          // Right-click / Context menu anywhere on the map to place user device location
+          this.map.on('contextmenu', (e) => {
+            e.preventDefault();
+            ParkingApp.setUserLocation(e.lngLat.lat, e.lngLat.lng, 'shift-click');
           });
 
           // ---- Viewport POI loading: auto-populate map like Google Maps ----
@@ -4342,12 +4363,33 @@
             <div class="vehicle-speed-pill" id="v-speed-pill">Device Location</div>
           `;
 
+          this.vehicleEl.title = "Your Location Pointer (Drag to place anywhere on map)";
+
           this.vehicleMarker = new maplibregl.Marker({
             element: this.vehicleEl,
-            anchor: 'center'
+            anchor: 'center',
+            draggable: true
           })
             .setLngLat(CONFIG.DEFAULT_COORDS)
             .addTo(this.map);
+
+          this.vehicleMarker.on('dragstart', () => {
+            this.vehicleEl.classList.add('dragging');
+            const speedPill = this.vehicleEl.querySelector('#v-speed-pill');
+            if (speedPill) speedPill.innerText = 'Repositioning...';
+          });
+
+          this.vehicleMarker.on('drag', () => {
+            const lngLat = this.vehicleMarker.getLngLat();
+            const speedPill = this.vehicleEl.querySelector('#v-speed-pill');
+            if (speedPill) speedPill.innerText = `${lngLat.lat.toFixed(4)}, ${lngLat.lng.toFixed(4)}`;
+          });
+
+          this.vehicleMarker.on('dragend', () => {
+            this.vehicleEl.classList.remove('dragging');
+            const lngLat = this.vehicleMarker.getLngLat();
+            ParkingApp.setUserLocation(lngLat.lat, lngLat.lng, 'drag');
+          });
         },
 
         updateVehicle(pos) {
@@ -4596,8 +4638,10 @@
               if (btn) btn.click();
             } else if (e.key === 'c' || e.key === 'C') {
               ParkingApp.snapToDebrecan();
+            } else if (e.key === 'v' || e.key === 'V') {
+              ParkingApp.toggleVariableMotion();
             } else if (e.key === '?') {
-              ParkingApp.showToast('Keyboard: [/] Search  [M] Map Layers  [L] Live Location  [C] Snap Debrecan  [Esc] Close');
+              ParkingApp.showToast('Keyboard: [/] Search  [M] Layers  [L] Live GPS  [V] Variable Motion  [C] Debrecan  [Esc] Close');
             }
           });
 
@@ -4609,6 +4653,13 @@
           if (snapBtn) {
             snapBtn.onclick = () => {
               ParkingApp.snapToDebrecan();
+            };
+          }
+
+          const varBtn = document.getElementById('btn-variable-motion');
+          if (varBtn) {
+            varBtn.onclick = () => {
+              ParkingApp.toggleVariableMotion();
             };
           }
 
@@ -6521,7 +6572,7 @@
               ParkingApp.loadNearbyLots(fix.lat, fix.lng);
               API.sendTraccarPing(fix);
               TelemetryController.update(fix);
-              ParkingApp.showToast(`📍 Device GPS Locked (±${fix.accuracy}m)`, 'success', 2500);
+              ParkingApp.showToast(`📍 Live GPS active (±${fix.accuracy}m)`, 'success', 2500);
             },
             (err) => {
               console.warn('[Geolocation] Initial lock warning:', err.message);
@@ -6658,13 +6709,7 @@
             accuracy: 3,
             timestamp: Date.now()
           };
-          STATE.userLocation = { ...debrecanFix };
-          GPSMonitor.onValidFix();
-          if (MapEngine.tracker) {
-            MapEngine.tracker.feedDirectFix(debrecanFix);
-          } else {
-            MapEngine.updateVehicle(debrecanFix);
-          }
+          this.setUserLocation(debrecanFix.lat, debrecanFix.lng, 'debrecan');
           if (MapEngine.map) {
             MapEngine.map.flyTo({
               center: [debrecanFix.lng, debrecanFix.lat],
@@ -6673,10 +6718,116 @@
               duration: 800
             });
           }
-          ParkingApp.loadNearbyLots(debrecanFix.lat, debrecanFix.lng);
-          API.sendTraccarPing(debrecanFix);
-          TelemetryController.update(debrecanFix);
-          ParkingApp.showToast("📍 Calibrated to Debrecan House (12.90310, 77.49750)", "success", 3000);
+          this.showToast("📍 Placed at Stanza Living Debrecan House (12.90310, 77.49750)", "success", 3000);
+        },
+
+        setUserLocation(lat, lng, source = 'manual') {
+          lat = Number(lat);
+          lng = Number(lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+          const updatedFix = {
+            lat,
+            lng,
+            speed: STATE.userLocation?.speed || 0,
+            speedMs: STATE.userLocation?.speedMs || 0,
+            heading: STATE.userLocation?.heading || 0,
+            altitude: STATE.userLocation?.altitude || 920,
+            accuracy: source === 'drag' ? 2 : 5,
+            timestamp: Date.now()
+          };
+
+          STATE.userLocation = { ...updatedFix };
+          GPSMonitor.onValidFix();
+
+          if (MapEngine.tracker) {
+            MapEngine.tracker.feedDirectFix(updatedFix);
+          } else {
+            MapEngine.updateVehicle(updatedFix);
+          }
+
+          if (STATE.isCameraFollowing && MapEngine.map) {
+            MapEngine.map.easeTo({
+              center: [lng, lat],
+              duration: 500
+            });
+          }
+
+          ParkingApp.loadNearbyLots(lat, lng);
+          API.sendTraccarPing(updatedFix);
+          TelemetryController.update(updatedFix);
+
+          if (STATE.activeTrip && NavigationEngine.trimRouteFrom) {
+            NavigationEngine.trimRouteFrom(lng, lat);
+          }
+
+          if (source === 'drag') {
+            this.showToast(`📍 Location moved to [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 2000);
+          } else if (source === 'shift-click') {
+            this.showToast(`📍 Location placed at [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 2000);
+          }
+        },
+
+        toggleVariableMotion() {
+          if (this.variableMotionInterval) {
+            clearInterval(this.variableMotionInterval);
+            this.variableMotionInterval = null;
+            const btn = document.getElementById('btn-variable-motion');
+            if (btn) btn.classList.remove('active-blue', 'active-pulse');
+            this.showToast("Variable motion stopped (Stationary)", "info", 2000);
+            return;
+          }
+
+          const btn = document.getElementById('btn-variable-motion');
+          if (btn) btn.classList.add('active-blue', 'active-pulse');
+          this.showToast("Variable motion active (Live walking drift)", "success", 2500);
+
+          let stepAngle = 0;
+          let currentLat = STATE.userLocation.lat;
+          let currentLng = STATE.userLocation.lng;
+          let currentHeading = STATE.userLocation.heading || 45;
+
+          this.variableMotionInterval = setInterval(() => {
+            if (NavigationEngine.isSimulating) return;
+
+            stepAngle += (Math.random() - 0.48) * 0.4;
+            currentHeading = (currentHeading + (Math.sin(stepAngle) * 9) + 360) % 360;
+
+            const speedMs = 1.1 + Math.sin(Date.now() / 2000) * 0.4;
+            const distMeters = speedMs * 1.0;
+
+            const radHeading = (currentHeading * Math.PI) / 180;
+            const dLat = (distMeters * Math.cos(radHeading)) / 111139;
+            const dLng = (distMeters * Math.sin(radHeading)) / (111139 * Math.cos((currentLat * Math.PI) / 180));
+
+            currentLat += dLat;
+            currentLng += dLng;
+
+            const fix = {
+              lat: currentLat,
+              lng: currentLng,
+              heading: Math.round(currentHeading),
+              speed: speedMs * 3.6,
+              speedMs,
+              accuracy: Math.round(3 + Math.random() * 2),
+              altitude: 920,
+              timestamp: Date.now()
+            };
+
+            STATE.userLocation = fix;
+            if (MapEngine.tracker) {
+              MapEngine.tracker.feedDirectFix(fix);
+            } else {
+              MapEngine.updateVehicle(fix);
+            }
+
+            TelemetryController.update(fix);
+            API.sendTraccarPing(fix);
+
+            if (STATE.activeTrip && NavigationEngine.trimRouteFrom) {
+              NavigationEngine.trimRouteFrom(fix.lng, fix.lat);
+            }
+          }, 1000);
         },
 
         showToast(message, type = 'info', duration = 3000) {
