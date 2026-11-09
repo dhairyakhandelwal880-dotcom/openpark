@@ -2025,6 +2025,16 @@
               <span class="slider"></span>
             </label>
           </div>
+          <div class="setting-row">
+            <div>
+              <div>Auto Day / Night Basemap</div>
+              <div style="font-size: 11px; color: var(--color-text-tertiary);">Switches to dark mode at sunset (6:30 PM)</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-auto-night" />
+              <span class="slider"></span>
+            </label>
+          </div>
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
             <span>Map Style & Detail Level</span>
             <select id="select-map-style" class="styled-input" style="width: 100%;">
@@ -4453,6 +4463,23 @@
           document.getElementById('toggle-voice-alerts').onchange = (e) => {
             STATE.config.voiceAlerts = e.target.checked;
           };
+
+          const autoNightToggle = document.getElementById('toggle-auto-night');
+          if (autoNightToggle) {
+            autoNightToggle.checked = localStorage.getItem('openpark_auto_night') === 'true';
+            autoNightToggle.onchange = (e) => {
+              const enabled = e.target.checked;
+              localStorage.setItem('openpark_auto_night', enabled ? 'true' : 'false');
+              STATE.config.autoNight = enabled;
+              if (enabled) {
+                const hour = new Date().getHours();
+                const isNight = hour >= 18 || hour < 6;
+                ParkingApp.showToast(isNight ? "Night mode active (Sunset)" : "Day mode active", "info");
+              } else {
+                ParkingApp.showToast("Auto day/night disabled", "info");
+              }
+            };
+          }
 
           document.getElementById('toggle-sim-drive').onchange = (e) => {
             STATE.config.simulateDrive = e.target.checked;
