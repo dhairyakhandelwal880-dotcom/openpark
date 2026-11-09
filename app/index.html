@@ -1649,6 +1649,15 @@
       </div>
       <button class="banner-btn-pill" id="alert-action-btn">Switch Lot</button>
     </div>
+
+    <!-- Offline / Network Status Banner -->
+    <div id="network-status-banner" class="banner glass-surface" style="display: none; border-left: 3px solid #f59e0b;">
+      <span style="font-size: 16px;">⚠️</span>
+      <div>
+        <div class="banner-instruction" id="network-status-title" style="color: #fbbf24;">Connection Lost</div>
+        <div class="banner-distance" id="network-status-sub">Operating in Offline Cache Mode. Reconnecting...</div>
+      </div>
+    </div>
   </div>
 
   <!-- Desktop Sidebar Collapse Toggle -->
@@ -6042,6 +6051,33 @@
           UIController.init();
           SearchEngine.init();
           API.loadTraccarServerConfig();
+
+          // Network Offline/Online Status Monitor
+          const netBanner = document.getElementById('network-status-banner');
+          const netTitle = document.getElementById('network-status-title');
+          const netSub = document.getElementById('network-status-sub');
+          window.addEventListener('offline', () => {
+            if (netBanner) {
+              netBanner.style.display = 'flex';
+              netBanner.style.borderLeftColor = '#f59e0b';
+              if (netTitle) netTitle.innerText = "Connection Lost";
+              if (netSub) netSub.innerText = "Operating in Offline Cache Mode. Reconnecting...";
+            }
+            ParkingApp.showToast("Offline: Using cached map data", "warning");
+          });
+          window.addEventListener('online', () => {
+            if (netBanner) {
+              netBanner.style.borderLeftColor = '#10b981';
+              if (netTitle) {
+                netTitle.innerText = "Connection Restored";
+                netTitle.style.color = "#34d399";
+              }
+              if (netSub) netSub.innerText = "Re-synchronized live parking & telemetry.";
+              setTimeout(() => { netBanner.style.display = 'none'; }, 3200);
+            }
+            ParkingApp.showToast("Back online: Live feeds active", "success");
+            ParkingApp.loadNearbyLots();
+          });
 
           const styleSelect = document.getElementById('select-map-style');
           if (styleSelect) {
