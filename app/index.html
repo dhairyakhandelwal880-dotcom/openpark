@@ -1783,6 +1783,23 @@
           </div>
         </div>
 
+        <!-- Parking Fee Estimator Calculator -->
+        <div class="contrast-card" style="padding: 12px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 5px;">
+              <span>🧮 Fee Estimator</span>
+            </span>
+            <span id="calc-total-badge" style="font-size: 13px; font-weight: 700; color: #38bdf8;">Est: ₹80</span>
+          </div>
+          <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;" id="calc-duration-chips">
+            <button class="chip-btn" data-hours="1" style="padding: 3px 8px; font-size: 11px;">1 hr</button>
+            <button class="chip-btn active" data-hours="2" style="padding: 3px 8px; font-size: 11px;">2 hrs</button>
+            <button class="chip-btn" data-hours="4" style="padding: 3px 8px; font-size: 11px;">4 hrs</button>
+            <button class="chip-btn" data-hours="8" style="padding: 3px 8px; font-size: 11px;">8 hrs</button>
+            <button class="chip-btn" data-hours="24" style="padding: 3px 8px; font-size: 11px;">Full Day</button>
+          </div>
+        </div>
+
         <!-- Sensor telemetry block (Rendered only if endpoint returns telemetry) -->
         <div id="dt-sensor-box" style="display: flex; flex-direction: column; gap: 8px;">
           <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--color-text-tertiary);">Live IIoT Sensor Telemetry</div>
@@ -4804,9 +4821,28 @@
             }
           });
 
+          // Initialize fee estimator
+          this.updateFeeEstimator(lot, 2);
+          document.querySelectorAll('#calc-duration-chips .chip-btn').forEach(b => {
+            b.classList.toggle('active', b.dataset.hours === '2');
+            b.onclick = () => {
+              document.querySelectorAll('#calc-duration-chips .chip-btn').forEach(c => c.classList.remove('active'));
+              b.classList.add('active');
+              this.updateFeeEstimator(lot, parseInt(b.dataset.hours, 10));
+            };
+          });
+
           // Switch internal view
           document.getElementById('view-explore').style.display = 'none';
           document.getElementById('view-detail').style.display = 'flex';
+        },
+
+        updateFeeEstimator(lot, hours) {
+          const badge = document.getElementById('calc-total-badge');
+          if (!badge) return;
+          const rate = parseInt(String(lot.price_car || '40').replace(/[^0-9]/g, ''), 10) || 40;
+          let total = hours === 24 ? rate * 10 : rate * hours;
+          badge.innerText = `Est: ₹${total}`;
         }
       };
 
