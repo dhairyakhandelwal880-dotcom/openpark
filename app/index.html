@@ -4923,11 +4923,78 @@
             }
           });
 
+          input.addEventListener('focus', () => {
+            if (!input.value.trim()) {
+              this.showRecentSearches();
+            }
+          });
+
           // Close dropdown on outside click
           document.addEventListener('click', (e) => {
             if (!e.target.closest('.search-wrapper')) {
               list.classList.remove('open');
             }
+          });
+        },
+
+        getRecentSearches() {
+          try {
+            return JSON.parse(localStorage.getItem('openpark_recents') || '[]');
+          } catch { return []; }
+        },
+
+        saveRecentSearch(query) {
+          if (!query || typeof query !== 'string') return;
+          const trimmed = query.trim();
+          if (trimmed.length < 2) return;
+          try {
+            const list = this.getRecentSearches().filter(q => q.toLowerCase() !== trimmed.toLowerCase());
+            list.unshift(trimmed);
+            localStorage.setItem('openpark_recents', JSON.stringify(list.slice(0, 6)));
+          } catch {}
+        },
+
+        showRecentSearches() {
+          const recents = this.getRecentSearches();
+          if (!recents || recents.length === 0) return;
+          const list = document.getElementById('search-autocomplete-box');
+          if (!list) return;
+
+          let html = `
+            <div style="padding: 8px 12px; font-size: 11px; font-weight: 600; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <span>🕒 Recent Searches</span>
+              <button id="btn-clear-recents" style="background: none; border: none; color: #64748b; font-size: 11px; cursor: pointer;">Clear</button>
+            </div>
+          `;
+          recents.forEach(r => {
+            html += `
+              <div class="autocomplete-item recent-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <span style="color: #64748b; font-size: 12px;">🕒</span>
+                <span style="flex: 1; font-weight: 500;">${r}</span>
+              </div>
+            `;
+          });
+          list.innerHTML = html;
+          list.classList.add('open');
+
+          const clearBtn = document.getElementById('btn-clear-recents');
+          if (clearBtn) {
+            clearBtn.onclick = (e) => {
+              e.stopPropagation();
+              localStorage.removeItem('openpark_recents');
+              list.classList.remove('open');
+              ParkingApp.showToast("Search history cleared", "info");
+            };
+          }
+
+          list.querySelectorAll('.recent-item').forEach((item, idx) => {
+            item.onclick = (e) => {
+              e.stopPropagation();
+              const val = recents[idx];
+              const input = document.getElementById('search-input');
+              if (input) input.value = val;
+              this.fetchSuggestions(val, true);
+            };
           });
         },
 
@@ -5043,6 +5110,7 @@
           document.getElementById('search-autocomplete-box').classList.remove('open');
           const input = document.getElementById('search-input');
           if (input) input.value = rawItem.name;
+          if (rawItem && rawItem.name) this.saveRecentSearch(rawItem.name);
 
           const item = enrichPlaceDetails(rawItem);
           STATE.selectedPlace = item;
