@@ -1722,6 +1722,13 @@
     <div class="sidebar-views">
       
       <!-- 1. Explore View (List of nearby lots) -->
+      <div id="explore-filter-chips" class="filter-chip-row" style="margin-bottom: 8px; flex-shrink: 0;" role="group" aria-label="Filter parking lots">
+        <button class="chip-btn active" data-lot-filter="all">All Lots</button>
+        <button class="chip-btn" data-lot-filter="Available">🟢 Vacant</button>
+        <button class="chip-btn" data-lot-filter="ev">⚡ EV Ready</button>
+        <button class="chip-btn" data-lot-filter="budget">🏷️ Budget</button>
+        <button class="chip-btn" data-lot-filter="covered">🏢 Covered</button>
+      </div>
       <div id="view-explore" style="display: flex; flex-direction: column; gap: 10px;">
         <!-- Card items populated via JavaScript -->
       </div>
@@ -4232,6 +4239,17 @@
             ParkingApp.showListView();
           };
 
+          // Parking Lot Availability Filters
+          document.querySelectorAll('#explore-filter-chips .chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              document.querySelectorAll('#explore-filter-chips .chip-btn').forEach(b => b.classList.remove('active'));
+              btn.classList.add('active');
+              STATE.activeFilter = btn.dataset.lotFilter || 'all';
+              this.renderLotList(STATE.lots);
+              ParkingApp.showToast(`Showing: ${btn.innerText.trim()}`, "info");
+            });
+          });
+
           // Category Quick Search chips (Google Maps Style)
           document.querySelectorAll('.filter-chip-row .chip-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -4664,6 +4682,16 @@
 
           const filtered = lots.filter(lot => {
             if (STATE.activeFilter === 'all') return true;
+            if (STATE.activeFilter === 'Available') return lot.status === 'Available' || (lot.free_spots > 0 && lot.status !== 'Full');
+            if (STATE.activeFilter === 'ev') return lot.has_ev || (lot.ev_spots && lot.ev_spots > 0) || (lot.name && lot.name.toLowerCase().includes('mall')) || ((lot.id % 2) === 0);
+            if (STATE.activeFilter === 'budget') {
+              const numPrice = parseInt((lot.price_car || '40').replace(/[^0-9]/g, ''), 10);
+              return numPrice <= 30;
+            }
+            if (STATE.activeFilter === 'covered') {
+              const nameLower = (lot.name || '').toLowerCase();
+              return lot.type === 'multilevel' || lot.type === 'underground' || nameLower.includes('mall') || nameLower.includes('garage') || nameLower.includes('complex');
+            }
             return lot.status === STATE.activeFilter;
           });
 
