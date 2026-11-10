@@ -811,7 +811,7 @@ def _load_local_candidates(lat: float, lon: float, radius_m: int) -> List[Dict[s
             cat_l = (p.get("category") or "").lower()
             name_l = name.lower()
             tags: Dict[str, str] = {"name": name}
-            if any(k in cat_l or k in name_l for k in TRUE_MALL_WORDS) or "shopping" in cat_l:
+            if any(k in cat_l or k in name_l for k in TRUE_MALL_WORDS) or "shopping mall" in cat_l or "shopping center" in cat_l:
                 tags["shop"] = "mall"
                 tags["access"] = "customers"
             elif any(k in cat_l or k in name_l for k in TRUE_GROUND_WORDS):

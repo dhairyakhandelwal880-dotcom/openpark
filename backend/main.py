@@ -414,6 +414,16 @@ async def lifespan(app: FastAPI):
         print(f"Redis connection warning: {e}. Falling back to in-memory pub/sub.")
         redis_client = None
 
+    # Auto-hydrate SQLite FTS5 from Overture Maps compressed archive on cold boot
+    try:
+        try:
+            from backend.places_db import init_places_db, ensure_overture_hydrated
+        except ImportError:
+            from places_db import init_places_db, ensure_overture_hydrated
+        await asyncio.to_thread(lambda: (init_places_db(), ensure_overture_hydrated()))
+    except Exception as e:
+        print(f"Places hydration warning: {e}")
+
     # Start Traccar port 5055 OsmAnd listener
     t_server = await start_traccar_port_5055(manager.broadcast_vehicle)
     if t_server:

@@ -4,6 +4,7 @@ Provides high-performance full-text search across millions of places, buildings,
 shops, PGs, hospitals, and addresses with sub-millisecond query latency.
 """
 
+import gzip
 import os
 import sqlite3
 import json
@@ -15,6 +16,10 @@ logger = logging.getLogger("openpark.places_db")
 DB_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "data", "places_search.db")
 )
+OVERTURE_ARCHIVE_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "data", "overture_places_openpark.json.gz")
+)
+_HYDRATED_DB_PATHS = set()
 
 
 def get_db_connection(db_path: str = DB_PATH) -> sqlite3.Connection:
@@ -69,48 +74,76 @@ def init_places_db(db_path: str = DB_PATH):
             VALUES('delete', old.rowid, old.name, old.category, old.address, old.city);
         END;
     """)
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_places_lat_lon ON places(lat, lon)")
     conn.commit()
     conn.close()
 
 
 def insert_places_batch(places: List[Dict[str, Any]], db_path: str = DB_PATH) -> int:
-    """Inserts or replaces a batch of places."""
+    """Inserts or replaces a batch of places cleanly in a single fast transaction."""
+    if not places:
+        return 0
     init_places_db(db_path)
     conn = get_db_connection(db_path)
+    conn.execute("PRAGMA synchronous = NORMAL")
     cur = conn.cursor()
-    inserted = 0
-    for p in places:
-        pid = str(p.get("id") or f"{p.get('lat')}_{p.get('lon')}_{p.get('name')}")
-        name = str(p.get("name") or "Unnamed Place")
-        cat = str(p.get("category") or "Building")
-        badge = str(p.get("badge") or "🏢")
-        addr = str(p.get("address") or "")
-        city = str(p.get("city") or "Bengaluru")
-        state = str(p.get("state") or "Karnataka")
-        lat = float(p.get("lat") or 0.0)
-        lon = float(p.get("lon") or 0.0)
-        phone = p.get("phone") or ""
-        website = p.get("website") or ""
-        rating = float(p.get("rating") or 4.5)
-        reviews_count = int(p.get("reviews_count") or 150)
-        source = str(p.get("source") or "dataset")
-
-        cur.execute("""
-            INSERT OR REPLACE INTO places (
-                id, name, category, badge, address, city, state,
-                lat, lon, phone, website, rating, reviews_count, source
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (pid, name, cat, badge, addr, city, state, lat, lon, phone, website, rating, reviews_count, source))
-        inserted += 1
-
+    rows = [
+        (
+            str(p.get("id") or f"{p.get('lat')}_{p.get('lon')}_{p.get('name')}"),
+            str(p.get("name") or "Unnamed Place"),
+            str(p.get("category") or "Building"),
+            str(p.get("badge") or "🏢"),
+            str(p.get("address") or ""),
+            str(p.get("city") or "Bengaluru"),
+            str(p.get("state") or "Karnataka"),
+            float(p.get("lat") or 0.0),
+            float(p.get("lon") or 0.0),
+            p.get("phone") or "",
+            p.get("website") or "",
+            float(p.get("rating") or 4.5),
+            int(p.get("reviews_count") or 150),
+            str(p.get("source") or "dataset"),
+        )
+        for p in places
+    ]
+    cur.executemany("""
+        INSERT OR REPLACE INTO places (
+            id, name, category, badge, address, city, state,
+            lat, lon, phone, website, rating, reviews_count, source
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, rows)
     conn.commit()
     conn.close()
-    return inserted
+    return len(rows)
+
+
+def ensure_overture_hydrated(db_path: str = DB_PATH) -> None:
+    """Auto-loads compact Overture Maps archive on cold server boot (only for default DB_PATH)."""
+    abs_path = os.path.abspath(db_path)
+    if abs_path in _HYDRATED_DB_PATHS or abs_path != DB_PATH:
+        return
+    _HYDRATED_DB_PATHS.add(abs_path)
+    if not os.path.exists(OVERTURE_ARCHIVE_PATH):
+        return
+    try:
+        conn = get_db_connection(abs_path)
+        cur = conn.cursor()
+        has_ovt = cur.execute("SELECT 1 FROM places WHERE source LIKE 'overture%' LIMIT 1").fetchone()
+        conn.close()
+        if not has_ovt:
+            with gzip.open(OVERTURE_ARCHIVE_PATH, "rt", encoding="utf-8") as gz:
+                places = json.load(gz)
+            if places:
+                n = insert_places_batch(places, db_path=abs_path)
+                logger.info("Auto-hydrated %d Overture Maps POIs into %s", n, abs_path)
+    except Exception as exc:
+        logger.warning("Overture auto-hydration skipped: %s", exc)
 
 
 def search_places_fts(query: str, limit: int = 15, db_path: str = DB_PATH) -> List[Dict[str, Any]]:
     """Fast FTS5 search query across place name, category, and address."""
     init_places_db(db_path)
+    ensure_overture_hydrated(db_path)
     conn = get_db_connection(db_path)
     cur = conn.cursor()
 
@@ -162,6 +195,7 @@ def search_places_nearby(
     """
     import math
     init_places_db(db_path)
+    ensure_overture_hydrated(db_path)
     conn = get_db_connection(db_path)
     cur = conn.cursor()
 
@@ -208,6 +242,7 @@ def search_places_nearby(
 def get_places_stats(db_path: str = DB_PATH) -> Dict[str, Any]:
     """Returns total count and summary of indexed places."""
     init_places_db(db_path)
+    ensure_overture_hydrated(db_path)
     conn = get_db_connection(db_path)
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) AS total FROM places")

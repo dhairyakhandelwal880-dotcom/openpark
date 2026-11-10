@@ -463,15 +463,19 @@ def test_outscraper_endpoints():
 
 def test_offline_places_database():
     """Verify local SQLite FTS5 places database search and stats endpoints."""
-    # 1. Stats endpoint
+    # 1. Stats endpoint (verifies Overture 2026-10-21.0 places dataset is hydrated)
     r_stats = client.get("/api/places/stats")
     assert r_stats.status_code == 200
     d_stats = r_stats.json()
     assert d_stats["status"] == "ok"
     assert "stats" in d_stats
-    assert d_stats["stats"]["total_places"] > 0
+    assert d_stats["stats"]["total_places"] >= 30000
 
-    # 2. Search endpoint
+    # 2. Search endpoint (local + Overture India POIs)
+    r_ovt = client.get("/api/places/search?query=Phoenix%20Marketcity")
+    assert r_ovt.status_code == 200
+    assert r_ovt.json()["total"] >= 1
+
     r_search = client.get("/api/places/search?query=Debrecan")
     assert r_search.status_code == 200
     d_search = r_search.json()
@@ -603,6 +607,7 @@ def test_ai_parking_scanner_endpoint():
     assert is_duplicate_of_existing(12.9800, 77.6100, "New Ground", existing) is False
 
     # 5. Live API endpoint (using offline pre-indexed open-grounds + OSM cache for fast deterministic test)
+    real_lots = client.get("/api/lots").json().get("lots", [])
     for test_lat, test_lon in ((12.9716, 77.5946), (12.9031, 77.4975)):
         res = client.get(f"/api/ai/scan-parking?lat={test_lat}&lon={test_lon}&radius_m=2000&live=false")
         assert res.status_code == 200
@@ -615,8 +620,7 @@ def test_ai_parking_scanner_endpoint():
         for item in data["results"]:
             assert item["category"] in ("empty_ground", "mall_parking", "legal_bay")
             assert 35 <= item["ai_score"] <= 98
-            if test_lat == 12.9716:
-                assert is_duplicate_of_existing(item["lat"], item["lon"], item["name"], existing) is False
+            assert is_duplicate_of_existing(item["lat"], item["lon"], item["name"], real_lots) is False
 
 
 
