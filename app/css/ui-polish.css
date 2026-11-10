@@ -452,3 +452,10 @@
   }
 }
 
+
+.welcome-card {
+  max-height: 92vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
