@@ -635,6 +635,42 @@
     });
   });
 
+  UIPolish.register('aiPolygonHoverTooltip', (up) => {
+    const tip = document.createElement('div');
+    tip.id = 'ai-map-tooltip';
+    tip.className = 'ai-map-tooltip';
+    document.body.appendChild(tip);
+
+    const bindMapHover = () => {
+      const ctx = up.getCtx();
+      const map = ctx.MapEngine && ctx.MapEngine.map;
+      if (!map) return false;
+      map.on('mousemove', 'ai-scan-fill', (e) => {
+        const f = e.features && e.features[0];
+        if (!f) return;
+        const p = f.properties || {};
+        map.getCanvas().style.cursor = 'pointer';
+        tip.innerHTML = `
+          <div style="font-weight:700;margin-bottom:2px;">${p.name || 'Discovered Space'}</div>
+          <div style="color:var(--text-secondary);">AI Fit <strong>${p.ai_score || 85}%</strong> &bull; ~${p.estimated_spots || 20} bays</div>
+        `;
+        tip.style.left = `${e.point.x}px`;
+        tip.style.top = `${e.point.y}px`;
+        tip.classList.add('visible');
+      });
+      map.on('mouseleave', 'ai-scan-fill', () => {
+        map.getCanvas().style.cursor = '';
+        tip.classList.remove('visible');
+      });
+      map.on('movestart', () => tip.classList.remove('visible'));
+      return true;
+    };
+
+    if (!bindMapHover()) {
+      const t = setInterval(() => { if (bindMapHover()) clearInterval(t); }, 400);
+    }
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
