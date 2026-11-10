@@ -100,6 +100,18 @@
     });
   });
 
+  UIPolish.register('aiScanShortcut', (up) => {
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() !== 'a' || up.isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      const welcome = document.getElementById('welcome-overlay');
+      if (welcome && !welcome.classList.contains('hidden')) return;
+      const ctx = up.getCtx();
+      if (ctx.AIScannerEngine && typeof ctx.AIScannerEngine.scanCurrentArea === 'function') {
+        ctx.AIScannerEngine.scanCurrentArea();
+      }
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
