@@ -671,6 +671,26 @@
     }
   });
 
+  UIPolish.register('favoritesStore', () => {
+    const FAV_KEY = 'openpark_favorite_lots_v1';
+    window.__openparkFavs = {
+      getSet() {
+        try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]').map(String)); }
+        catch { return new Set(); }
+      },
+      has(id) { return this.getSet().has(String(id)); },
+      toggle(id) {
+        const s = this.getSet();
+        const key = String(id);
+        if (s.has(key)) s.delete(key);
+        else s.add(key);
+        try { localStorage.setItem(FAV_KEY, JSON.stringify(Array.from(s))); } catch {}
+        window.dispatchEvent(new CustomEvent('openpark:favs-updated'));
+        return s.has(key);
+      }
+    };
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
