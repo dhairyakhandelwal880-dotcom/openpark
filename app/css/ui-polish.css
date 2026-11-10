@@ -278,3 +278,28 @@
   outline: 1px solid rgba(0, 113, 227, 0.35);
 }
 
+@keyframes uiSpin {
+  to { transform: rotate(360deg); }
+}
+.search-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-border-subtle);
+  border-top-color: var(--apple-blue);
+  border-radius: 50%;
+  animation: uiSpin 0.65s linear infinite;
+  display: none;
+  flex-shrink: 0;
+}
+.search-wrapper.is-loading .search-spinner {
+  display: inline-block;
+}
+@keyframes uiInputNudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.input-nudge {
+  animation: uiInputNudge 220ms ease-in-out;
+}
+
