@@ -8267,12 +8267,17 @@
             this.renderScan(data);
 
             const sum = data.summary || {};
+            const timing = data.elapsed_ms ? ` in ${Math.round(data.elapsed_ms)}ms` : '';
             if (this.results.length > 0) {
               ParkingApp.showToast(
-                `🤖 Found ${sum.total_found} spaces (${sum.empty_grounds || 0} Grounds, ${sum.mall_parkings || 0} Malls, ${sum.legal_bays || 0} Legal Bays)`,
+                `🤖 Found ${sum.total_found} spaces${timing} (${sum.empty_grounds || 0} Grounds, ${sum.mall_parkings || 0} Malls, ${sum.legal_bays || 0} Bays)`,
                 'success',
                 4000
               );
+              const best = this.results[0];
+              if (best && MapEngine.map) {
+                MapEngine.map.flyTo({ center: [best.lon, best.lat], zoom: 16.2, duration: 700 });
+              }
             } else {
               ParkingApp.showToast('No extra legal grounds found here — try panning to another area.', 'warning', 3000);
             }
