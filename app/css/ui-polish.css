@@ -248,3 +248,33 @@
   }
 }
 
+.recent-searches-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.recent-search-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--text-contrast-layer);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-standard);
+}
+.recent-search-chip:hover {
+  color: var(--text-primary);
+  border-color: rgba(0, 113, 227, 0.35);
+}
+.autocomplete-item.is-active {
+  background: rgba(0, 113, 227, 0.14) !important;
+  outline: 1px solid rgba(0, 113, 227, 0.35);
+}
+
