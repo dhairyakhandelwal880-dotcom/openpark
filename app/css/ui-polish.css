@@ -334,3 +334,34 @@
   filter: brightness(1.15);
 }
 
+.hud-speed-warning {
+  color: var(--apple-red) !important;
+  text-shadow: 0 0 10px rgba(255, 59, 48, 0.35);
+}
+.sidebar-scroll-top {
+  position: sticky;
+  bottom: 10px;
+  align-self: flex-end;
+  z-index: 12;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--solid-panel-bg);
+  color: var(--text-primary);
+  border: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  cursor: pointer;
+  display: none;
+}
+.sidebar-scroll-top.visible {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+@media print {
+  @page { margin: 12mm; }
+  #rcpt-pass-code { color: #0071e3 !important; }
+  #rcpt-timestamp { color: #334155 !important; }
+}
+
