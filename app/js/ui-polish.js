@@ -1002,6 +1002,25 @@
     });
   });
 
+  UIPolish.register('aiPolygonClickFocus', (up) => {
+    const bind = () => {
+      const ctx = up.getCtx();
+      const map = ctx.MapEngine && ctx.MapEngine.map;
+      if (!map) return false;
+      map.on('click', 'ai-scan-fill', (e) => {
+        const f = e.features && e.features[0];
+        if (!f || !ctx.AIScannerEngine) return;
+        const pid = f.properties && f.properties.id;
+        const match = (ctx.AIScannerEngine.results || []).find((s) => s.id === pid);
+        if (match) ctx.AIScannerEngine.selectDiscoveredSpot(match);
+      });
+      return true;
+    };
+    if (!bind()) {
+      const t = setInterval(() => { if (bind()) clearInterval(t); }, 450);
+    }
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
