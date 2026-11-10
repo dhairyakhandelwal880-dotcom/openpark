@@ -157,3 +157,41 @@
   border-color: var(--apple-blue);
 }
 
+.ai-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.ai-filter-pill {
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-subtle);
+  background: var(--text-contrast-layer);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--transition-standard);
+}
+.ai-filter-pill.active[data-ai-cat="all"] {
+  background: var(--apple-blue);
+  color: #ffffff;
+  border-color: var(--apple-blue);
+}
+.ai-filter-pill.active[data-ai-cat="empty_ground"] {
+  background: #ff9500;
+  color: #ffffff;
+  border-color: #ff9500;
+}
+.ai-filter-pill.active[data-ai-cat="mall_parking"] {
+  background: #0071e3;
+  color: #ffffff;
+  border-color: #0071e3;
+}
+.ai-filter-pill.active[data-ai-cat="legal_bay"] {
+  background: #34c759;
+  color: #ffffff;
+  border-color: #34c759;
+}
+
