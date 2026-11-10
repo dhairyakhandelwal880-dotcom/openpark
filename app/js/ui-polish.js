@@ -836,6 +836,17 @@
     decorateCards();
   });
 
+  UIPolish.register('selectedLotCardHighlight', () => {
+    const viewExplore = document.getElementById('view-explore');
+    if (!viewExplore) return;
+    viewExplore.addEventListener('click', (e) => {
+      const card = e.target.closest('.lot-card');
+      if (!card) return;
+      viewExplore.querySelectorAll('.lot-card.is-selected').forEach((c) => c.classList.remove('is-selected'));
+      card.classList.add('is-selected');
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
