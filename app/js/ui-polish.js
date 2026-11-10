@@ -912,6 +912,25 @@
     new MutationObserver(enhanceAiCards).observe(resultsEl, { childList: true });
   });
 
+  UIPolish.register('hudAiScanCounterBadge', (up) => {
+    const hudBtn = document.getElementById('btn-hud-ai-scan');
+    const resultsEl = document.getElementById('ai-scan-results');
+    if (!hudBtn || !resultsEl) return;
+
+    hudBtn.style.position = 'relative';
+    const dot = document.createElement('span');
+    dot.id = 'hud-ai-count-badge';
+    dot.style.cssText = 'position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:#ff9500;color:#fff;font-size:9.5px;font-weight:800;display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.25);';
+    hudBtn.appendChild(dot);
+
+    new MutationObserver(() => {
+      const ctx = up.getCtx();
+      const count = (ctx.AIScannerEngine && ctx.AIScannerEngine.results) ? ctx.AIScannerEngine.results.length : 0;
+      dot.style.display = count > 0 ? 'inline-flex' : 'none';
+      dot.textContent = count > 99 ? '99+' : String(count);
+    }).observe(resultsEl, { childList: true });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
