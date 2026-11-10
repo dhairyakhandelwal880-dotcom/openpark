@@ -1236,6 +1236,19 @@
     });
   });
 
+  UIPolish.register('receiptTimestampRefresh', () => {
+    const modal = document.getElementById('modal-receipt');
+    const tsEl = document.getElementById('rcpt-timestamp');
+    if (!modal || !tsEl) return;
+
+    new MutationObserver(() => {
+      if (modal.classList.contains('open')) {
+        const now = new Date();
+        tsEl.textContent = `Issued: ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Valid Today`;
+      }
+    }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
