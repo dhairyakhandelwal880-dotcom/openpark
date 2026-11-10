@@ -64,3 +64,24 @@
   .kbd-hint { display: none !important; }
 }
 
+@keyframes uiShimmerSlide {
+  0% { background-position: -220% 0; }
+  100% { background-position: 220% 0; }
+}
+.ui-skeleton-card {
+  border-radius: var(--radius-card);
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-subtle);
+  background: linear-gradient(90deg, var(--text-contrast-layer) 25%, var(--text-contrast-subtle) 50%, var(--text-contrast-layer) 75%);
+  background-size: 200% 100%;
+  animation: uiShimmerSlide 1.35s ease-in-out infinite;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ui-skeleton-line {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--text-contrast-subtle);
+}
+
