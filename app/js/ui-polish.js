@@ -306,6 +306,46 @@
     hookAutocomplete('welcome-autocomplete-box');
   });
 
+  UIPolish.register('sidebarRecentPills', () => {
+    const header = document.querySelector('.sidebar-header');
+    const searchInput = document.getElementById('search-input');
+    const chipRow = header ? header.querySelector('.filter-chip-row') : null;
+    if (!header || !searchInput || !chipRow) return;
+
+    const row = document.createElement('div');
+    row.className = 'recent-searches-row';
+    row.id = 'sidebar-recent-row';
+    header.insertBefore(row, chipRow);
+
+    const render = () => {
+      const items = (window.__openparkRecent && window.__openparkRecent.load()) || [];
+      if (!items.length) {
+        row.style.display = 'none';
+        row.innerHTML = '';
+        return;
+      }
+      row.style.display = 'flex';
+      row.innerHTML = '<span style="font-size:10.5px;color:var(--text-secondary);font-weight:600;">Recent:</span>' +
+        items.map((q) => `<button type="button" class="recent-search-chip" data-rq="${q.replace(/"/g, '&quot;')}">🕒 ${q}</button>`).join('') +
+        '<button type="button" class="recent-search-chip" data-clear-recent="1" title="Clear search history">Clear</button>';
+    };
+
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('[data-clear-recent]')) {
+        window.__openparkRecent.clear();
+        return;
+      }
+      const btn = e.target.closest('[data-rq]');
+      if (!btn) return;
+      searchInput.value = btn.getAttribute('data-rq');
+      searchInput.focus();
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    window.addEventListener('openpark:recent-updated', render);
+    render();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
