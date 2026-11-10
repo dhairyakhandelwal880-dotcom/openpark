@@ -1249,6 +1249,21 @@
     }).observe(modal, { attributes: true, attributeFilter: ['class'] });
   });
 
+  UIPolish.register('traccarCopyDeviceId', (up) => {
+    const input = document.getElementById('input-traccar-device-id');
+    const saveBtn = document.getElementById('btn-save-traccar-device');
+    if (!input || !saveBtn || document.getElementById('btn-copy-traccar-id')) return;
+
+    const cpBtn = document.createElement('button');
+    cpBtn.id = 'btn-copy-traccar-id';
+    cpBtn.type = 'button';
+    cpBtn.className = 'btn-pill-secondary';
+    cpBtn.style.cssText = 'width:auto;padding:7px 10px;font-size:11.5px;';
+    cpBtn.textContent = 'Copy ID';
+    cpBtn.addEventListener('click', () => up.copyText(input.value.trim(), 'Traccar Device ID copied'));
+    saveBtn.insertAdjacentElement('afterend', cpBtn);
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
