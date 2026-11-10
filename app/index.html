@@ -16,54 +16,85 @@
 
   <style>
     /* ==========================================================================
-       1. Design Tokens & Apple Clear Glass Visual Language
-       High-contrast, crystal-clear surfaces without blurry haze or cloud effect
+       1. Design Tokens & Apple Glass Visual Language
+       Adaptive Light/Dark translucent glass, SF Pro typography & spring physics
        ========================================================================== */
     :root {
-      /* Typography */
-      --font-stack: -apple-system, "SF Pro Text", "SF Pro Display", Inter, system-ui, sans-serif;
-      --font-mono: 'JetBrains Mono', monospace;
+      --apple-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+      --font-stack: var(--apple-font);
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
       --font-size-sec: 13px;
       --font-size-body: 15px;
       --font-size-title: 17px;
       --font-size-lg: 28px;
 
       /* Radii */
-      --radius-panel: 22px;
+      --radius-panel: 20px;
       --radius-card: 14px;
       --radius-pill: 999px;
 
-      /* Status Palette */
-      --status-available: #10b981;
-      --status-filling: #f59e0b;
-      --status-full: #ef4444;
-      --status-unknown: #94a3b8;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-      --accent-subtle: #38bdf8;
+      /* Apple Status & Brand Colors */
+      --apple-blue: #0071e3;
+      --apple-green: #34c759;
+      --apple-orange: #ff9500;
+      --apple-red: #ff3b30;
 
-      /* Transitions */
-      --transition-standard: 200ms cubic-bezier(0.16, 1, 0.3, 1);
-      --transition-smooth: 280ms cubic-bezier(0.32, 0.72, 0, 1);
+      --status-available: var(--apple-green);
+      --status-filling: var(--apple-orange);
+      --status-full: var(--apple-red);
+      --status-unknown: #8e8e93;
+      --accent: var(--apple-blue);
+      --accent-hover: #0062c4;
+      --accent-subtle: #0071e3;
 
-      /* Dark Theme (Default) - Crisp, Solid & Clean */
-      --glass-bg: rgba(15, 23, 42, 0.92);
-      --glass-border: 1px solid rgba(255, 255, 255, 0.12);
-      --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.15);
-      --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+      /* Spring Physics & Transitions */
+      --spring-curve: cubic-bezier(0.16, 1, 0.3, 1);
+      --transition-standard: 180ms var(--spring-curve);
+      --transition-smooth: 320ms var(--spring-curve);
 
-      --solid-panel-bg: #0f172a;
-      --text-contrast-layer: #1e293b;
-      --text-contrast-subtle: #334155;
+      /* Apple Light Glass (Default) */
+      --glass-bg: rgba(255, 255, 255, 0.72);
+      --glass-border-color: rgba(255, 255, 255, 0.65);
+      --glass-border: 1px solid var(--glass-border-color);
+      --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+      --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
 
-      --color-text-primary: #f8fafc;
-      --color-text-secondary: #cbd5e1;
-      --color-text-tertiary: #94a3b8;
-      --color-border-subtle: rgba(255, 255, 255, 0.1);
-      --color-hover: rgba(255, 255, 255, 0.08);
-      --color-active: rgba(255, 255, 255, 0.14);
+      --text-primary: #1d1d1f;
+      --text-secondary: rgba(60, 60, 67, 0.65);
+      --solid-panel-bg: rgba(255, 255, 255, 0.88);
+      --text-contrast-layer: rgba(120, 120, 128, 0.08);
+      --text-contrast-subtle: rgba(120, 120, 128, 0.14);
 
-      --map-tile-style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+      --color-text-primary: var(--text-primary);
+      --color-text-secondary: var(--text-secondary);
+      --color-text-tertiary: rgba(60, 60, 67, 0.48);
+      --color-border-subtle: rgba(60, 60, 67, 0.12);
+      --color-hover: rgba(120, 120, 128, 0.12);
+      --color-active: rgba(120, 120, 128, 0.2);
+
+      --map-tile-style: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json";
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --glass-bg: rgba(28, 28, 30, 0.78);
+        --glass-border-color: rgba(255, 255, 255, 0.12);
+        --glass-border: 1px solid var(--glass-border-color);
+        --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+        --glass-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
+
+        --text-primary: #f5f5f7;
+        --text-secondary: rgba(235, 235, 245, 0.6);
+        --solid-panel-bg: rgba(28, 28, 30, 0.92);
+        --text-contrast-layer: rgba(120, 120, 128, 0.16);
+        --text-contrast-subtle: rgba(120, 120, 128, 0.24);
+
+        --accent-subtle: #38bdf8;
+        --color-text-tertiary: rgba(235, 235, 245, 0.45);
+        --color-border-subtle: rgba(255, 255, 255, 0.12);
+        --color-hover: rgba(255, 255, 255, 0.1);
+        --color-active: rgba(255, 255, 255, 0.18);
+      }
     }
 
     /* Reset & Base */
@@ -75,27 +106,44 @@
     }
 
     body {
-      font-family: var(--font-stack);
+      font-family: var(--apple-font);
       font-size: var(--font-size-body);
-      color: var(--color-text-primary);
+      color: var(--text-primary);
       background: #0b0f19;
       overflow: hidden;
       width: 100vw;
       height: 100vh;
       line-height: 1.4;
       user-select: none;
+      -webkit-font-smoothing: antialiased;
     }
 
     :focus-visible {
-      outline: 2px solid var(--accent-subtle);
+      outline: 2px solid var(--apple-blue);
       outline-offset: 2px;
     }
 
-    /* Clean solid glass panel */
+    /* Master Apple Glass Style */
+    .apple-glass,
     .glass-surface {
+      font-family: var(--apple-font);
       background: var(--glass-bg);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
       border: var(--glass-border);
       box-shadow: var(--glass-shadow), var(--glass-highlight);
+      border-radius: var(--radius-panel);
+      color: var(--text-primary);
+      user-select: none;
+    }
+
+    /* Tactile Spring Press */
+    .pressable {
+      transition: transform 0.18s var(--spring-curve), opacity 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+      cursor: pointer;
+    }
+    .pressable:active {
+      transform: scale(0.94);
     }
 
     .contrast-card {
@@ -172,16 +220,17 @@
       background: var(--color-hover);
     }
 
-    /* Control Cluster (Right Side) */
+    /* Control Cluster (Apple Glass Map Controls HUD) */
     .control-cluster {
       position: absolute;
-      top: 16px;
-      right: 16px;
+      top: 20px;
+      right: 20px;
       z-index: 10;
-      border-radius: var(--radius-pill);
+      border-radius: var(--radius-panel);
       display: flex;
       flex-direction: column;
-      overflow: hidden;
+      padding: 6px;
+      gap: 4px;
     }
 
     .cluster-btn {
@@ -192,14 +241,12 @@
       justify-content: center;
       border: none;
       background: transparent;
-      color: var(--color-text-primary);
+      color: var(--text-primary);
+      border-radius: 50%;
+      font-size: 16px;
       cursor: pointer;
-      transition: background-color var(--transition-standard);
+      transition: transform 0.18s var(--spring-curve), background-color 0.18s ease, color 0.18s ease;
       position: relative;
-    }
-
-    .cluster-btn + .cluster-btn {
-      border-top: 1px solid var(--color-border-subtle);
     }
 
     .cluster-btn:hover {
@@ -207,16 +254,18 @@
     }
 
     .cluster-btn:active {
+      transform: scale(0.94);
       background: var(--color-active);
     }
 
     .cluster-btn.active-blue {
-      color: var(--accent-subtle);
+      color: var(--apple-blue);
+      background: rgba(0, 113, 227, 0.14);
     }
 
     .cluster-btn#btn-compass-north.has-bearing {
-      color: #60a5fa;
-      background: rgba(59, 130, 246, 0.18);
+      color: var(--apple-blue);
+      background: rgba(0, 113, 227, 0.16);
     }
 
     .cluster-btn.active-pulse::after {
@@ -224,9 +273,9 @@
       position: absolute;
       width: 6px;
       height: 6px;
-      background: var(--accent-subtle);
+      background: var(--apple-blue);
       border-radius: 50%;
-      bottom: 8px;
+      bottom: 6px;
       animation: pulse-dot 1.8s infinite;
     }
 
@@ -242,27 +291,27 @@
       bottom: 8px;
       left: 12px;
       z-index: 10;
-      background: rgba(15, 23, 42, 0.75);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      color: #94a3b8;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      color: var(--text-secondary);
       font-size: 11px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      padding: 3px 10px;
+      font-family: var(--font-mono);
+      padding: 4px 12px;
       border-radius: 9999px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: var(--glass-border);
+      box-shadow: var(--glass-shadow);
       cursor: pointer;
       user-select: none;
-      transition: all 180ms ease;
+      transition: all 180ms var(--spring-curve);
       display: flex;
       align-items: center;
       gap: 6px;
       pointer-events: auto;
     }
     .map-coords-pill:hover {
-      background: rgba(15, 23, 42, 0.95);
-      color: #f1f5f9;
-      border-color: rgba(255, 255, 255, 0.2);
+      color: var(--text-primary);
+      transform: translateY(-1px);
     }
     @media (max-width: 640px) {
       .map-coords-pill {
@@ -488,50 +537,51 @@
       display: flex;
     }
 
-    /* Google Maps Style Autocomplete Dropdown */
+    /* Apple Glass Autocomplete Dropdown */
     .autocomplete-list {
       position: absolute;
-      top: calc(100% + 6px);
+      top: calc(100% + 8px);
       left: 0;
       right: 0;
-      border-radius: var(--radius-card);
+      border-radius: 18px;
       overflow: hidden;
       z-index: 40;
       max-height: 320px;
       overflow-y: auto;
       display: none;
-      background: #0b1329;
-      border: 1px solid var(--color-border-subtle);
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(20px);
+      background: var(--solid-panel-bg);
+      border: var(--glass-border);
+      box-shadow: var(--glass-shadow);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
     }
     .autocomplete-list.open {
       display: block;
     }
     .autocomplete-item {
-      padding: 10px 14px;
+      padding: 11px 14px;
       display: flex;
       align-items: center;
       gap: 12px;
       cursor: pointer;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-      background: rgba(15, 23, 42, 0.7);
+      border-bottom: 1px solid var(--color-border-subtle);
+      background: transparent;
       transition: background-color var(--transition-standard);
     }
     .autocomplete-item:last-child {
       border-bottom: none;
     }
     .autocomplete-item:hover, .autocomplete-item.active-item {
-      background: rgba(56, 189, 248, 0.15);
-      border-left: 3px solid var(--accent-subtle);
+      background: rgba(0, 113, 227, 0.12);
+      border-left: 3px solid var(--apple-blue);
       padding-left: 11px;
     }
     .autocomplete-badge-box {
       width: 32px;
       height: 32px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      background: var(--text-contrast-layer);
+      border: 1px solid var(--color-border-subtle);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -557,7 +607,7 @@
       text-overflow: ellipsis;
     }
     .autocomplete-item-title .highlight {
-      color: var(--accent-subtle);
+      color: var(--apple-blue);
       font-weight: 700;
       text-decoration: underline;
     }
@@ -565,10 +615,10 @@
       font-size: 11px;
       font-family: var(--font-mono);
       font-weight: 600;
-      color: var(--accent-subtle);
-      background: rgba(56, 189, 248, 0.15);
-      border: 1px solid rgba(56, 189, 248, 0.3);
-      padding: 2px 6px;
+      color: var(--apple-blue);
+      background: rgba(0, 113, 227, 0.12);
+      border: 1px solid rgba(0, 113, 227, 0.25);
+      padding: 2px 7px;
       border-radius: var(--radius-pill);
       white-space: nowrap;
       flex-shrink: 0;
@@ -582,10 +632,10 @@
       margin-top: 2px;
     }
     .search-quick-chip {
-      padding: 4px 10px;
-      background: rgba(56, 189, 248, 0.12);
-      border: 1px solid rgba(56, 189, 248, 0.28);
-      color: var(--accent-subtle);
+      padding: 5px 11px;
+      background: rgba(0, 113, 227, 0.1);
+      border: 1px solid rgba(0, 113, 227, 0.24);
+      color: var(--apple-blue);
       border-radius: var(--radius-pill);
       font-size: 11.5px;
       font-weight: 600;
@@ -593,8 +643,8 @@
       transition: all var(--transition-standard);
     }
     .search-quick-chip:hover {
-      background: rgba(56, 189, 248, 0.25);
-      border-color: var(--accent-subtle);
+      background: rgba(0, 113, 227, 0.18);
+      border-color: var(--apple-blue);
     }
 
     /* Filter Chips */
@@ -604,29 +654,33 @@
       gap: 8px;
       overflow-x: auto;
       scrollbar-width: none;
-      padding-bottom: 2px;
+      padding-bottom: 4px;
     }
     .filter-chip-row::-webkit-scrollbar { display: none; }
 
     .chip-btn {
-      padding: 6px 14px;
-      border-radius: var(--radius-pill);
-      border: 1px solid var(--color-border-subtle);
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: var(--glass-border);
       background: var(--text-contrast-layer);
-      color: var(--color-text-secondary);
-      font-size: var(--font-size-sec);
+      color: var(--text-primary);
+      font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       white-space: nowrap;
-      transition: all var(--transition-standard);
+      transition: transform 0.18s var(--spring-curve), background-color 0.18s ease, color 0.18s ease;
       display: flex;
       align-items: center;
       gap: 6px;
     }
+    .chip-btn:active {
+      transform: scale(0.94);
+    }
     .chip-btn.active {
-      background: var(--accent);
+      background: var(--apple-blue);
       color: #fff;
-      border-color: var(--accent);
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
     }
 
     /* Segmented Control Bar */
@@ -634,7 +688,7 @@
       display: flex;
       padding: 3px;
       border-radius: var(--radius-pill);
-      background: var(--text-contrast-subtle);
+      background: var(--text-contrast-layer);
       border: 1px solid var(--color-border-subtle);
       margin: 0 16px;
       flex-shrink: 0;
@@ -652,10 +706,13 @@
       cursor: pointer;
       transition: all var(--transition-standard);
     }
+    .segment-tab:active {
+      transform: scale(0.96);
+    }
     .segment-tab.active {
-      background: #2563eb;
+      background: var(--apple-blue);
       color: #ffffff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      box-shadow: 0 2px 10px rgba(0, 113, 227, 0.32);
     }
 
     /* Scrollable Views Container */
@@ -1033,25 +1090,25 @@
       border-radius: 9999px;
       font-size: 13px;
       font-weight: 500;
-      color: #f8fafc;
-      background: rgba(15, 23, 42, 0.92);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      color: var(--text-primary);
+      background: var(--glass-bg);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: var(--glass-border);
+      box-shadow: var(--glass-shadow);
       pointer-events: auto;
       opacity: 0;
       transform: translateY(16px) scale(0.96);
-      transition: all 260ms cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 260ms var(--spring-curve);
     }
     .toast-pill.show {
       opacity: 1;
       transform: translateY(0) scale(1);
     }
-    .toast-pill.toast-success { border-left: 3px solid #10b981; }
-    .toast-pill.toast-warning { border-left: 3px solid #f59e0b; }
-    .toast-pill.toast-error { border-left: 3px solid #ef4444; }
-    .toast-pill.toast-info { border-left: 3px solid #3b82f6; }
+    .toast-pill.toast-success { border-left: 3px solid var(--apple-green); }
+    .toast-pill.toast-warning { border-left: 3px solid var(--apple-orange); }
+    .toast-pill.toast-error { border-left: 3px solid var(--apple-red); }
+    .toast-pill.toast-info { border-left: 3px solid var(--apple-blue); }
     .toast-pill .toast-icon { font-size: 14px; line-height: 1; }
 
     #toast {
@@ -1063,14 +1120,16 @@
       border-radius: var(--radius-pill);
       font-size: var(--font-size-sec);
       font-weight: 500;
-      color: #fff;
-      background: #0f172a;
-      border: 1px solid var(--color-border-subtle);
-      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      color: var(--text-primary);
+      background: var(--glass-bg);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: var(--glass-border);
+      box-shadow: var(--glass-shadow);
       z-index: 100;
       opacity: 0;
       pointer-events: none;
-      transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 220ms var(--spring-curve);
     }
     #toast.show {
       transform: translateX(-50%) translateY(0);
@@ -1139,6 +1198,150 @@
       margin: 0 !important;
       padding: 0 !important;
       will-change: transform;
+    }
+
+    /* Live Apple Glass Parking Map Pins */
+    .parking-pin {
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
+      transition: transform 0.18s var(--spring-curve), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+    }
+    .parking-pin:hover {
+      transform: translateY(-2px) scale(1.04);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+      z-index: 60 !important;
+    }
+    .parking-pin.is-selected {
+      background: var(--apple-blue);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.45);
+      transform: scale(1.08);
+      box-shadow: 0 10px 26px rgba(0, 113, 227, 0.45);
+      z-index: 80 !important;
+    }
+    .parking-pin .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .parking-pin .status-dot.status-available { background: var(--apple-green); box-shadow: 0 0 8px var(--apple-green); }
+    .parking-pin .status-dot.status-filling   { background: var(--apple-orange); box-shadow: 0 0 8px var(--apple-orange); }
+    .parking-pin .status-dot.status-full      { background: var(--apple-red); }
+    .parking-pin .status-dot.status-unknown   { background: var(--status-unknown); }
+
+    /* Sliding Apple Glass Parking Spot Details Drawer */
+    .bottom-drawer {
+      position: absolute;
+      bottom: 24px;
+      left: calc(50% + 202px);
+      transform: translateX(-50%) translateY(130%);
+      width: min(500px, calc(100vw - 448px));
+      padding: 18px 22px 20px 22px;
+      z-index: 26;
+      transition: transform 0.45s var(--spring-curve), left 0.32s var(--spring-curve), width 0.32s var(--spring-curve);
+    }
+    .bottom-drawer.open {
+      transform: translateX(-50%) translateY(0);
+    }
+    body.sidebar-collapsed .bottom-drawer {
+      left: 50%;
+      width: min(520px, calc(100vw - 32px));
+    }
+    @media (max-width: 899px) {
+      .bottom-drawer {
+        left: 50%;
+        bottom: 18px;
+        width: calc(100vw - 24px);
+        padding: 16px 18px;
+      }
+    }
+    .drawer-drag-pill {
+      width: 36px;
+      height: 4px;
+      background: var(--text-secondary);
+      opacity: 0.35;
+      border-radius: 2px;
+      margin: 0 auto 12px auto;
+      cursor: pointer;
+    }
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .drawer-title {
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 3px 0;
+    }
+    .drawer-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+    .capacity-card {
+      margin: 14px 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: var(--text-contrast-layer);
+      border: 1px solid var(--color-border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .spots-count {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--apple-green);
+      font-family: var(--font-mono);
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.8fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .btn-secondary {
+      padding: 12px 10px;
+      border-radius: 14px;
+      border: var(--glass-border);
+      background: var(--text-contrast-layer);
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text-primary);
+      cursor: pointer;
+    }
+    .btn-secondary:hover {
+      background: var(--color-hover);
+    }
+    .btn-primary {
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: none;
+      background: var(--apple-blue);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 113, 227, 0.32);
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
     }
 
     /* Custom Map Marker styles */
@@ -1706,12 +1909,12 @@
   </div>
 
   <!-- Desktop Sidebar Collapse Toggle -->
-  <button class="sidebar-collapse-toggle glass-surface" id="btn-toggle-sidebar" aria-label="Toggle Sidebar Navigation">
+  <button class="sidebar-collapse-toggle apple-glass pressable" id="btn-toggle-sidebar" aria-label="Toggle Sidebar Navigation">
     <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
   </button>
 
   <!-- Left Sidebar / Mobile Bottom Sheet -->
-  <aside id="sidebar" class="glass-surface" role="complementary" aria-label="OpenPark Sidebar Navigation">
+  <aside id="sidebar" class="apple-glass" role="complementary" aria-label="OpenPark Sidebar Navigation">
     <div class="sidebar-drag-handle" id="sheet-drag-handle" aria-hidden="true"></div>
 
     <!-- Sidebar Header: Brand, Search & Filters -->
@@ -1719,14 +1922,14 @@
       <div class="brand-row">
         <div class="brand-title">
           <span>OpenPark</span>
-          <span class="brand-badge">Bengaluru Core</span>
+          <span class="brand-badge"><span id="total-lots-count">148</span> Lots</span>
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
-          <button id="btn-traccar-pill" class="chip-btn" style="padding: 3px 9px; font-size: 11px; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); color: #34d399; display: flex; align-items: center; gap: 5px; cursor: pointer;" title="Traccar GPS Tracking Engine (https://www.traccar.org/)">
-            <span class="status-dot" style="background:#10b981; width:6px; height:6px;"></span>
+          <button id="btn-traccar-pill" class="chip-btn pressable" style="padding: 3px 9px; font-size: 11px; background: rgba(52, 199, 89, 0.14); border-color: rgba(52, 199, 89, 0.35); color: var(--apple-green); display: flex; align-items: center; gap: 5px; cursor: pointer;" title="Traccar GPS Tracking Engine (https://www.traccar.org/)">
+            <span class="status-dot" style="background:var(--apple-green); width:6px; height:6px;"></span>
             <span id="traccar-pill-text">Traccar</span>
           </button>
-          <button id="btn-refresh-top" class="chip-btn" style="padding: 4px 8px;" title="Refresh Occupancy">
+          <button id="btn-refresh-top" class="chip-btn pressable" style="padding: 4px 8px;" title="Refresh Occupancy">
             <span>🔄</span>
           </button>
         </div>
@@ -2189,36 +2392,36 @@
     </div>
   </aside>
 
-  <!-- Right Side Minimal Floating Map Controls -->
-  <div class="control-cluster glass-surface" role="toolbar" aria-label="Map navigation controls">
-    <button class="cluster-btn" id="btn-zoom-in" aria-label="Zoom in" title="Zoom in">
+  <!-- Right Side Apple Glass Map Controls HUD -->
+  <div class="control-cluster apple-glass" role="toolbar" aria-label="Map navigation controls">
+    <button class="cluster-btn pressable" id="btn-zoom-in" aria-label="Zoom in" title="Zoom in">
       <svg class="svg-icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
-    <button class="cluster-btn" id="btn-zoom-out" aria-label="Zoom out" title="Zoom out">
+    <button class="cluster-btn pressable" id="btn-zoom-out" aria-label="Zoom out" title="Zoom out">
       <svg class="svg-icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
-    <button class="cluster-btn" id="btn-my-location" aria-label="Center on my location" title="Toggle Real GPS Device Tracking">
+    <button class="cluster-btn pressable" id="btn-my-location" aria-label="Center on my location" title="Toggle Real GPS Device Tracking">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
     </button>
-    <button class="cluster-btn" id="btn-snap-debrecan" aria-label="Snap to Debrecan House" title="Calibrate / Snap to Stanza Living Debrecan House (12.90310, 77.49750) [Shortcut: C]">
+    <button class="cluster-btn pressable" id="btn-snap-debrecan" aria-label="Snap to Debrecan House" title="Calibrate / Snap to Stanza Living Debrecan House (12.90310, 77.49750) [Shortcut: C]">
       <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
     </button>
-    <button class="cluster-btn" id="btn-variable-motion" aria-label="Toggle live variable GPS motion" title="Toggle Live Variable Walking Motion / Drift [Shortcut: V]">
+    <button class="cluster-btn pressable" id="btn-variable-motion" aria-label="Toggle live variable GPS motion" title="Toggle Live Variable Walking Motion / Drift [Shortcut: V]">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     </button>
-    <button class="cluster-btn" id="btn-compass-north" aria-label="Reset orientation north" title="Reset North">
+    <button class="cluster-btn pressable" id="btn-compass-north" aria-label="Reset orientation north" title="Reset North">
       <svg class="svg-icon" id="compass-icon" viewBox="0 0 24 24">
         <polygon points="12 2 15 11 12 8 9 11 12 2" fill="currentColor"/>
         <polygon points="12 22 9 13 12 16 15 13 12 22" fill="none"/>
       </svg>
     </button>
-    <button class="cluster-btn" id="btn-tilt-3d" aria-label="Toggle 3D tilt" title="Toggle 3D Pitch">
-      <span style="font-size: 11px; font-weight: 700; letter-spacing: -0.5px;">3D</span>
+    <button class="cluster-btn pressable" id="btn-tilt-3d" aria-label="Toggle 3D tilt" title="Toggle 3D View">
+      <span style="font-size: 12px; font-weight: 700; letter-spacing: -0.5px;">3D</span>
     </button>
-    <button class="cluster-btn" id="btn-toggle-layers" aria-label="Toggle map detail layers" title="Cycle Detail Styles (Google Maps Vector / OSM Full Detail / Carto Voyager)">
+    <button class="cluster-btn pressable" id="btn-toggle-layers" aria-label="Toggle map detail layers" title="Cycle Detail Styles (Google Maps Vector / OSM Full Detail / Carto Voyager)">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
     </button>
-    <button class="cluster-btn" id="btn-fullscreen" aria-label="Toggle full screen mode" title="Toggle Fullscreen">
+    <button class="cluster-btn pressable" id="btn-fullscreen" aria-label="Toggle full screen mode" title="Toggle Fullscreen">
       <svg class="svg-icon" id="fullscreen-icon" viewBox="0 0 24 24">
         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
       </svg>
@@ -2425,6 +2628,38 @@
     <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
     <span>Re-center</span>
   </button>
+
+  <!-- Interactive Apple Glass Detail Drawer -->
+  <div class="apple-glass bottom-drawer" id="parking-drawer" role="dialog" aria-label="Selected parking lot details">
+    <div class="drawer-drag-pill" id="drawer-drag-dismiss" title="Tap to dismiss"></div>
+    <div class="drawer-header">
+      <div>
+        <h3 class="drawer-title" id="drawer-lot-name">Parking Lot</h3>
+        <p class="drawer-subtitle" id="drawer-lot-info">2 mins away • 0.3 km • Bengaluru</p>
+      </div>
+      <span style="font-size: 18px; font-weight: 700; white-space: nowrap;" id="drawer-lot-rate">₹40<small style="font-size:12px; font-weight:400; color:var(--text-secondary)">/hr</small></span>
+    </div>
+
+    <div class="capacity-card">
+      <div>
+        <div style="font-size: 11.5px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.4px;">Live Availability</div>
+        <div style="font-size: 13px; font-weight: 500;" id="drawer-lot-sub">Electric & Standard Bays</div>
+      </div>
+      <div class="spots-count" id="drawer-lot-spots">24 Free</div>
+    </div>
+
+    <div class="action-grid">
+      <button class="btn-secondary pressable" id="drawer-btn-dismiss">Dismiss</button>
+      <button class="btn-secondary pressable" id="drawer-btn-details">Full Info</button>
+      <button class="btn-primary pressable" id="drawer-btn-navigate">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+        Navigate Now
+      </button>
+    </div>
+  </div>
 
   <!-- Toast Notification Pill & Dynamic Stack Container -->
   <div id="toast-container" aria-live="polite"></div>
@@ -4461,15 +4696,53 @@
         },
 
         renderLotMarkers(lots) {
-          // Clear any existing lot markers to keep map uncluttered like Google Maps
           this.markers.forEach(m => m.marker.remove());
           this.markers.clear();
-          // The map displays only the real-time vehicle and user-selected destination pin
+          if (!this.map || !Array.isArray(lots)) return;
+
+          const filtered = (typeof UIController !== 'undefined' && UIController.filterLots)
+            ? UIController.filterLots(lots)
+            : lots;
+
+          // Render crisp Apple Glass availability pills for the closest 18 lots
+          filtered.slice(0, 18).forEach(lot => {
+            const lon = Number(lot.lon !== undefined ? lot.lon : lot.lng);
+            const lat = Number(lot.lat);
+            if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+
+            const free = Number(lot.free_spots || 0);
+            let statusDotClass = 'status-available';
+            if (lot.status === 'Full' || free === 0) statusDotClass = 'status-full';
+            else if (lot.status === 'Filling up' || free <= 5) statusDotClass = 'status-filling';
+            else if (lot.status === 'Unknown') statusDotClass = 'status-unknown';
+
+            const el = document.createElement('div');
+            el.className = 'apple-glass parking-pin pressable';
+            if (STATE.selectedLot && STATE.selectedLot.id == lot.id) {
+              el.classList.add('is-selected');
+            }
+            el.innerHTML = `
+              <span class="status-dot ${statusDotClass}"></span>
+              <span>${free > 0 ? free + ' spots' : 'Full'}</span>
+            `;
+            el.title = `${lot.name} • ${free} spots free (${lot.price_car || '₹40'}/hr)`;
+
+            el.addEventListener('click', (e) => {
+              e.stopPropagation();
+              ParkingApp.selectLot(lot.id);
+            });
+
+            const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+              .setLngLat([lon, lat])
+              .addTo(this.map);
+
+            this.markers.set(lot.id, { marker, element: el });
+          });
         },
 
         highlightMarker(lotId) {
           this.markers.forEach((item, id) => {
-            if (id === lotId) {
+            if (id == lotId) {
               item.element.classList.add('is-selected');
             } else {
               item.element.classList.remove('is-selected');
@@ -4499,17 +4772,52 @@
 
           // Parking Lot Availability Filters
           document.querySelectorAll('#explore-filter-chips .chip-btn').forEach(btn => {
+            btn.classList.add('pressable');
             btn.addEventListener('click', () => {
               document.querySelectorAll('#explore-filter-chips .chip-btn').forEach(b => b.classList.remove('active'));
               btn.classList.add('active');
               STATE.activeFilter = btn.dataset.lotFilter || 'all';
               this.renderLotList(STATE.lots);
+              MapEngine.renderLotMarkers(STATE.lots);
               ParkingApp.showToast(`Showing: ${btn.innerText.trim()}`, "info");
             });
           });
 
+          // Sliding Apple Glass Detail Drawer Handlers
+          const closeDrawerFn = () => ParkingApp.closeDrawer();
+          const btnDismiss = document.getElementById('drawer-btn-dismiss');
+          const dragDismiss = document.getElementById('drawer-drag-dismiss');
+          const btnDrawerDetails = document.getElementById('drawer-btn-details');
+          const btnDrawerNavigate = document.getElementById('drawer-btn-navigate');
+          if (btnDismiss) btnDismiss.onclick = closeDrawerFn;
+          if (dragDismiss) dragDismiss.onclick = closeDrawerFn;
+          if (btnDrawerDetails) {
+            btnDrawerDetails.onclick = () => {
+              const drawer = document.getElementById('parking-drawer');
+              if (drawer) drawer.classList.remove('open');
+              const sidebarEl = document.getElementById('sidebar');
+              if (sidebarEl) {
+                sidebarEl.classList.remove('is-collapsed');
+                document.body.classList.remove('sidebar-collapsed');
+                if (window.innerWidth < 900) {
+                  sidebarEl.style.transform = 'translateY(0)';
+                }
+              }
+              this.switchTab('explore');
+            };
+          }
+          if (btnDrawerNavigate) {
+            btnDrawerNavigate.onclick = () => {
+              if (STATE.selectedLot) {
+                NavigationEngine.startTrip(STATE.selectedLot);
+                ParkingApp.closeDrawer();
+              }
+            };
+          }
+
           // Category Quick Search chips (Google Maps Style)
           document.querySelectorAll('.filter-chip-row .chip-btn').forEach(btn => {
+            btn.classList.add('pressable');
             btn.addEventListener('click', () => {
               document.querySelectorAll('.filter-chip-row .chip-btn').forEach(b => b.classList.remove('active'));
               btn.classList.add('active');
@@ -4518,6 +4826,7 @@
               } else if (btn.dataset.filter) {
                 STATE.activeFilter = btn.dataset.filter;
                 this.renderLotList(STATE.lots);
+                MapEngine.renderLotMarkers(STATE.lots);
               }
             });
           });
@@ -4528,6 +4837,7 @@
           toggleBtn.onclick = () => {
             sidebar.classList.toggle('is-collapsed');
             const isCollapsed = sidebar.classList.contains('is-collapsed');
+            document.body.classList.toggle('sidebar-collapsed', isCollapsed);
             toggleBtn.innerHTML = isCollapsed 
               ? '<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>'
               : '<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>';
@@ -4573,8 +4883,9 @@
           document.getElementById('btn-tilt-3d').onclick = () => {
             STATE.is3D = !STATE.is3D;
             MapEngine.map.easeTo({
-              pitch: STATE.is3D ? CONFIG.PITCH_3D : 0,
-              duration: 400
+              pitch: STATE.is3D ? 60 : 0,
+              duration: 800,
+              easing: (t) => t * (2 - t)
             });
             document.getElementById('btn-tilt-3d').classList.toggle('active-blue', STATE.is3D);
           };
@@ -5078,11 +5389,8 @@
           document.getElementById('view-place').style.display = 'flex';
         },
 
-        renderLotList(lots) {
-          const container = document.getElementById('view-explore');
-          container.innerHTML = '';
-
-          const filtered = lots.filter(lot => {
+        filterLots(lots) {
+          return (lots || []).filter(lot => {
             if (STATE.activeFilter === 'all') return true;
             if (STATE.activeFilter === 'Available') return lot.status === 'Available' || (lot.free_spots > 0 && lot.status !== 'Full');
             if (STATE.activeFilter === 'ev') return lot.has_ev || (lot.ev_spots && lot.ev_spots > 0) || (lot.name && lot.name.toLowerCase().includes('mall')) || ((lot.id % 2) === 0);
@@ -5096,8 +5404,16 @@
             }
             return lot.status === STATE.activeFilter;
           });
+        },
 
-          document.getElementById('total-lots-count').innerText = lots.length;
+        renderLotList(lots) {
+          const container = document.getElementById('view-explore');
+          container.innerHTML = '';
+
+          const filtered = this.filterLots(lots);
+
+          const countEl = document.getElementById('total-lots-count');
+          if (countEl) countEl.innerText = lots.length;
 
           if (filtered.length === 0) {
             container.innerHTML = `
@@ -5112,7 +5428,7 @@
 
           filtered.forEach(lot => {
             const card = document.createElement('div');
-            card.className = 'lot-card contrast-card';
+            card.className = 'lot-card contrast-card pressable';
             
             let statusClass = 'status-available';
             if (lot.status === 'Filling up') statusClass = 'status-filling';
@@ -6699,13 +7015,64 @@
           STATE.selectedLot = lot;
           MapEngine.setDestinationMarker(lot);
           MapEngine.highlightMarker(lotId);
-          MapEngine.map.easeTo({ center: [lot.lon, lot.lat], zoom: 16, duration: 500 });
+
+          // Apple-Grade Kinetic FlyTo (smooth 3D tilt + cubic deceleration)
+          if (MapEngine.map) {
+            MapEngine.map.flyTo({
+              center: [lot.lon, lot.lat],
+              zoom: 16.5,
+              pitch: 50,
+              bearing: 15,
+              speed: 0.9,
+              curve: 1.4,
+              easing: (t) => 1 - Math.pow(1 - t, 3),
+              essential: true
+            });
+          }
+
           UIController.renderLotDetail(lot);
 
-          // Mobile sheet snap to half
+          // Populate & slide open the Apple Glass detail drawer
+          const drawer = document.getElementById('parking-drawer');
+          if (drawer) {
+            const free = Number(lot.free_spots || 0);
+            const isCovered = (lot.type === 'multilevel' || lot.type === 'underground' || /mall|garage|complex/i.test(lot.name || ''));
+            document.getElementById('drawer-lot-name').textContent = lot.name;
+            document.getElementById('drawer-lot-info').textContent = `${lot.eta_mins} mins away • ${lot.distance_km} km • ${isCovered ? 'Covered' : 'Open Bay'}`;
+            const rateRaw = lot.price_car || lot.price_note || '₹40';
+            const cleanRate = String(rateRaw).replace('/hr', '');
+            document.getElementById('drawer-lot-rate').innerHTML = `${cleanRate}<small style="font-size:12px; font-weight:400; color:var(--text-secondary)">/hr</small>`;
+            document.getElementById('drawer-lot-sub').textContent = `${lot.has_ev || (lot.id % 2 === 0) ? 'EV & Standard Bays' : 'Standard Parking Bays'} • Updated ${lot.updated_mins}m ago`;
+
+            const spotsEl = document.getElementById('drawer-lot-spots');
+            spotsEl.textContent = free > 0 ? `${free} Free` : 'Full';
+            spotsEl.style.color = free > 5 ? 'var(--apple-green)' : (free > 0 ? 'var(--apple-orange)' : 'var(--apple-red)');
+
+            drawer.classList.add('open');
+          }
+
+          if (navigator.vibrate) navigator.vibrate(8);
+
+          // On mobile keep bottom sheet tucked so the Apple Glass drawer is unobstructed
           const sidebar = document.getElementById('sidebar');
+          if (window.innerWidth < 900 && sidebar) {
+            sidebar.style.transform = 'translateY(calc(100% - 84px))';
+          }
+        },
+
+        closeDrawer() {
+          const drawer = document.getElementById('parking-drawer');
+          if (drawer) drawer.classList.remove('open');
+          if (MapEngine.map) {
+            MapEngine.map.easeTo({
+              pitch: STATE.is3D ? 60 : 0,
+              bearing: 0,
+              duration: 600
+            });
+          }
           if (window.innerWidth < 900) {
-            sidebar.style.transform = 'translateY(calc(100% - 380px))';
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.style.transform = 'translateY(calc(100% - 130px))';
           }
         },
 
@@ -6714,6 +7081,7 @@
           STATE.selectedPlace = null;
           MapEngine.clearDestinationMarker();
           MapEngine.highlightMarker(null);
+          this.closeDrawer();
           document.getElementById('view-detail').style.display = 'none';
           document.getElementById('view-place').style.display = 'none';
           document.getElementById('view-explore').style.display = 'flex';
