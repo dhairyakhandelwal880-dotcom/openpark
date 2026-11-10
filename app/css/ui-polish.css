@@ -217,3 +217,34 @@
   opacity: 1;
 }
 
+.map-legend-pill {
+  position: fixed;
+  right: 70px;
+  bottom: 22px;
+  z-index: 18;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+@media (max-width: 768px) {
+  .map-legend-pill {
+    right: 12px;
+    top: 72px;
+    bottom: auto;
+    font-size: 10px;
+    padding: 5px 9px;
+  }
+}
+
