@@ -8416,10 +8416,13 @@
 
       // Bootstrap on DOM ready
       window.addEventListener('DOMContentLoaded', () => {
+        window.__openpark = { STATE, MapEngine, UIController, ParkingApp, AIScannerEngine, WelcomeController };
         ParkingApp.init();
         AIScannerEngine.init();
+        window.dispatchEvent(new CustomEvent('openpark:ready', { detail: window.__openpark }));
       });
     })();
   </script>
+  <script src="js/ui-polish.js"></script>
 </body>
 </html>
