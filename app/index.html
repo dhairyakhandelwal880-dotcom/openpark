@@ -2404,6 +2404,16 @@
           </div>
           <div class="setting-row">
             <div>
+              <div>Show parking pins on map</div>
+              <div style="font-size: 11px; color: var(--color-text-tertiary);">Display floating availability pills directly over map</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-lot-pins" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="setting-row">
+            <div>
               <div>Auto Day / Night Basemap</div>
               <div style="font-size: 11px; color: var(--color-text-tertiary);">Switches to dark mode at sunset (6:30 PM)</div>
             </div>
@@ -2867,6 +2877,7 @@
           simulateDrive: false,
           showHud: true,
           showBreadcrumbs: true,
+          showLotPins: false,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
           activeStyle: (() => {
             const s = localStorage.getItem('openpark_map_style');
@@ -4638,6 +4649,7 @@
 
         renderRouteLotMarkers(lots) {
           this.clearRouteLotMarkers();
+          if (!STATE.config.showLotPins) return;
           if (!this.map || !lots || !lots.length) return;
 
           lots.forEach(lot => {
@@ -4820,6 +4832,7 @@
         renderLotMarkers(lots) {
           this.markers.forEach(m => m.marker.remove());
           this.markers.clear();
+          if (!STATE.config.showLotPins) return;
           if (!this.map || !Array.isArray(lots)) return;
 
           const filtered = (typeof UIController !== 'undefined' && UIController.filterLots)
@@ -4966,6 +4979,18 @@
               }
             }
           });
+
+          // Toggle floating parking lot pins on the map
+          const toggleLotPins = document.getElementById('toggle-lot-pins');
+          if (toggleLotPins) {
+            toggleLotPins.checked = !!STATE.config.showLotPins;
+            toggleLotPins.addEventListener('change', (e) => {
+              STATE.config.showLotPins = e.target.checked;
+              MapEngine.renderLotMarkers(STATE.lots);
+              if (!STATE.config.showLotPins) MapEngine.clearRouteLotMarkers();
+              ParkingApp.showToast(STATE.config.showLotPins ? 'Showing parking pins on map' : 'Parking pins hidden on map', 'info', 2000);
+            });
+          }
 
           // Category Quick Search chips (Google Maps Style)
           document.querySelectorAll('.filter-chip-row .chip-btn').forEach(btn => {
