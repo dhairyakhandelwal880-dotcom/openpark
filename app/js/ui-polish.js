@@ -1071,6 +1071,50 @@
     window.__calcVehicle = 'car';
   });
 
+  UIPolish.register('feeEstimatorDynamicCalc', () => {
+    const chips = document.getElementById('calc-duration-chips');
+    const totalBadge = document.getElementById('calc-total-badge');
+    const toggle = document.getElementById('vehicle-type-toggle');
+    const carEl = document.getElementById('dt-price-car');
+    const bikeEl = document.getElementById('dt-price-bike');
+    if (!chips || !totalBadge || !carEl || !bikeEl) return;
+
+    const parseRate = (el) => {
+      const m = (el.textContent || '').match(/(\d+)/);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+
+    const recalc = () => {
+      const activeChip = chips.querySelector('.chip-btn.active') || chips.querySelector('[data-hours="2"]');
+      const hrs = activeChip ? parseInt(activeChip.getAttribute('data-hours') || '2', 10) : 2;
+      const rate = (window.__calcVehicle === 'bike') ? parseRate(bikeEl) : parseRate(carEl);
+      const total = hrs === 24 ? Math.round(rate * 12) : rate * hrs;
+      totalBadge.textContent = rate > 0 ? `Est: ₹${total}` : 'Free';
+    };
+
+    if (toggle) {
+      toggle.addEventListener('click', (e) => {
+        const btn = e.target.closest('.vehicle-type-btn');
+        if (!btn) return;
+        toggle.querySelectorAll('.vehicle-type-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        window.__calcVehicle = btn.getAttribute('data-veh') || 'car';
+        recalc();
+      });
+    }
+
+    chips.addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip-btn[data-hours]');
+      if (!btn) return;
+      chips.querySelectorAll('.chip-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      recalc();
+    });
+
+    new MutationObserver(recalc).observe(carEl, { childList: true, characterData: true, subtree: true });
+    recalc();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
