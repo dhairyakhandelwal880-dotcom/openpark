@@ -44,3 +44,23 @@
   }
 }
 
+.kbd-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--text-contrast-layer);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  pointer-events: none;
+}
+@media (max-width: 768px) {
+  .kbd-hint { display: none !important; }
+}
+
