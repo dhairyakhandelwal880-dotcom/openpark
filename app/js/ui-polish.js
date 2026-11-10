@@ -406,6 +406,22 @@
     syncIcon();
   });
 
+  UIPolish.register('welcomeEmptySearchNudge', () => {
+    const wGo = document.getElementById('btn-welcome-go');
+    const wInput = document.getElementById('welcome-search-input');
+    const pill = document.querySelector('.welcome-search-pill');
+    if (!wGo || !wInput || !pill) return;
+
+    wGo.addEventListener('click', () => {
+      if (wInput.value.trim().length < 2) {
+        pill.classList.remove('input-nudge');
+        void pill.offsetWidth;
+        pill.classList.add('input-nudge');
+        wInput.focus();
+      }
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
