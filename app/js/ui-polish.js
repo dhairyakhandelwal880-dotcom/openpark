@@ -120,6 +120,45 @@
     });
   });
 
+  UIPolish.register('shortcutsHelpModal', (up) => {
+    const createModal = () => {
+      if (document.getElementById('modal-shortcuts')) return document.getElementById('modal-shortcuts');
+      const modal = document.createElement('div');
+      modal.className = 'modal-backdrop';
+      modal.id = 'modal-shortcuts';
+      modal.setAttribute('role', 'dialog');
+      modal.setAttribute('aria-modal', 'true');
+      modal.innerHTML = `
+        <div class="modal-sheet glass-surface" style="max-width: 390px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-weight:700;font-size:15px;color:var(--text-primary);">⌨️ Keyboard Shortcuts</span>
+            <button id="modal-shortcuts-close" aria-label="Close shortcuts dialog" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:18px;line-height:1;">&times;</button>
+          </div>
+          <div style="display:grid;gap:7px;font-size:12.5px;color:var(--text-primary);">
+            <div style="display:flex;justify-content:space-between;"><span>Focus Search Box</span><span class="kbd-hint">/</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>AI Scan Map Grounds</span><span class="kbd-hint">A</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Parking Near Me</span><span class="kbd-hint">G</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Toggle Dark / Light Glass</span><span class="kbd-hint">T</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Snap to Debrecan House</span><span class="kbd-hint">C</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Navigate Autocomplete</span><span class="kbd-hint">&uarr; / &darr;</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Dismiss Modal / Drawer</span><span class="kbd-hint">Esc</span></div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal || e.target.id === 'modal-shortcuts-close') modal.classList.remove('open');
+      });
+      return modal;
+    };
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== '?' || up.isTyping(e.target)) return;
+      e.preventDefault();
+      createModal().classList.toggle('open');
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
