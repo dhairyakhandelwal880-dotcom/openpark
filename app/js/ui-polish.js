@@ -1297,6 +1297,19 @@
     syncOnline();
   });
 
+  UIPolish.register('mobileSheetHandleToggle', () => {
+    const handle = document.getElementById('sheet-drag-handle');
+    const sidebar = document.getElementById('sidebar');
+    if (!handle || !sidebar) return;
+    handle.style.cursor = 'pointer';
+    handle.addEventListener('click', () => {
+      if (window.innerWidth >= 900) return;
+      const collapsed = sidebar.dataset.mobileCompact === '1';
+      sidebar.dataset.mobileCompact = collapsed ? '0' : '1';
+      sidebar.style.maxHeight = collapsed ? '' : '34vh';
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
