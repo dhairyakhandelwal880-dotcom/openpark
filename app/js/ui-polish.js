@@ -112,6 +112,14 @@
     });
   });
 
+  UIPolish.register('nearMeShortcut', (up) => {
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() !== 'g' || up.isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      const nearBtn = document.getElementById('btn-welcome-nearby') || document.getElementById('btn-my-location');
+      if (nearBtn) nearBtn.click();
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
