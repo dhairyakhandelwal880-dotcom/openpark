@@ -1055,6 +1055,22 @@
     update();
   });
 
+  UIPolish.register('feeVehicleToggleUI', () => {
+    const chips = document.getElementById('calc-duration-chips');
+    const totalBadge = document.getElementById('calc-total-badge');
+    if (!chips || !totalBadge || document.getElementById('vehicle-type-toggle')) return;
+
+    const wrap = document.createElement('div');
+    wrap.id = 'vehicle-type-toggle';
+    wrap.className = 'vehicle-type-toggle';
+    wrap.innerHTML = `
+      <button type="button" class="vehicle-type-btn active" data-veh="car">🚗 Car</button>
+      <button type="button" class="vehicle-type-btn" data-veh="bike">🏍️ Bike</button>
+    `;
+    totalBadge.parentElement.insertBefore(wrap, totalBadge);
+    window.__calcVehicle = 'car';
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
