@@ -422,6 +422,24 @@
     });
   });
 
+  UIPolish.register('themePersistenceSync', () => {
+    const THEME_KEY = 'openpark_theme_pref';
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved === 'dark' || saved === 'light') {
+      document.documentElement.setAttribute('data-theme', saved);
+    }
+    const saveCurrentTheme = () => {
+      setTimeout(() => {
+        const cur = document.documentElement.getAttribute('data-theme');
+        if (cur === 'dark' || cur === 'light') localStorage.setItem(THEME_KEY, cur);
+      }, 40);
+    };
+    const btn = document.getElementById('btn-theme');
+    const wBtn = document.getElementById('btn-welcome-theme');
+    if (btn) btn.addEventListener('click', saveCurrentTheme);
+    if (wBtn) wBtn.addEventListener('click', saveCurrentTheme);
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
