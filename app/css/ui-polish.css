@@ -392,3 +392,8 @@
   line-height: 1.35;
 }
 
+
+#dt-occ-fill {
+  transition: width 380ms var(--spring-curve), background-color 280ms ease;
+}
+
