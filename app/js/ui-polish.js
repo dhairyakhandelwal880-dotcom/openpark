@@ -92,6 +92,14 @@
     });
   });
 
+  UIPolish.register('themeShortcut', (up) => {
+    document.addEventListener('keydown', (e) => {
+      if (e.key.toLowerCase() !== 't' || up.isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      const btn = document.getElementById('btn-theme');
+      if (btn) btn.click();
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
