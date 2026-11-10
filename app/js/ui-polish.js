@@ -1264,6 +1264,20 @@
     saveBtn.insertAdjacentElement('afterend', cpBtn);
   });
 
+  UIPolish.register('hudOverspeedWarning', () => {
+    const speedEl = document.getElementById('hud-speed');
+    const limitEl = document.getElementById('hud-speed-limit');
+    if (!speedEl || !limitEl) return;
+
+    const checkSpeed = () => {
+      const spd = parseInt((speedEl.textContent || '0').replace(/[^0-9]/g, ''), 10) || 0;
+      const lim = parseInt((limitEl.textContent || '50').replace(/[^0-9]/g, ''), 10) || 50;
+      speedEl.classList.toggle('hud-speed-warning', spd > lim);
+    };
+    new MutationObserver(checkSpeed).observe(speedEl, { childList: true, characterData: true, subtree: true });
+    checkSpeed();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
