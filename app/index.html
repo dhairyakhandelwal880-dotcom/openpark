@@ -2310,6 +2310,20 @@
         <button class="chip-btn" data-lot-filter="budget">🏷️ Budget</button>
         <button class="chip-btn" data-lot-filter="covered">🏢 Covered</button>
       </div>
+
+      <!-- AI Map Space & Legal Parking Scanner Bar -->
+      <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 4px;">
+        <button id="btn-ai-scan" class="btn-primary pressable" style="padding: 10px 14px; font-size: 13px; border-radius: 14px; background: linear-gradient(135deg, #0071e3 0%, #5856d6 100%);">
+          <span>🤖</span>
+          <span id="btn-ai-scan-label">AI Scan Map: Find Empty Grounds & Mall Lots</span>
+        </button>
+        <div id="ai-scan-banner" class="contrast-card" style="display: none; padding: 9px 12px; font-size: 12px; justify-content: space-between; align-items: center; gap: 8px; border-color: rgba(0, 113, 227, 0.35);">
+          <span id="ai-scan-summary-text" style="font-weight: 600;">Scanning area...</span>
+          <button id="btn-ai-clear" class="chip-btn pressable" style="padding: 3px 9px; font-size: 11px;">Clear</button>
+        </div>
+        <div id="ai-scan-results" style="display: none; flex-direction: column; gap: 8px;"></div>
+      </div>
+
       <div id="view-explore" style="display: flex; flex-direction: column; gap: 10px;">
         <!-- Card items populated via JavaScript -->
       </div>
@@ -2760,6 +2774,10 @@
       </svg>
     </button>
     <div class="hud-divider"></div>
+    <button class="cluster-btn pressable" id="btn-hud-ai-scan" aria-label="AI Scan Map for Empty Grounds and Mall Lots" title="🤖 AI Scan Visible Map for Empty Grounds, Malls & Legal Bays">
+      <span style="font-size: 15px;">🤖</span>
+    </button>
+    <div class="hud-divider"></div>
     <button class="cluster-btn pressable" id="btn-toggle-layers" aria-label="Toggle map detail layers" title="Cycle Detail Styles (Google Maps Vector / OSM Full Detail / Carto Voyager)">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
     </button>
@@ -3105,13 +3123,17 @@
       </div>
 
       <!-- Bottom Direct CTAs -->
-      <div class="welcome-footer-actions">
+      <div class="welcome-footer-actions" style="grid-template-columns: 1.2fr 1.2fr 0.9fr;">
         <button class="btn-primary pressable" id="btn-welcome-nearby">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-          Find Parking Near Me
+          Park Near Me
+        </button>
+        <button class="btn-primary pressable" id="btn-welcome-ai-scan" style="background: linear-gradient(135deg, #5856d6 0%, #0071e3 100%);">
+          <span>🤖</span>
+          AI Scan Grounds
         </button>
         <button class="btn-secondary pressable" id="btn-welcome-skip-bottom">
-          Open Live Map
+          Open Map
         </button>
       </div>
     </div>
@@ -4877,6 +4899,37 @@
                 'line-color': '#38bdf8',
                 'line-width': 4,
                 'line-opacity': 0.85
+              }
+            });
+          }
+
+          // AI Discovered Parking Polygons (Empty Grounds, Malls, Legal Public Bays)
+          if (!this.map.getSource('ai-scan-polygons')) {
+            this.map.addSource('ai-scan-polygons', {
+              type: 'geojson',
+              data: { type: 'FeatureCollection', features: [] }
+            });
+          }
+          if (!this.map.getLayer('ai-scan-fill')) {
+            this.map.addLayer({
+              id: 'ai-scan-fill',
+              type: 'fill',
+              source: 'ai-scan-polygons',
+              paint: {
+                'fill-color': ['coalesce', ['get', 'color'], '#34c759'],
+                'fill-opacity': 0.24
+              }
+            });
+          }
+          if (!this.map.getLayer('ai-scan-outline')) {
+            this.map.addLayer({
+              id: 'ai-scan-outline',
+              type: 'line',
+              source: 'ai-scan-polygons',
+              paint: {
+                'line-color': ['coalesce', ['get', 'color'], '#34c759'],
+                'line-width': 2.5,
+                'line-dasharray': [2, 1.5]
               }
             });
           }
@@ -8166,9 +8219,226 @@
         }
       };
 
+      // --------------------------------------------------------------------------
+      // 5.10 AI Map Space & Legal Parking Scanner Controller
+      // --------------------------------------------------------------------------
+      const AIScannerEngine = {
+        results: [],
+        aiMarkers: [],
+        isScanning: false,
+
+        init() {
+          const btnSidebar = document.getElementById('btn-ai-scan');
+          const btnHud = document.getElementById('btn-hud-ai-scan');
+          const btnClear = document.getElementById('btn-ai-clear');
+          const btnWelcomeAi = document.getElementById('btn-welcome-ai-scan');
+
+          if (btnSidebar) btnSidebar.onclick = () => this.scanCurrentArea();
+          if (btnHud) btnHud.onclick = () => this.scanCurrentArea();
+          if (btnClear) btnClear.onclick = () => this.clear();
+          if (btnWelcomeAi) {
+            btnWelcomeAi.onclick = () => {
+              WelcomeController.hide();
+              this.scanCurrentArea();
+            };
+          }
+        },
+
+        async scanCurrentArea() {
+          if (this.isScanning) return;
+          this.isScanning = true;
+
+          const labelEl = document.getElementById('btn-ai-scan-label');
+          const hudBtn = document.getElementById('btn-hud-ai-scan');
+          if (labelEl) labelEl.textContent = 'AI Reading Map Geometry...';
+          if (hudBtn) hudBtn.classList.add('active-blue', 'active-pulse');
+
+          const center = MapEngine.map
+            ? MapEngine.map.getCenter()
+            : { lat: STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1], lng: STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0] };
+
+          ParkingApp.showToast('🤖 AI scanning map for empty grounds, malls & legal bays...', 'info', 2500);
+
+          try {
+            const resp = await fetch(`/api/ai/scan-parking?lat=${center.lat.toFixed(5)}&lon=${center.lng.toFixed(5)}&radius_m=1500`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            this.results = data.results || [];
+            this.renderScan(data);
+
+            const sum = data.summary || {};
+            if (this.results.length > 0) {
+              ParkingApp.showToast(
+                `🤖 Found ${sum.total_found} spaces (${sum.empty_grounds || 0} Grounds, ${sum.mall_parkings || 0} Malls, ${sum.legal_bays || 0} Legal Bays)`,
+                'success',
+                4000
+              );
+            } else {
+              ParkingApp.showToast('No extra legal grounds found here — try panning to another area.', 'warning', 3000);
+            }
+          } catch (e) {
+            console.warn('AI Scan error:', e);
+            ParkingApp.showToast('AI Map Scan unavailable right now.', 'error', 2500);
+          } finally {
+            this.isScanning = false;
+            if (labelEl) labelEl.textContent = 'AI Scan Map: Find Empty Grounds & Mall Lots';
+            if (hudBtn) hudBtn.classList.remove('active-pulse');
+          }
+        },
+
+        renderScan(data) {
+          this.clearMarkers();
+          const banner = document.getElementById('ai-scan-banner');
+          const sumText = document.getElementById('ai-scan-summary-text');
+          const listEl = document.getElementById('ai-scan-results');
+          const sum = data.summary || {};
+
+          if (banner && sumText) {
+            banner.style.display = 'flex';
+            sumText.textContent = `🤖 ${sum.total_found || 0} New Spaces • ${sum.empty_grounds || 0} Grounds • ${sum.mall_parkings || 0} Malls • ${sum.legal_bays || 0} Bays`;
+          }
+
+          if (MapEngine.map && MapEngine.map.getSource('ai-scan-polygons')) {
+            MapEngine.map.getSource('ai-scan-polygons').setData(
+              data.geojson || { type: 'FeatureCollection', features: [] }
+            );
+          }
+
+          if (listEl) {
+            listEl.innerHTML = '';
+            listEl.style.display = this.results.length ? 'flex' : 'none';
+
+            this.results.forEach(spot => {
+              // Sidebar card
+              const card = document.createElement('div');
+              card.className = 'lot-card contrast-card pressable';
+              card.style.borderLeft = `3px solid ${spot.color || '#34c759'}`;
+              card.innerHTML = `
+                <div class="lot-card-header">
+                  <div class="lot-title">${spot.badge} ${spot.name}</div>
+                  <div class="lot-dist">${spot.distance_km} km &bull; ${spot.eta_mins}m</div>
+                </div>
+                <div class="lot-meta-row">
+                  <div class="status-pill" style="background: rgba(0,113,227,0.12); color: ${spot.color || 'var(--apple-blue)'};">
+                    <span>AI ${spot.ai_score}% &bull; ~${spot.estimated_spots} bays</span>
+                  </div>
+                  <div class="lot-price">${spot.fee}</div>
+                </div>
+                <div class="lot-footer-sub">${spot.category_label} &bull; ${spot.reason}</div>
+              `;
+              card.onclick = () => this.selectDiscoveredSpot(spot);
+              listEl.appendChild(card);
+
+              // Liquid Glass Map Pin for discovered spot
+              if (MapEngine.map) {
+                const el = document.createElement('div');
+                el.className = 'apple-glass parking-pin pressable';
+                const pulseCls = spot.category === 'empty_ground' ? 'status-orange' : 'status-green';
+                el.innerHTML = `
+                  <div class="status-pulse ${pulseCls}"></div>
+                  <span>${spot.badge} ~${spot.estimated_spots} bays</span>
+                `;
+                el.title = `${spot.name} (${spot.category_label}) • AI Score ${spot.ai_score}%`;
+                el.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  this.selectDiscoveredSpot(spot);
+                });
+                const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+                  .setLngLat([spot.lon, spot.lat])
+                  .addTo(MapEngine.map);
+                this.aiMarkers.push(marker);
+              }
+            });
+          }
+        },
+
+        selectDiscoveredSpot(spot) {
+          if (!spot) return;
+          STATE.selectedLot = {
+            id: spot.id,
+            name: spot.name,
+            address: `${spot.category_label} • ${spot.legality_status}`,
+            lat: spot.lat,
+            lon: spot.lon,
+            capacity: spot.estimated_spots,
+            free_spots: spot.estimated_spots,
+            distance_km: spot.distance_km,
+            eta_mins: spot.eta_mins,
+            price_car: spot.fee,
+            price_note: spot.fee,
+            status: 'Available'
+          };
+
+          MapEngine.setDestinationMarker(STATE.selectedLot);
+          if (MapEngine.map) {
+            MapEngine.map.flyTo({
+              center: [spot.lon, spot.lat],
+              zoom: 17,
+              pitch: 52,
+              bearing: 15,
+              speed: 0.9,
+              curve: 1.4,
+              easing: (t) => 1 - Math.pow(1 - t, 3),
+              essential: true
+            });
+          }
+
+          const drawer = document.getElementById('parking-drawer');
+          if (drawer) {
+            document.getElementById('drawer-lot-name').textContent = `${spot.badge} ${spot.name}`;
+            document.getElementById('drawer-lot-info').textContent = `${spot.eta_mins} mins away • ${spot.distance_km} km • ${spot.legality_status}`;
+            document.getElementById('drawer-lot-rate').innerHTML = `${spot.fee}<small style="font-size:12px; font-weight:400; color:var(--text-secondary)"> est.</small>`;
+            document.getElementById('drawer-lot-spots').textContent = `~${spot.estimated_spots} Est. Bays (${spot.category_label})`;
+            document.getElementById('drawer-lot-spots').style.color = 'var(--text-primary)';
+            document.getElementById('drawer-lot-sub').textContent = spot.reason;
+
+            const pct = spot.ai_score || 80;
+            const offset = 125.6 - (pct / 100) * 125.6;
+            const gaugeBar = document.getElementById('drawer-gauge-bar');
+            const gaugeText = document.getElementById('drawer-gauge-text');
+            if (gaugeBar) {
+              gaugeBar.style.strokeDashoffset = offset;
+              gaugeBar.style.stroke = spot.color || 'var(--apple-green)';
+            }
+            if (gaugeText) gaugeText.textContent = `${pct}%`;
+
+            const badgesEl = document.getElementById('drawer-badges');
+            if (badgesEl) {
+              badgesEl.innerHTML = `
+                <span class="feature-tag">🤖 AI Fit ${spot.ai_score}%</span>
+                <span class="feature-tag">🛣️ Surface: ${spot.surface}</span>
+                ${spot.area_m2 > 0 ? `<span class="feature-tag">📐 ${Math.round(spot.area_m2).toLocaleString()} m²</span>` : ''}
+              `;
+            }
+            drawer.classList.add('open');
+          }
+          if (navigator.vibrate) navigator.vibrate(8);
+        },
+
+        clearMarkers() {
+          this.aiMarkers.forEach(m => m.remove());
+          this.aiMarkers = [];
+        },
+
+        clear() {
+          this.clearMarkers();
+          this.results = [];
+          const banner = document.getElementById('ai-scan-banner');
+          const listEl = document.getElementById('ai-scan-results');
+          const hudBtn = document.getElementById('btn-hud-ai-scan');
+          if (banner) banner.style.display = 'none';
+          if (listEl) { listEl.innerHTML = ''; listEl.style.display = 'none'; }
+          if (hudBtn) hudBtn.classList.remove('active-blue', 'active-pulse');
+          if (MapEngine.map && MapEngine.map.getSource('ai-scan-polygons')) {
+            MapEngine.map.getSource('ai-scan-polygons').setData({ type: 'FeatureCollection', features: [] });
+          }
+        }
+      };
+
       // Bootstrap on DOM ready
       window.addEventListener('DOMContentLoaded', () => {
         ParkingApp.init();
+        AIScannerEngine.init();
       });
     })();
   </script>

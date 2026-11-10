@@ -557,6 +557,53 @@ def test_india_only_place_search():
         assert 68.0 <= item["lon"] <= 97.5
 
 
+def test_ai_parking_scanner_endpoint():
+    """Verify AI Map Space & Legal Parking Scanner discovers non-duplicate spots & scores legality."""
+    from ai_parking_scanner import (
+        compute_polygon_area_m2,
+        classify_and_score_candidate,
+        is_duplicate_of_existing,
+    )
+
+    # 1. Polygon area math (~100m x 100m square near Bengaluru -> ~10,000 m^2)
+    ring = [
+        [77.5900, 12.9700],
+        [77.5909, 12.9700],
+        [77.5909, 12.9709],
+        [77.5900, 12.9709],
+        [77.5900, 12.9700],
+    ]
+    area = compute_polygon_area_m2(ring)
+    assert 8000 <= area <= 12000
+
+    # 2. Private/illegal area must be rejected by AI legality rules
+    assert classify_and_score_candidate({"access": "private", "amenity": "parking"}, "Private Lot", 1500, 200) is None
+    assert classify_and_score_candidate({"landuse": "military"}, "Restricted Zone", 5000, 300) is None
+
+    # 3. Valid empty ground & mall plaza must be scored cleanly
+    ground = classify_and_score_candidate({"landuse": "brownfield", "surface": "unpaved"}, "Open Ground", 1200, 250)
+    assert ground is not None and ground["category"] == "empty_ground" and ground["estimated_spots"] >= 10
+    mall = classify_and_score_candidate({"shop": "mall"}, "Forum Mall", 3000, 400)
+    assert mall is not None and mall["category"] == "mall_parking"
+
+    # 4. Deduplication against existing uploaded parking lots
+    existing = [{"id": 1, "name": "Existing Lot", "lat": 12.9716, "lon": 77.5946}]
+    assert is_duplicate_of_existing(12.97165, 77.59465, "Some Name", existing) is True
+    assert is_duplicate_of_existing(12.9800, 77.6100, "New Ground", existing) is False
+
+    # 5. Live API endpoint (using offline index mode for fast deterministic test)
+    res = client.get("/api/ai/scan-parking?lat=12.9716&lon=77.5946&radius_m=2000&live=false")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ok"
+    assert "summary" in data and "results" in data and "geojson" in data
+    assert data["geojson"]["type"] == "FeatureCollection"
+    for item in data["results"]:
+        assert item["category"] in ("empty_ground", "mall_parking", "legal_bay")
+        assert 35 <= item["ai_score"] <= 98
+        assert is_duplicate_of_existing(item["lat"], item["lon"], item["name"], existing) is False
+
+
 
 
 

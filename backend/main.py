@@ -858,6 +858,33 @@ async def mappls_route_endpoint(
     )
 
 
+@app.get("/api/ai/scan-parking")
+async def ai_scan_parking_endpoint(
+    lat: float = Query(12.9716, ge=-90.0, le=90.0),
+    lon: float = Query(77.5946, ge=-180.0, le=180.0),
+    radius_m: int = Query(1500, ge=300, le=2500),
+    live: bool = Query(True)
+):
+    """
+    AI Map Space & Legal Parking Scanner:
+    Reads map geometry (Overpass OSM + local spatial index) to discover empty
+    grounds, mall plazas, and legal public parking areas NOT already in OpenPark's
+    uploaded dataset.
+    """
+    try:
+        from backend.ai_parking_scanner import scan_map_for_parking
+    except ImportError:
+        from ai_parking_scanner import scan_map_for_parking
+
+    return await scan_map_for_parking(
+        lat=lat,
+        lon=lon,
+        radius_m=radius_m,
+        existing_lots=FALLBACK_LOTS,
+        use_live_overpass=live
+    )
+
+
 # --------------------------------------------------------------------------
 # OSM Overpass REST API (Parking Outlines, Fuel Stations, Toll Plazas)
 # --------------------------------------------------------------------------
