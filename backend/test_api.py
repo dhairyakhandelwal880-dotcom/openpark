@@ -606,6 +606,11 @@ def test_ai_parking_scanner_endpoint():
     assert is_duplicate_of_existing(12.97165, 77.59465, "Some Name", existing) is True
     assert is_duplicate_of_existing(12.9800, 77.6100, "New Ground", existing) is False
 
+    # 4b. Verify frontend entry & modular UI polish assets serve HTTP 200
+    for asset_path in ("/app/index.html", "/app/css/ui-polish.css", "/app/js/ui-polish.js"):
+        r_asset = client.get(asset_path)
+        assert r_asset.status_code == 200, f"Missing UI asset: {asset_path}"
+
     # 5. Live API endpoint (using offline pre-indexed open-grounds + OSM cache for fast deterministic test)
     real_lots = client.get("/api/lots").json().get("lots", [])
     for test_lat, test_lon in ((12.9716, 77.5946), (12.9031, 77.4975)):
