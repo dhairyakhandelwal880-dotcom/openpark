@@ -1115,6 +1115,25 @@
     recalc();
   });
 
+  UIPolish.register('sparklineTooltips', () => {
+    const barsEl = document.getElementById('dt-sparkline-bars');
+    if (!barsEl) return;
+    const hours = ['8 AM', '10 AM', '11 AM', '1 PM', '2 PM', '4 PM', '5 PM', '7 PM', '8 PM', '10 PM', '11 PM', 'Midnight'];
+
+    const attachTitles = () => {
+      const bars = Array.from(barsEl.children);
+      bars.forEach((bar, idx) => {
+        if (bar.dataset.tipBound) return;
+        bar.dataset.tipBound = '1';
+        const pct = parseInt(bar.style.height || '50', 10);
+        const label = hours[idx] || `${8 + idx}:00`;
+        bar.title = `${label}: ~${pct}% typical occupancy`;
+      });
+    };
+    new MutationObserver(attachTitles).observe(barsEl, { childList: true });
+    attachTitles();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
