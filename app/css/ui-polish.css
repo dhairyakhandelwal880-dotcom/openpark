@@ -365,3 +365,12 @@
   #rcpt-timestamp { color: #334155 !important; }
 }
 
+
+@keyframes uiCardEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+#ai-scan-results .lot-card {
+  animation: uiCardEnter 220ms var(--spring-curve) both;
+}
+
