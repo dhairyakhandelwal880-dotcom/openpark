@@ -225,6 +225,51 @@
     syncClear();
   });
 
+  UIPolish.register('searchSpinnerAndKbd', () => {
+    const wrapper = document.querySelector('.search-wrapper');
+    const clearBtn = document.getElementById('search-clear');
+    if (!wrapper || !clearBtn) return;
+
+    const spinner = document.createElement('span');
+    spinner.className = 'search-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+
+    const kbd = document.createElement('span');
+    kbd.className = 'kbd-hint';
+    kbd.textContent = '/';
+    kbd.title = 'Press / to search';
+
+    wrapper.insertBefore(spinner, clearBtn);
+    wrapper.insertBefore(kbd, clearBtn);
+
+    const input = document.getElementById('search-input');
+    if (input) {
+      const updateKbd = () => {
+        kbd.style.display = (document.activeElement === input || input.value.trim().length > 0) ? 'none' : '';
+      };
+      input.addEventListener('focus', updateKbd);
+      input.addEventListener('blur', updateKbd);
+      input.addEventListener('input', updateKbd);
+    }
+
+    const origFetch = window.fetch;
+    let activeSearchReqs = 0;
+    window.fetch = function (...args) {
+      const url = String(args[0] || '');
+      const isPlaceSearch = url.includes('/api/traccar/search') || url.includes('/api/places/search');
+      if (isPlaceSearch) {
+        activeSearchReqs++;
+        wrapper.classList.add('is-loading');
+      }
+      return origFetch.apply(this, args).finally(() => {
+        if (isPlaceSearch) {
+          activeSearchReqs = Math.max(0, activeSearchReqs - 1);
+          if (activeSearchReqs === 0) wrapper.classList.remove('is-loading');
+        }
+      });
+    };
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
