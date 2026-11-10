@@ -1044,6 +1044,17 @@
     });
   });
 
+  UIPolish.register('savedChipCountUpdater', () => {
+    const update = () => {
+      const chip = document.querySelector('#explore-sort-bar [data-sort="saved"]');
+      if (!chip || !window.__openparkFavs) return;
+      const n = window.__openparkFavs.getSet().size;
+      chip.textContent = n > 0 ? `⭐ Saved (${n})` : '⭐ Saved';
+    };
+    window.addEventListener('openpark:favs-updated', update);
+    update();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
