@@ -794,6 +794,15 @@ def enrich_place_details(place: Dict[str, Any]) -> Dict[str, Any]:
     return enriched
 
 
+def is_in_india(lat: float, lon: float, country_code: Optional[str] = None, country: Optional[str] = None) -> bool:
+    """Returns True only if the place lies within India (by country tag and bounding box)."""
+    if country_code and country_code.strip().upper() != "IN":
+        return False
+    if country and "india" not in country.strip().lower():
+        return False
+    return 6.5 <= float(lat) <= 37.5 and 68.0 <= float(lon) <= 97.5
+
+
 async def search_traccar_places(
     query: str,
     lat: float = 12.9716,
@@ -801,8 +810,7 @@ async def search_traccar_places(
 ) -> List[Dict[str, Any]]:
     """
     Universal Google Maps-style place search powered by Photon Geocoder (Komoot/OSM)
-    and OpenStreetMap Nominatim, plus curated landmarks and POIs.
-    Supports global landmarks, local restaurants, cafes, shops, airports, and street addresses.
+    and OpenStreetMap Nominatim, plus curated landmarks and POIs (strictly restricted to India).
     """
     raw_query = query.strip()
     q_lower = raw_query.lower()
@@ -818,6 +826,8 @@ async def search_traccar_places(
         for p in local_matches:
             p_lat = float(p["lat"])
             p_lon = float(p["lon"])
+            if not is_in_india(p_lat, p_lon):
+                continue
             norm_key = f"{p['name'].lower()}_{round(p_lat, 3)}_{round(p_lon, 3)}"
             if norm_key not in seen_names:
                 seen_names.add(norm_key)
@@ -835,10 +845,13 @@ async def search_traccar_places(
     except Exception:
         pass
 
-    # 1. Query Photon Geocoder (Fast OpenStreetMap Search with location proximity bias)
+    # 1. Query Photon Geocoder restricted to India bounding box + proximity bias
     if len(raw_query) >= 2:
         try:
-            photon_url = f"https://photon.komoot.io/api/?q={urllib.parse.quote(raw_query)}&lat={lat}&lon={lon}&limit=10"
+            photon_url = (
+                f"https://photon.komoot.io/api/?q={urllib.parse.quote(raw_query)}"
+                f"&lat={lat}&lon={lon}&bbox=68.0,6.5,97.5,37.5&limit=15"
+            )
             headers = {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "application/json"
@@ -856,6 +869,8 @@ async def search_traccar_places(
 
                         p_lon = float(coords[0])
                         p_lat = float(coords[1])
+                        if not is_in_india(p_lat, p_lon, props.get("countrycode"), props.get("country")):
+                            continue
                         base_name = props.get("name") or props.get("street") or props.get("city")
                         if not base_name:
                             continue
@@ -906,10 +921,13 @@ async def search_traccar_places(
         except Exception:
             pass
 
-    # 2. Query OSM Nominatim if needed or to augment results
+    # 2. Query OSM Nominatim restricted strictly to India (countrycodes=in)
     if len(results) < 5 and len(raw_query) >= 3:
         try:
-            nom_url = f"https://nominatim.openstreetmap.org/search?format=json&q={urllib.parse.quote(raw_query)}&limit=6&addressdetails=1"
+            nom_url = (
+                f"https://nominatim.openstreetmap.org/search?format=json"
+                f"&q={urllib.parse.quote(raw_query)}&countrycodes=in&limit=8&addressdetails=1"
+            )
             headers = {
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "application/json"
@@ -920,6 +938,9 @@ async def search_traccar_places(
                     for item in resp.json():
                         p_lat = float(item["lat"])
                         p_lon = float(item["lon"])
+                        addr_obj = item.get("address") or {}
+                        if not is_in_india(p_lat, p_lon, addr_obj.get("country_code"), addr_obj.get("country")):
+                            continue
                         d_name = item.get("display_name", "").split(",")[0]
                         norm_key = f"{d_name.lower()}_{round(p_lat, 3)}_{round(p_lon, 3)}"
                         if norm_key not in seen_names:

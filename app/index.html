@@ -4266,27 +4266,42 @@
           }
         },
 
-        // Universal Google Maps & Traccar Geocoding / Place Search
+        // Universal India-Only Google Maps & Traccar Geocoding / Place Search
+        isInIndiaPlace(lat, lon, countryCode = null, countryName = null) {
+          const cc = countryCode ? String(countryCode).trim().toUpperCase() : '';
+          if (cc && cc !== 'IN') return false;
+          const cn = countryName ? String(countryName).trim().toLowerCase() : '';
+          if (cn && !cn.includes('india')) return false;
+          const nLat = Number(lat), nLon = Number(lon);
+          return Number.isFinite(nLat) && Number.isFinite(nLon) && nLat >= 6.5 && nLat <= 37.5 && nLon >= 68.0 && nLon <= 97.5;
+        },
+
         async searchTraccar(query, lat, lon) {
-          // 1. Query backend proxy (Photon + Nominatim + Curated Landmarks)
+          // 1. Query backend proxy (Photon + Nominatim + Curated Landmarks, India-filtered)
           try {
             const res = await fetch(`/api/traccar/search?query=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}`);
             if (res.ok) {
               const data = await res.json();
               if (data.results && data.results.length > 0) {
-                return data.results.map(r => enrichPlaceDetails(r));
+                const indiaOnly = data.results.filter(r => this.isInIndiaPlace(r.lat, r.lon));
+                if (indiaOnly.length > 0) return indiaOnly.map(r => enrichPlaceDetails(r));
               }
             }
           } catch (e) {
             console.warn("Traccar search proxy notice", e);
           }
 
-          // 2. Direct browser Photon Geocoder fallback
+          // 2. Direct browser Photon Geocoder fallback (restricted to India bbox)
           try {
-            const photonRes = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}&limit=10`);
+            const photonRes = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}&bbox=68.0,6.5,97.5,37.5&limit=15`);
             if (photonRes.ok) {
               const pData = await photonRes.json();
-              if (pData.features && pData.features.length > 0) {
+              const indiaFeatures = (pData.features || []).filter(f => {
+                const p = f.properties || {};
+                const coords = (f.geometry && f.geometry.coordinates) || [];
+                return this.isInIndiaPlace(coords[1], coords[0], p.countrycode, p.country);
+              });
+              if (indiaFeatures.length > 0) {
                 const getBadge = (val, type) => {
                   const s = `${val || ''} ${type || ''}`.toLowerCase();
                   if (s.includes('cafe') || s.includes('coffee')) return '☕';
@@ -4305,7 +4320,7 @@
                   return '📍';
                 };
 
-                return pData.features.map(f => {
+                return indiaFeatures.map(f => {
                   const p = f.properties || {};
                   const coords = (f.geometry && f.geometry.coordinates) || [lon, lat];
                   const pLon = parseFloat(coords[0]);
@@ -4343,11 +4358,13 @@
             console.warn("Browser Photon fallback notice", e);
           }
 
-          // 3. Direct browser OSM Nominatim fallback
+          // 3. Direct browser OSM Nominatim fallback (strictly countrycodes=in)
           try {
-            const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1`);
+            const nomRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=8&addressdetails=1`);
             if (nomRes.ok) {
-              const nomData = await nomRes.json();
+              const nomData = (await nomRes.json()).filter(item =>
+                this.isInIndiaPlace(item.lat, item.lon, item.address?.country_code, item.address?.country)
+              );
               if (nomData && nomData.length > 0) {
                 return nomData.map(item => enrichPlaceDetails({
                   name: item.display_name.split(',')[0],

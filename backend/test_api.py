@@ -543,6 +543,20 @@ def test_geolocate_endpoint():
     assert isinstance(data["lon"], (int, float))
 
 
+def test_india_only_place_search():
+    """Verify place search restricts returned coordinates strictly to India."""
+    from traccar_service import is_in_india
+    assert is_in_india(12.9716, 77.5946, "IN", "India") is True
+    assert is_in_india(51.5074, -0.1278, "GB", "United Kingdom") is False
+    assert is_in_india(47.5316, 21.6273, "HU", "Hungary") is False
+
+    res = client.get("/api/traccar/search?query=Debrecan")
+    assert res.status_code == 200
+    for item in res.json().get("results", []):
+        assert 6.5 <= item["lat"] <= 37.5
+        assert 68.0 <= item["lon"] <= 97.5
+
+
 
 
 
