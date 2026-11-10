@@ -575,6 +575,19 @@
     new MutationObserver(applyFilter).observe(banner, { attributes: true, attributeFilter: ['style'] });
   });
 
+  UIPolish.register('aiMapPolygonFilterSync', (up) => {
+    window.addEventListener('openpark:ai-filter-changed', (e) => {
+      const cat = e.detail || 'all';
+      const ctx = up.getCtx();
+      const map = ctx.MapEngine && ctx.MapEngine.map;
+      if (!map) return;
+      const expr = cat === 'all' ? null : ['==', ['get', 'category'], cat];
+      ['ai-scan-fill', 'ai-scan-outline'].forEach((layerId) => {
+        if (map.getLayer(layerId)) map.setFilter(layerId, expr);
+      });
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
