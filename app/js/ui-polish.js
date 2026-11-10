@@ -1197,6 +1197,35 @@
     new MutationObserver(syncMapsHref).observe(addrEl, { childList: true, characterData: true, subtree: true });
   });
 
+  UIPolish.register('holdSpotCountdownTimer', () => {
+    const holdBtn = document.getElementById('btn-hold-spot');
+    const holdText = document.getElementById('btn-hold-spot-text');
+    if (!holdBtn || !holdText) return;
+
+    let timer = null;
+    let remainingSec = 0;
+
+    holdBtn.addEventListener('click', () => {
+      setTimeout(() => {
+        if ((holdText.textContent || '').toLowerCase().includes('held') || remainingSec === 0) {
+          remainingSec = 15 * 60;
+          if (timer) clearInterval(timer);
+          timer = setInterval(() => {
+            remainingSec--;
+            if (remainingSec <= 0) {
+              clearInterval(timer);
+              holdText.textContent = '⏳ Hold Spot (15m)';
+              return;
+            }
+            const mm = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+            const ss = String(remainingSec % 60).padStart(2, '0');
+            holdText.textContent = `✅ Held (${mm}:${ss})`;
+          }, 1000);
+        }
+      }, 60);
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
