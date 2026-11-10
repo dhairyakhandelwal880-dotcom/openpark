@@ -1,4 +1,4 @@
-/* OpenPark UI & UX Enhancements Module */
+/* OpenPark UI & UX Enhancements Module v2.0 — Apple Liquid Glass + India-First Mobility */
 (() => {
   const UIPolish = {
     getCtx() {
