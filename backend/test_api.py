@@ -613,18 +613,20 @@ def test_ai_parking_scanner_endpoint():
         r_asset = client.get(asset_path)
         assert r_asset.status_code == 200, f"Missing UI asset: {asset_path}"
 
-    # 5. Live API endpoint (using offline pre-indexed open-grounds + OSM cache for fast deterministic test)
+    # 5. Live API endpoint (strictly <= 1 km / 1000m radius + pre-indexed small ground checks)
     real_lots = client.get("/api/lots").json().get("lots", [])
     for test_lat, test_lon in ((12.9716, 77.5946), (12.9031, 77.4975)):
-        res = client.get(f"/api/ai/scan-parking?lat={test_lat}&lon={test_lon}&radius_m=2000&live=false")
+        res = client.get(f"/api/ai/scan-parking?lat={test_lat}&lon={test_lon}&radius_m=1000&live=false")
         assert res.status_code == 200
         data = res.json()
         assert data["status"] == "ok"
+        assert data["radius_m"] <= 1000
         assert "summary" in data and "results" in data and "geojson" in data
         assert data["geojson"]["type"] == "FeatureCollection"
         assert data["summary"]["empty_grounds"] >= 1
         assert data["elapsed_ms"] < 200.0
         for item in data["results"]:
+            assert item["distance_km"] <= 1.0
             assert item["category"] in ("empty_ground", "mall_parking", "legal_bay")
             assert 35 <= item["ai_score"] <= 98
             assert is_duplicate_of_existing(item["lat"], item["lon"], item["name"], real_lots) is False

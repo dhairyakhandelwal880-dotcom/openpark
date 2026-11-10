@@ -2315,8 +2315,8 @@
       <!-- AI Map Space & Legal Parking Scanner Bar -->
       <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 4px;">
         <button id="btn-ai-scan" class="btn-primary pressable" style="padding: 10px 14px; font-size: 13px; border-radius: 14px; background: linear-gradient(135deg, #0071e3 0%, #5856d6 100%);">
-          <span>🤖</span>
-          <span id="btn-ai-scan-label">AI Scan Map: Find Empty Grounds & Mall Lots</span>
+          <span>🅿️</span>
+          <span id="btn-ai-scan-label">Find Parking &amp; AI Scan (≤1 km)</span>
         </button>
         <div id="ai-scan-banner" class="contrast-card" style="display: none; padding: 9px 12px; font-size: 12px; justify-content: space-between; align-items: center; gap: 8px; border-color: rgba(0, 113, 227, 0.35);">
           <span id="ai-scan-summary-text" style="font-weight: 600;">Scanning area...</span>
@@ -3173,7 +3173,7 @@
         DEFAULT_COORDS: savedDebrecan ? [savedDebrecan.lng, savedDebrecan.lat] : [77.49750, 12.90310],
         INITIAL_ZOOM: 17.5,
         PITCH_3D: 42,
-        RADIUS_METERS: 3500,
+        RADIUS_METERS: 1000,
         WS_RECONNECT_MS: 3000
       };
 
@@ -4216,18 +4216,22 @@
       // --------------------------------------------------------------------------
       const API = {
         async getNearbyLots(lat, lon, radius = CONFIG.RADIUS_METERS) {
+          const maxMeters = Math.min(Number(radius) || 1000, 1000);
           try {
-            const res = await fetch(`/lots/nearby?lat=${lat}&lon=${lon}&radius_m=${radius}`);
+            const res = await fetch(`/lots/nearby?lat=${lat}&lon=${lon}&radius_m=${maxMeters}`);
             if (!res.ok) throw new Error("Backend nearby lots offline");
             const data = await res.json();
-            return (data.lots || data).map(lot => API.normalizeLot(lot));
+            return (data.lots || data)
+              .map(lot => API.normalizeLot(lot, lat, lon))
+              .filter(lot => (parseFloat(lot.distance_km) * 1000) <= maxMeters);
           } catch (err) {
             console.warn("OpenPark: Using seed dataset fallback", err);
-            return API.generateFallbackLots(lat, lon);
+            return API.generateFallbackLots(lat, lon)
+              .filter(lot => (parseFloat(lot.distance_km) * 1000) <= maxMeters);
           }
         },
 
-        normalizeLot(raw) {
+        normalizeLot(raw, refLat = null, refLon = null) {
           const id = raw.id;
           const name = raw.name || `Parking Lot #${id}`;
           const lat = parseFloat(raw.lat || (raw.coordinates ? raw.coordinates[1] : 12.9716));
@@ -4240,6 +4244,12 @@
           if (free <= 5 || ratio < 0.10) status = 'Full';
           else if (ratio < 0.30) status = 'Filling up';
 
+          let distMeters = raw.distance_m != null ? Number(raw.distance_m) : null;
+          if ((distMeters === null || !Number.isFinite(distMeters)) && refLat != null && refLon != null) {
+            distMeters = calculateDistanceMeters(Number(refLat), Number(refLon), lat, lon);
+          }
+          const distKm = distMeters !== null ? (distMeters / 1000).toFixed(2) : (0.4 + (id % 5) * 0.15).toFixed(2);
+
           return {
             id: id,
             name: name,
@@ -4251,7 +4261,7 @@
             status: status,
             price_car: raw.pricing_car || (raw.price_hourly ? `₹${raw.price_hourly}` : '₹40'),
             price_bike: raw.pricing_bike || '₹15',
-            distance_km: raw.distance_m ? (raw.distance_m / 1000).toFixed(1) : (0.4 + (id % 5) * 0.3).toFixed(1),
+            distance_km: distKm,
             eta_mins: Math.ceil(2 + (id % 4) * 2),
             updated_mins: 1 + (id % 6),
             ev_chargers: raw.ev_chargers || 0
@@ -5402,7 +5412,10 @@
             btn.addEventListener('click', () => {
               document.querySelectorAll('.filter-chip-row .chip-btn').forEach(b => b.classList.remove('active'));
               btn.classList.add('active');
-              if (btn.dataset.category) {
+              if (btn.dataset.category === 'Parking') {
+                UIController.switchTab('explore');
+                AIScannerEngine.scanCurrentArea();
+              } else if (btn.dataset.category) {
                 SearchEngine.quickSearch(btn.dataset.category);
               } else if (btn.dataset.filter) {
                 STATE.activeFilter = btn.dataset.filter;
@@ -6610,7 +6623,7 @@
               nearbyContainer.innerHTML = '';
               const topLots = STATE.lots.slice(0, 4);
               if (topLots.length === 0) {
-                nearbyContainer.innerHTML = '<div style="font-size:12px;color:var(--color-text-secondary);padding:6px 0;">No parking recorded within 3 km.</div>';
+                nearbyContainer.innerHTML = '<div style="font-size:12px;color:var(--color-text-secondary);padding:6px 0;">No parking recorded within 1 km.</div>';
               } else {
                 topLots.forEach(lot => {
                   const row = document.createElement('div');
@@ -8222,7 +8235,7 @@
 
           const labelEl = document.getElementById('btn-ai-scan-label');
           const hudBtn = document.getElementById('btn-hud-ai-scan');
-          if (labelEl) labelEl.textContent = 'AI Reading Map Geometry...';
+          if (labelEl) labelEl.textContent = 'Finding Parking & 1km Grounds...';
           if (hudBtn) hudBtn.classList.add('active-blue', 'active-pulse');
 
           const center = (Number.isFinite(overrideLat) && Number.isFinite(overrideLon))
@@ -8231,20 +8244,64 @@
               ? MapEngine.map.getCenter()
               : { lat: STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1], lng: STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0] });
 
-          ParkingApp.showToast('🤖 AI scanning map for empty grounds, malls & legal bays...', 'info', 2500);
+          ParkingApp.showToast('🅿️ Finding parking & small grounds within 1 km...', 'info', 2500);
 
           try {
-            const resp = await fetch(`/api/ai/scan-parking?lat=${center.lat.toFixed(5)}&lon=${center.lng.toFixed(5)}&radius_m=1500`);
+            const [, resp] = await Promise.all([
+              ParkingApp.loadNearbyLots(center.lat, center.lng).catch(() => {}),
+              fetch(`/api/ai/scan-parking?lat=${center.lat.toFixed(5)}&lon=${center.lng.toFixed(5)}&radius_m=1000`)
+            ]);
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const data = await resp.json();
-            this.results = data.results || [];
+
+            // Merge live OpenPark lots within 1 km into the unified discovery list
+            const aiList = (data.results || []).filter(r => Number(r.distance_km) <= 1.0);
+            const nearbyLots = (STATE.lots || []).filter(l => (parseFloat(l.distance_km) || 99) <= 1.0);
+            nearbyLots.forEach(lot => {
+              const dup = aiList.some(r => calculateDistanceMeters(lot.lat, lot.lon, r.lat, r.lon) < 80);
+              if (!dup) {
+                aiList.push({
+                  id: `lot-${lot.id}`,
+                  _lotId: lot.id,
+                  name: lot.name,
+                  category: 'legal_bay',
+                  category_label: 'OpenPark Live Lot',
+                  badge: '🅿️',
+                  color: '#34c759',
+                  lat: lot.lat,
+                  lon: lot.lon,
+                  distance_km: Number(parseFloat(lot.distance_km).toFixed(2)),
+                  eta_mins: lot.eta_mins || 2,
+                  area_m2: 0,
+                  estimated_spots: lot.free_spots || 15,
+                  ai_score: 94,
+                  legality_status: 'Verified OpenPark Partner',
+                  surface: 'paved',
+                  fee: lot.price_car ? `${lot.price_car}/hr` : 'Metered',
+                  reason: `Live bays: ${lot.free_spots} free within 1 km`,
+                  has_polygon: false
+                });
+              }
+            });
+            aiList.sort((a, b) => (a.distance_km - b.distance_km) || (b.ai_score - a.ai_score));
+
+            data.results = aiList;
+            data.summary = {
+              ...(data.summary || {}),
+              total_found: aiList.length,
+              empty_grounds: aiList.filter(r => r.category === 'empty_ground').length,
+              mall_parkings: aiList.filter(r => r.category === 'mall_parking').length,
+              legal_bays: aiList.filter(r => r.category === 'legal_bay').length,
+            };
+
+            this.results = aiList;
             this.renderScan(data);
 
             const sum = data.summary || {};
             const timing = data.elapsed_ms ? ` in ${Math.round(data.elapsed_ms)}ms` : '';
             if (this.results.length > 0) {
               ParkingApp.showToast(
-                `🤖 Found ${sum.total_found} spaces${timing} (${sum.empty_grounds || 0} Grounds, ${sum.mall_parkings || 0} Malls, ${sum.legal_bays || 0} Bays)`,
+                `🅿️ Found ${sum.total_found} within 1 km${timing} (${sum.empty_grounds || 0} Small Grounds, ${sum.mall_parkings || 0} Malls, ${sum.legal_bays || 0} Bays)`,
                 'success',
                 4000
               );
@@ -8253,14 +8310,14 @@
                 MapEngine.map.flyTo({ center: [best.lon, best.lat], zoom: 16.2, duration: 700 });
               }
             } else {
-              ParkingApp.showToast('No extra legal grounds found here — try panning to another area.', 'warning', 3000);
+              ParkingApp.showToast('No parking or small ground found within 1 km here — try panning.', 'warning', 3000);
             }
           } catch (e) {
             console.warn('AI Scan error:', e);
-            ParkingApp.showToast('AI Map Scan unavailable right now.', 'error', 2500);
+            ParkingApp.showToast('Find Parking & AI Scan unavailable right now.', 'error', 2500);
           } finally {
             this.isScanning = false;
-            if (labelEl) labelEl.textContent = 'AI Scan Map: Find Empty Grounds & Mall Lots';
+            if (labelEl) labelEl.textContent = 'Find Parking & AI Scan (≤1 km)';
             if (hudBtn) hudBtn.classList.remove('active-pulse');
           }
         },
@@ -8274,7 +8331,7 @@
 
           if (banner && sumText) {
             banner.style.display = 'flex';
-            sumText.textContent = `🤖 ${sum.total_found || 0} New Spaces • ${sum.empty_grounds || 0} Grounds • ${sum.mall_parkings || 0} Malls • ${sum.legal_bays || 0} Bays`;
+            sumText.textContent = `🅿️ ${sum.total_found || 0} Within 1 km • ${sum.empty_grounds || 0} Grounds • ${sum.mall_parkings || 0} Malls • ${sum.legal_bays || 0} Bays`;
           }
 
           if (MapEngine.map && MapEngine.map.getSource('ai-scan-polygons')) {
@@ -8333,6 +8390,10 @@
 
         selectDiscoveredSpot(spot) {
           if (!spot) return;
+          if (spot._lotId) {
+            ParkingApp.selectLot(spot._lotId);
+            return;
+          }
           STATE.selectedLot = {
             id: spot.id,
             name: spot.name,

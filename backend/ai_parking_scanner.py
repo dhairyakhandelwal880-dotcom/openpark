@@ -715,7 +715,7 @@ async def _fetch_photon_spaces(lat: float, lon: float, radius_m: int) -> List[Di
         "Accept": "application/json",
     }
     elements: List[Dict[str, Any]] = []
-    max_search_r = max(float(radius_m), 2500.0)
+    max_search_r = float(min(int(radius_m), 1000))
 
     try:
         async with httpx.AsyncClient(timeout=1.9, headers=headers) as client:
@@ -857,7 +857,7 @@ def _load_local_candidates(lat: float, lon: float, radius_m: int) -> List[Dict[s
 
     try:
         from places_db import search_places_nearby
-        nearby = search_places_nearby(lat=lat, lon=lon, radius_km=max(1.2, (radius_m * 1.6) / 1000.0), limit=120)
+        nearby = search_places_nearby(lat=lat, lon=lon, radius_km=radius_m / 1000.0, limit=120)
         for p in nearby:
             name = p.get("name") or ""
             if _has_non_parking_name(name):
@@ -895,7 +895,7 @@ def _load_local_candidates(lat: float, lon: float, radius_m: int) -> List[Dict[s
                 continue
             c_lat = float(item.get("lat", 0.0))
             c_lon = float(item.get("lon", 0.0))
-            if haversine_m(lat, lon, c_lat, c_lon) > max(radius_m, 2500):
+            if haversine_m(lat, lon, c_lat, c_lon) > radius_m:
                 continue
             cat_l = (item.get("category") or "").lower()
             name_l = name.lower()
@@ -1039,17 +1039,17 @@ def _process_elements(
 async def scan_map_for_parking(
     lat: float,
     lon: float,
-    radius_m: int = 1500,
+    radius_m: int = 1000,
     existing_lots: Optional[List[Dict[str, Any]]] = None,
     use_live_overpass: bool = True,
 ) -> Dict[str, Any]:
     """
-    Fast (< 2.5s uncached, < 5ms cached) AI map scanner with pre-indexed empty-ground
-    polygons, live OSM CGImap + Photon geometry, unbuilt-plot detection, and
-    automatic radius expansion.
+    Fast (< 2s uncached, < 5ms cached) AI map scanner strictly scoped within 1 km
+    (<= 1000m) to discover small 3-4 car unused grounds, mall plazas, and legal bays.
     """
     t0 = time.perf_counter()
-    cache_key = (round(lat, 3), round(lon, 3), int(radius_m))
+    effective_radius = max(200, min(int(radius_m), 1000))
+    cache_key = (round(lat, 3), round(lon, 3), effective_radius)
     now = time.time()
     if use_live_overpass and cache_key in _SCAN_CACHE:
         cached_ts, cached_payload = _SCAN_CACHE[cache_key]
@@ -1058,12 +1058,12 @@ async def scan_map_for_parking(
 
     existing = existing_lots or []
     scan_source = "osm_local_ai_index"
-    elements = _load_local_candidates(lat, lon, radius_m)
+    elements = _load_local_candidates(lat, lon, effective_radius)
 
     if use_live_overpass:
         live_els, photon_els = await asyncio.gather(
             _fetch_osm_cgimap_fast(lat, lon),
-            _fetch_photon_spaces(lat, lon, radius_m),
+            _fetch_photon_spaces(lat, lon, effective_radius),
         )
         if live_els:
             elements = live_els + elements
@@ -1071,16 +1071,7 @@ async def scan_map_for_parking(
         if photon_els:
             elements.extend(photon_els)
 
-    discovered, geojson_features, excluded_existing = _process_elements(elements, lat, lon, radius_m, existing)
-
-    # Auto-expand local radius up to 4.5 km if fewer than 3 spots or zero grounds found nearby
-    effective_radius = radius_m
-    if len(discovered) < 3 or not any(d["category"] == "empty_ground" for d in discovered):
-        effective_radius = max(radius_m, 4500)
-        expanded_els = _load_local_candidates(lat, lon, effective_radius)
-        discovered, geojson_features, excluded_existing = _process_elements(
-            elements + expanded_els, lat, lon, effective_radius, existing
-        )
+    discovered, geojson_features, excluded_existing = _process_elements(elements, lat, lon, effective_radius, existing)
 
     # Sort primarily by high AI score, breaking ties by shortest distance
     discovered.sort(key=lambda x: (-x["ai_score"], x["distance_km"]))

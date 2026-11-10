@@ -872,7 +872,7 @@ async def mappls_route_endpoint(
 async def ai_scan_parking_endpoint(
     lat: float = Query(12.9716, ge=-90.0, le=90.0),
     lon: float = Query(77.5946, ge=-180.0, le=180.0),
-    radius_m: int = Query(1500, ge=300, le=2500),
+    radius_m: int = Query(1000, ge=250, le=1000),
     live: bool = Query(True)
 ):
     """

@@ -595,7 +595,7 @@
 
     new MutationObserver(() => {
       const txt = (labelEl.textContent || '').toLowerCase();
-      if (txt.includes('reading map') && !resultsEl.querySelector('.lot-card')) {
+      if ((txt.includes('reading map') || txt.includes('finding') || txt.includes('scanning')) && !resultsEl.querySelector('.lot-card')) {
         resultsEl.style.display = 'flex';
         resultsEl.innerHTML = [1, 2, 3].map(() => `
           <div class="ui-skeleton-card" aria-hidden="true">
@@ -875,7 +875,7 @@
       const ctx = up.getCtx();
       const aiCount = (ctx.AIScannerEngine && Array.isArray(ctx.AIScannerEngine.results)) ? ctx.AIScannerEngine.results.length : 0;
       const lotCount = lotsCountEl ? parseInt(lotsCountEl.textContent || '0', 10) : 0;
-      tabExplore.textContent = aiCount > 0 ? `Explore (${aiCount} AI)` : lotCount > 0 ? `Explore (${lotCount})` : 'Explore';
+      tabExplore.textContent = aiCount > 0 ? `Explore (${aiCount} • ≤1km)` : lotCount > 0 ? `Explore (${lotCount})` : 'Explore';
     };
 
     if (aiList) new MutationObserver(updateTabLabel).observe(aiList, { childList: true });
@@ -939,7 +939,7 @@
     btnRescan.type = 'button';
     btnRescan.className = 'apple-glass pressable';
     btnRescan.style.cssText = 'position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:22;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:600;color:var(--apple-blue);display:none;align-items:center;gap:6px;cursor:pointer;';
-    btnRescan.innerHTML = '<span>🔄</span><span>Re-scan Empty Grounds Here</span>';
+    btnRescan.innerHTML = '<span>🔄</span><span>Find Parking &amp; Grounds (1km)</span>';
     document.body.appendChild(btnRescan);
 
     let lastScanCenter = null;
