@@ -711,6 +711,84 @@
     window.__exploreSortMode = 'distance';
   });
 
+  UIPolish.register('exploreSortLogic', (up) => {
+    const bar = document.getElementById('explore-sort-bar');
+    const viewExplore = document.getElementById('view-explore');
+    if (!bar || !viewExplore) return;
+
+    const parseCardMetrics = (card) => {
+      const distText = (card.querySelector('.lot-dist')?.textContent || '999').split('km')[0];
+      const spotsText = card.querySelector('.status-pill strong')?.textContent || '0';
+      const priceText = (card.querySelector('.lot-price')?.textContent || '999').replace(/[^0-9]/g, '');
+      const title = (card.querySelector('.lot-title')?.textContent || '').trim();
+      return {
+        dist: parseFloat(distText) || 999,
+        spots: parseInt(spotsText, 10) || 0,
+        price: parseInt(priceText, 10) || 999,
+        title
+      };
+    };
+
+    let sortingNow = false;
+    const applySortAndFavs = () => {
+      if (sortingNow) return;
+      sortingNow = true;
+      try {
+        const mode = window.__exploreSortMode || 'distance';
+        const cards = Array.from(viewExplore.querySelectorAll('.lot-card'));
+        if (!cards.length) return;
+
+        const ctx = up.getCtx();
+        const lots = (ctx.STATE && ctx.STATE.lots) || [];
+        cards.forEach((card) => {
+          const title = (card.querySelector('.lot-title')?.textContent || '').trim();
+          const matched = lots.find((l) => l.name === title);
+          if (matched) card.dataset.lotId = String(matched.id);
+        });
+
+        cards.sort((a, b) => {
+          const ma = parseCardMetrics(a);
+          const mb = parseCardMetrics(b);
+          if (mode === 'spots') return mb.spots - ma.spots;
+          if (mode === 'price') return ma.price - mb.price;
+          return ma.dist - mb.dist;
+        });
+        cards.forEach((c) => {
+          const isFav = window.__openparkFavs && c.dataset.lotId ? window.__openparkFavs.has(c.dataset.lotId) : false;
+          c.style.display = (mode === 'saved' && !isFav) ? 'none' : '';
+          viewExplore.appendChild(c);
+        });
+
+        let emptySaved = document.getElementById('saved-empty-msg');
+        if (mode === 'saved' && cards.every((c) => c.style.display === 'none')) {
+          if (!emptySaved) {
+            emptySaved = document.createElement('div');
+            emptySaved.id = 'saved-empty-msg';
+            emptySaved.style.cssText = 'text-align:center;padding:28px 12px;color:var(--text-secondary);font-size:13px;';
+            emptySaved.innerHTML = '⭐ No saved parking lots yet.<br><span style="font-size:11.5px;">Tap the star on any lot card to bookmark it.</span>';
+            viewExplore.appendChild(emptySaved);
+          }
+        } else if (emptySaved) {
+          emptySaved.remove();
+        }
+      } finally {
+        sortingNow = false;
+      }
+    };
+
+    bar.addEventListener('click', (e) => {
+      const chip = e.target.closest('.explore-sort-chip');
+      if (!chip) return;
+      bar.querySelectorAll('.explore-sort-chip').forEach((c) => c.classList.remove('active'));
+      chip.classList.add('active');
+      window.__exploreSortMode = chip.getAttribute('data-sort') || 'distance';
+      applySortAndFavs();
+    });
+
+    new MutationObserver(applySortAndFavs).observe(viewExplore, { childList: true });
+    window.addEventListener('openpark:favs-updated', applySortAndFavs);
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
