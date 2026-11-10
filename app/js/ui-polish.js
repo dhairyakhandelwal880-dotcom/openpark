@@ -691,6 +691,26 @@
     };
   });
 
+  UIPolish.register('exploreSortBarUI', () => {
+    const viewExplore = document.getElementById('view-explore');
+    if (!viewExplore || document.getElementById('explore-sort-bar')) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'explore-sort-bar';
+    bar.className = 'explore-sort-bar';
+    bar.setAttribute('role', 'group');
+    bar.setAttribute('aria-label', 'Sort parking lots');
+    bar.innerHTML = `
+      <span class="explore-sort-label">Sort:</span>
+      <button type="button" class="explore-sort-chip active" data-sort="distance">Nearest</button>
+      <button type="button" class="explore-sort-chip" data-sort="spots">Most Free</button>
+      <button type="button" class="explore-sort-chip" data-sort="price">Lowest Price</button>
+      <button type="button" class="explore-sort-chip" data-sort="saved">⭐ Saved</button>
+    `;
+    viewExplore.insertAdjacentElement('beforebegin', bar);
+    window.__exploreSortMode = 'distance';
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
