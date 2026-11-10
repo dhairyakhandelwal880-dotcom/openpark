@@ -607,6 +607,21 @@
     }).observe(labelEl, { childList: true, characterData: true, subtree: true });
   });
 
+  UIPolish.register('mapLegendPill', () => {
+    if (document.getElementById('map-legend-pill')) return;
+    const legend = document.createElement('div');
+    legend.id = 'map-legend-pill';
+    legend.className = 'apple-glass map-legend-pill';
+    legend.setAttribute('role', 'region');
+    legend.setAttribute('aria-label', 'Parking polygon legend');
+    legend.innerHTML = `
+      <span data-legend-cat="empty_ground" style="cursor:pointer;" title="Filter Empty Grounds"><span class="legend-dot" style="background:#ff9500;"></span>Empty Ground</span>
+      <span data-legend-cat="mall_parking" style="cursor:pointer;" title="Filter Mall Plazas"><span class="legend-dot" style="background:#0071e3;"></span>Mall Lot</span>
+      <span data-legend-cat="legal_bay" style="cursor:pointer;" title="Filter Legal Bays"><span class="legend-dot" style="background:#34c759;"></span>Legal Bay</span>
+    `;
+    document.body.appendChild(legend);
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
