@@ -78,6 +78,20 @@
     });
   });
 
+  UIPolish.register('slashSearchShortcut', (up) => {
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== '/' || up.isTyping(e.target) || e.metaKey || e.ctrlKey) return;
+      e.preventDefault();
+      const welcome = document.getElementById('welcome-overlay');
+      const targetId = (welcome && !welcome.classList.contains('hidden')) ? 'welcome-search-input' : 'search-input';
+      const el = document.getElementById(targetId);
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
