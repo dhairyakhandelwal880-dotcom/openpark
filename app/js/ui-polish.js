@@ -883,6 +883,35 @@
     if (lotsCountEl) new MutationObserver(updateTabLabel).observe(lotsCountEl, { childList: true, characterData: true, subtree: true });
   });
 
+  UIPolish.register('aiCardQuickLinks', (up) => {
+    const resultsEl = document.getElementById('ai-scan-results');
+    if (!resultsEl) return;
+
+    const enhanceAiCards = () => {
+      const ctx = up.getCtx();
+      const spots = (ctx.AIScannerEngine && ctx.AIScannerEngine.results) || [];
+      resultsEl.querySelectorAll('.lot-card').forEach((card, idx) => {
+        const spot = spots[idx];
+        if (!spot || card.querySelector('.ai-card-actions')) return;
+        const bar = document.createElement('div');
+        bar.className = 'ai-card-actions';
+        bar.style.cssText = 'display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;';
+        bar.innerHTML = `
+          <a href="https://maps.google.com/?q=${spot.lat},${spot.lon}" target="_blank" rel="noopener" class="recent-search-chip" style="text-decoration:none;">🗺️ Maps</a>
+          <button type="button" class="recent-search-chip" data-copy-coord="${spot.lat.toFixed(5)}, ${spot.lon.toFixed(5)}">📋 Copy GPS</button>
+        `;
+        bar.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const cp = e.target.closest('[data-copy-coord]');
+          if (cp) up.copyText(cp.getAttribute('data-copy-coord'), `Copied ${spot.name} GPS`);
+        });
+        card.appendChild(bar);
+      });
+    };
+
+    new MutationObserver(enhanceAiCards).observe(resultsEl, { childList: true });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
