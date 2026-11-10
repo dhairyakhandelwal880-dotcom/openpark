@@ -346,6 +346,40 @@
     render();
   });
 
+  UIPolish.register('welcomeRecentPills', () => {
+    const box = document.querySelector('.welcome-search-box');
+    const wInput = document.getElementById('welcome-search-input');
+    if (!box || !wInput) return;
+
+    const row = document.createElement('div');
+    row.className = 'recent-searches-row';
+    row.id = 'welcome-recent-row';
+    box.appendChild(row);
+
+    const render = () => {
+      const items = (window.__openparkRecent && window.__openparkRecent.load()) || [];
+      if (!items.length) {
+        row.style.display = 'none';
+        row.innerHTML = '';
+        return;
+      }
+      row.style.display = 'flex';
+      row.innerHTML = '<span style="font-size:11px;color:var(--text-secondary);font-weight:600;">Recent:</span>' +
+        items.slice(0, 3).map((q) => `<button type="button" class="recent-search-chip" data-wq="${q.replace(/"/g, '&quot;')}">🕒 ${q}</button>`).join('');
+    };
+
+    row.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-wq]');
+      if (!btn) return;
+      wInput.value = btn.getAttribute('data-wq');
+      wInput.focus();
+      wInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    window.addEventListener('openpark:recent-updated', render);
+    render();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
