@@ -85,3 +85,16 @@
   background: var(--text-contrast-subtle);
 }
 
+.lot-card {
+  transition: transform var(--transition-standard), box-shadow var(--transition-standard), border-color var(--transition-standard);
+}
+.lot-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 113, 227, 0.34);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+}
+.lot-card.is-selected {
+  border-color: var(--apple-blue) !important;
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.22), 0 8px 20px rgba(0, 113, 227, 0.12);
+}
+
