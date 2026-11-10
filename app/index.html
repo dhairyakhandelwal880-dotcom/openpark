@@ -2662,10 +2662,10 @@
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
             <span>Map Style & Detail Level</span>
             <select id="select-map-style" class="styled-input" style="width: 100%;">
+              <option value="google-hybrid" selected>Google Maps Satellite Hybrid (Default)</option>
+              <option value="google-roadmap">Google Maps Full Detail Retina (Roads, Buildings, PGs &amp; Shops)</option>
+              <option value="google-traffic">Google Maps Live Traffic &amp; Congestion Flow</option>
               <option value="ola-maps">Ola Maps India Vector (api.olamaps.io)</option>
-              <option value="google-roadmap">Google Maps Full Detail Retina (Roads, Buildings, PGs & Shops) (Default)</option>
-              <option value="google-traffic">Google Maps Live Traffic & Congestion Flow</option>
-              <option value="google-hybrid">Google Maps Satellite Hybrid</option>
               <option value="openfreemap-vector">OpenFreeMap Ultra-Detail Vector</option>
               <option value="osm-standard">OpenStreetMap Standard</option>
               <option value="carto-voyager">Carto Voyager Retina @2x</option>
@@ -2779,7 +2779,7 @@
       <span style="font-size: 15px;">🤖</span>
     </button>
     <div class="hud-divider"></div>
-    <button class="cluster-btn pressable" id="btn-toggle-layers" aria-label="Toggle map detail layers" title="Cycle Detail Styles (Google Maps Vector / OSM Full Detail / Carto Voyager)">
+    <button class="cluster-btn pressable" id="btn-toggle-layers" aria-label="Switch between Satellite Hybrid and GMap Full Detail Retina" title="Switch Map: Google Satellite Hybrid ⇄ GMap Full Detail Retina">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
     </button>
     <button class="cluster-btn pressable" id="btn-fullscreen" aria-label="Toggle full screen mode" title="Toggle Fullscreen">
@@ -3230,8 +3230,13 @@
           showLotPins: false,
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
           activeStyle: (() => {
+            if (!localStorage.getItem('openpark_style_v2_hybrid_default')) {
+              localStorage.setItem('openpark_style_v2_hybrid_default', '1');
+              localStorage.setItem('openpark_map_style', 'google-hybrid');
+              return 'google-hybrid';
+            }
             const s = localStorage.getItem('openpark_map_style');
-            if (!s || s === 'ola-maps' || s === 'ola') return 'google-roadmap';
+            if (!s || s === 'ola-maps' || s === 'ola') return 'google-hybrid';
             return s;
           })(),
           olaMapsKey: localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP',
@@ -3384,13 +3389,13 @@
           const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP';
           return `https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=${encodeURIComponent(key)}`;
         }
-        if (!styleKey || styleKey === 'google-roadmap' || styleKey === 'google-maps' || styleKey === 'openfreemap-auto' || styleKey === 'auto') {
+        if (styleKey === 'google-roadmap' || styleKey === 'google-maps') {
           return MAP_STYLES['google-roadmap'];
         }
         if (styleKey === 'google-traffic' || styleKey === 'traffic') {
           return MAP_STYLES['google-traffic'];
         }
-        if (styleKey === 'google-hybrid' || styleKey === 'hybrid') {
+        if (!styleKey || styleKey === 'google-hybrid' || styleKey === 'hybrid' || styleKey === 'openfreemap-auto' || styleKey === 'auto') {
           return MAP_STYLES['google-hybrid'];
         }
         if (styleKey === 'openfreemap-vector' || styleKey === 'ultra-detail' || styleKey === 'openfreemap-liberty' || styleKey === 'liberty') {
@@ -3405,7 +3410,7 @@
         if (styleKey === 'carto-voyager') {
           return MAP_STYLES['carto-voyager'];
         }
-        return MAP_STYLES[styleKey] || MAP_STYLES['google-roadmap'];
+        return MAP_STYLES[styleKey] || MAP_STYLES['google-hybrid'];
       }
 
       // --------------------------------------------------------------------------
@@ -5484,24 +5489,23 @@
             document.getElementById('btn-tilt-3d').classList.toggle('active-blue', STATE.is3D);
           };
 
-          // One-click Map Detail Switcher (Ola Maps -> Google Maps Retina -> Live Traffic -> Satellite Hybrid -> Vector -> OSM)
-          const styleCycle = ['ola-maps', 'google-roadmap', 'google-traffic', 'google-hybrid', 'openfreemap-vector', 'osm-standard', 'carto-voyager'];
+          // Direct 1-Tap Switcher between Google Maps Satellite Hybrid & GMap Full Detail Retina
           const styleLabels = {
-            'ola-maps': 'Ola Maps India Vector (api.olamaps.io)',
-            'google-roadmap': 'Google Maps Full Detail Retina (Roads, Buildings, PGs & Shops)',
+            'google-hybrid': '🛰️ Google Maps Satellite Hybrid',
+            'google-roadmap': '🗺️ GMap Full Detail Retina',
             'google-traffic': 'Google Maps Live Traffic & Congestion Flow',
-            'google-hybrid': 'Google Maps Satellite Hybrid',
+            'ola-maps': 'Ola Maps India Vector (api.olamaps.io)',
             'openfreemap-vector': 'OpenFreeMap Ultra-Detail Vector',
             'osm-standard': 'OpenStreetMap Standard',
             'carto-voyager': 'Carto Voyager Retina @2x'
           };
           document.getElementById('btn-toggle-layers').onclick = () => {
-            const curIdx = styleCycle.indexOf(STATE.config.activeStyle);
-            const nextStyle = styleCycle[(curIdx + 1) % styleCycle.length];
+            const nextStyle = STATE.config.activeStyle === 'google-hybrid' ? 'google-roadmap' : 'google-hybrid';
             STATE.config.activeStyle = nextStyle;
             localStorage.setItem('openpark_map_style', nextStyle);
             const sel = document.getElementById('select-map-style');
             if (sel) sel.value = nextStyle;
+            window.dispatchEvent(new CustomEvent('openpark:map-style-changed', { detail: nextStyle }));
             ParkingApp.showToast(`Map Style: ${styleLabels[nextStyle]}`);
             MapEngine.clearPoiMarkers();
             MapEngine.map.remove();
@@ -5742,6 +5746,7 @@
             const style = e.target.value;
             STATE.config.activeStyle = style;
             localStorage.setItem('openpark_map_style', style);
+            window.dispatchEvent(new CustomEvent('openpark:map-style-changed', { detail: style }));
             MapEngine.clearPoiMarkers();
             MapEngine.map.remove();
             MapEngine.init();

@@ -465,3 +465,41 @@
   box-shadow: 0 16px 38px rgba(0, 0, 0, 0.18), 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
+.map-style-switcher {
+  position: fixed;
+  top: max(16px, env(safe-area-inset-top));
+  right: 72px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+}
+.map-style-pill-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-standard);
+}
+.map-style-pill-btn.active {
+  background: var(--apple-blue);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.35);
+}
+@media (max-width: 768px) {
+  .map-style-switcher {
+    right: 64px;
+  }
+  .map-style-pill-btn {
+    padding: 4px 8px;
+    font-size: 10.5px;
+  }
+}
+

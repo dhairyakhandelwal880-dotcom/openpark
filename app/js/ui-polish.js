@@ -1343,6 +1343,52 @@
     cluster.appendChild(btn);
   });
 
+  UIPolish.register('mapStyleQuickSwitcher', (up) => {
+    if (document.getElementById('map-style-switcher')) return;
+    const bar = document.createElement('div');
+    bar.id = 'map-style-switcher';
+    bar.className = 'apple-glass map-style-switcher';
+    bar.setAttribute('role', 'group');
+    bar.setAttribute('aria-label', 'Switch Map Style');
+    bar.innerHTML = `
+      <button type="button" class="map-style-pill-btn pressable" data-map-style="google-hybrid" title="Google Maps Satellite Hybrid">🛰️ Satellite Hybrid</button>
+      <button type="button" class="map-style-pill-btn pressable" data-map-style="google-roadmap" title="Google Maps Full Detail Retina">🗺️ Full Detail Retina</button>
+    `;
+    document.body.appendChild(bar);
+
+    const syncButtons = () => {
+      const ctx = up.getCtx();
+      const active = (ctx.STATE && ctx.STATE.config && ctx.STATE.config.activeStyle) || 'google-hybrid';
+      bar.querySelectorAll('.map-style-pill-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.getAttribute('data-map-style') === active);
+      });
+    };
+
+    bar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.map-style-pill-btn');
+      if (!btn) return;
+      const targetStyle = btn.getAttribute('data-map-style');
+      const ctx = up.getCtx();
+      if (!targetStyle || !ctx.STATE || !ctx.MapEngine) return;
+      if (ctx.STATE.config.activeStyle === targetStyle) return;
+
+      ctx.STATE.config.activeStyle = targetStyle;
+      try { localStorage.setItem('openpark_map_style', targetStyle); } catch {}
+      const sel = document.getElementById('select-map-style');
+      if (sel) sel.value = targetStyle;
+      syncButtons();
+      up.toast(targetStyle === 'google-hybrid' ? '🛰️ Google Maps Satellite Hybrid' : '🗺️ GMap Full Detail Retina', 'info', 2000);
+      if (ctx.MapEngine.clearPoiMarkers) ctx.MapEngine.clearPoiMarkers();
+      if (ctx.MapEngine.map) {
+        ctx.MapEngine.map.remove();
+        ctx.MapEngine.init();
+      }
+    });
+
+    window.addEventListener('openpark:map-style-changed', syncButtons);
+    syncButtons();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
