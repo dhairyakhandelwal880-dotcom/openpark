@@ -1171,6 +1171,32 @@
     syncState();
   });
 
+  UIPolish.register('detailQuickAddressActions', (up) => {
+    const addrEl = document.getElementById('dt-address');
+    if (!addrEl || document.getElementById('dt-quick-actions')) return;
+
+    const row = document.createElement('div');
+    row.id = 'dt-quick-actions';
+    row.style.cssText = 'display:flex;gap:6px;margin:4px 0 8px;flex-wrap:wrap;';
+    row.innerHTML = `
+      <button type="button" class="recent-search-chip" id="dt-btn-copy-addr">📋 Copy Address</button>
+      <a href="#" target="_blank" rel="noopener" class="recent-search-chip" id="dt-btn-ext-maps" style="text-decoration:none;">🗺️ Open in Maps</a>
+    `;
+    addrEl.insertAdjacentElement('afterend', row);
+
+    const syncMapsHref = () => {
+      const ctx = up.getCtx();
+      const lot = ctx.STATE && ctx.STATE.selectedLot;
+      const a = document.getElementById('dt-btn-ext-maps');
+      if (a && lot) a.href = `https://maps.google.com/?q=${lot.lat},${lot.lon}`;
+    };
+
+    document.getElementById('dt-btn-copy-addr').addEventListener('click', () => {
+      up.copyText(addrEl.textContent.trim(), 'Address copied');
+    });
+    new MutationObserver(syncMapsHref).observe(addrEl, { childList: true, characterData: true, subtree: true });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
