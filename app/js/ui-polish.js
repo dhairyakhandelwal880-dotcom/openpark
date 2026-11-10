@@ -68,6 +68,16 @@
     });
   });
 
+  UIPolish.register('modalBackdropDismiss', () => {
+    ['modal-receipt', 'modal-report', 'modal-traccar'].forEach((id) => {
+      const backdrop = document.getElementById(id);
+      if (!backdrop) return;
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) backdrop.classList.remove('open');
+      });
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
