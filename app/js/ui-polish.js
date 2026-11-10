@@ -1134,6 +1134,43 @@
     attachTitles();
   });
 
+  UIPolish.register('detailBookmarkButton', (up) => {
+    const statusPill = document.getElementById('dt-status-pill');
+    const dtName = document.getElementById('dt-name');
+    if (!statusPill || !dtName || document.getElementById('dt-fav-btn')) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'dt-fav-btn';
+    btn.type = 'button';
+    btn.className = 'fav-toggle-btn';
+    statusPill.parentElement.insertBefore(btn, statusPill);
+
+    const syncState = () => {
+      const ctx = up.getCtx();
+      const lot = ctx.STATE && ctx.STATE.selectedLot;
+      const lotId = lot ? lot.id : dtName.textContent.trim();
+      const saved = window.__openparkFavs && window.__openparkFavs.has(lotId);
+      btn.classList.toggle('is-saved', !!saved);
+      btn.textContent = saved ? '★' : '☆';
+      btn.title = saved ? 'Remove from Saved Lots' : 'Save this Lot';
+    };
+
+    btn.addEventListener('click', () => {
+      const ctx = up.getCtx();
+      const lot = ctx.STATE && ctx.STATE.selectedLot;
+      const lotId = lot ? lot.id : dtName.textContent.trim();
+      if (window.__openparkFavs) {
+        const nowSaved = window.__openparkFavs.toggle(lotId);
+        up.toast(nowSaved ? `⭐ Saved ${dtName.textContent}` : `Removed ${dtName.textContent}`, 'info', 1600);
+        syncState();
+      }
+    });
+
+    new MutationObserver(syncState).observe(dtName, { childList: true, characterData: true, subtree: true });
+    window.addEventListener('openpark:favs-updated', syncState);
+    syncState();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
