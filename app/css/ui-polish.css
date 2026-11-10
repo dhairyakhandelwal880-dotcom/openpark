@@ -406,3 +406,16 @@
   opacity: 1;
 }
 
+
+@media (max-width: 768px) {
+  .control-cluster .cluster-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .filter-chip-row .chip-btn,
+  .explore-sort-chip {
+    min-height: 32px;
+    padding: 5px 11px;
+  }
+}
+
