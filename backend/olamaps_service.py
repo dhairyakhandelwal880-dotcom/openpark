@@ -7,7 +7,7 @@ import urllib.parse
 from typing import Dict, Any, Optional
 import httpx
 
-DEFAULT_OLAMAPS_KEY = "dZZGLlB7JiE6fylbxaTkHwbm88QPQP"
+DEFAULT_OLAMAPS_KEY = os.getenv("OLAMAPS_API_KEY", "")
 
 class OlaMapsClient:
     """Client for querying the Ola Maps API platform."""

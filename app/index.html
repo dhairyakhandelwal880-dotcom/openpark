@@ -2684,7 +2684,7 @@
               <a href="https://cloud.olakrutrim.com" target="_blank" style="color: var(--color-primary); font-size: 12px; text-decoration: underline;">cloud.olakrutrim.com</a>
             </div>
             <div style="display: flex; gap: 8px; width: 100%;">
-              <input type="text" id="setting-olamaps-key" class="styled-input" style="flex: 1;" placeholder="api_key value" value="dZZGLlB7JiE6fylbxaTkHwbm88QPQP" />
+              <input type="text" id="setting-olamaps-key" class="styled-input" style="flex: 1;" placeholder="Enter Ola Maps api_key" value="" />
               <button class="btn-pill-secondary" id="btn-save-olamaps-key" style="padding: 6px 14px; font-size: 13px; width: auto;">Save</button>
             </div>
           </div>
@@ -3239,7 +3239,7 @@
             if (!s || s === 'ola-maps' || s === 'ola') return 'google-hybrid';
             return s;
           })(),
-          olaMapsKey: localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP',
+          olaMapsKey: localStorage.getItem('openpark_olamaps_key') || '',
           outscraperKey: localStorage.getItem('openpark_outscraper_key') || ''
         },
         watchId: null,
@@ -3258,8 +3258,8 @@
       // 5.3 Google Maps, Ola Maps & OpenStreetMap Ultra-Detail Map Styles
       // --------------------------------------------------------------------------
       const MAP_STYLES = {
-        'ola-maps': 'https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=' + (localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP'),
-        'ola-maps-dark': 'https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=' + (localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP'),
+        'ola-maps': 'https://api.olamaps.io/tiles/vector/v1/styles/default-light-standard/style.json?api_key=' + encodeURIComponent(localStorage.getItem('openpark_olamaps_key') || ''),
+        'ola-maps-dark': 'https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=' + encodeURIComponent(localStorage.getItem('openpark_olamaps_key') || ''),
         'google-roadmap': {
           version: 8,
           sources: {
@@ -3381,12 +3381,12 @@
 
       function resolveMapStyleUrl(styleKey) {
         if (styleKey === 'ola-maps' || styleKey === 'ola') {
-          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP';
+          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || '';
           const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
           return `https://api.olamaps.io/tiles/vector/v1/styles/${isDark ? 'default-dark-standard' : 'default-light-standard'}/style.json?api_key=${encodeURIComponent(key)}`;
         }
         if (styleKey === 'ola-maps-dark') {
-          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP';
+          const key = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || '';
           return `https://api.olamaps.io/tiles/vector/v1/styles/default-dark-standard/style.json?api_key=${encodeURIComponent(key)}`;
         }
         if (styleKey === 'google-roadmap' || styleKey === 'google-maps') {
@@ -4629,20 +4629,8 @@
             const errStr = String((err && err.error && err.error.message) || (err && err.status) || (err && err.message) || '');
             if (errStr.includes('401') || errStr.includes('Unauthorized') || (err && err.status === 401)) {
               if (STATE.config.activeStyle === 'ola-maps' || STATE.config.activeStyle === 'ola-maps-dark') {
-                ParkingApp.showToast('Ola Maps key unauthorized. Switched to Google Maps Retina');
-                STATE.config.activeStyle = 'google-roadmap';
-                localStorage.setItem('openpark_map_style', 'google-roadmap');
-                const sel = document.getElementById('select-map-style');
-                if (sel) sel.value = 'google-roadmap';
-                setTimeout(() => {
-                  try {
-                    MapEngine.clearPoiMarkers();
-                    MapEngine.map.remove();
-                    MapEngine.init();
-                  } catch (e) {
-                    console.warn(e);
-                  }
-                }, 400);
+                ParkingApp.showToast('Ola Maps key unauthorized. Switched to Google Maps Satellite Hybrid');
+                MapEngine.switchMapStyle('google-hybrid');
               }
             }
           });
@@ -4850,6 +4838,47 @@
           } catch (e) {
             // Silently ignore network errors during pan
           }
+        },
+
+        switchMapStyle(nextStyle) {
+          if (!nextStyle) return;
+          STATE.config.activeStyle = nextStyle;
+          try { localStorage.setItem('openpark_map_style', nextStyle); } catch (e) {}
+          const sel = document.getElementById('select-map-style');
+          if (sel) sel.value = nextStyle;
+          window.dispatchEvent(new CustomEvent('openpark:map-style-changed', { detail: nextStyle }));
+
+          if (!this.map) {
+            this.init();
+            return;
+          }
+
+          const savedCenter = this.map.getCenter();
+          const savedZoom = this.map.getZoom();
+          const savedPitch = this.map.getPitch();
+          const savedBearing = this.map.getBearing();
+          this.clearPoiMarkers();
+
+          this.map.setStyle(resolveMapStyleUrl(nextStyle));
+          this.map.once('style.load', () => {
+            if (!this.map) return;
+            this.setupRouteSource();
+            this.map.jumpTo({ center: savedCenter, zoom: savedZoom, pitch: savedPitch, bearing: savedBearing });
+            if (NavigationEngine && NavigationEngine.routePoints && NavigationEngine.routePoints.length > 1) {
+              const rSource = this.map.getSource('route');
+              if (rSource) {
+                rSource.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: NavigationEngine.routePoints } });
+              }
+            }
+            if (typeof AIScannerEngine !== 'undefined' && AIScannerEngine.lastScanPayload) {
+              const aiSrc = this.map.getSource('ai-scan-polygons');
+              if (aiSrc && AIScannerEngine.lastScanPayload.geojson) {
+                aiSrc.setData(AIScannerEngine.lastScanPayload.geojson);
+              }
+            }
+            this.renderLotMarkers(STATE.lots || []);
+            this.loadViewportPois();
+          });
         },
 
         setupRouteSource() {
@@ -5389,16 +5418,6 @@
             };
           }
 
-          // ESC key dismisses open drawer cleanly
-          document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-              const drawer = document.getElementById('parking-drawer');
-              if (drawer && drawer.classList.contains('open')) {
-                ParkingApp.closeDrawer();
-              }
-            }
-          });
-
           // Toggle floating parking lot pins on the map
           const toggleLotPins = document.getElementById('toggle-lot-pins');
           if (toggleLotPins) {
@@ -5426,6 +5445,7 @@
                 STATE.activeFilter = btn.dataset.filter;
                 this.renderLotList(STATE.lots);
                 MapEngine.renderLotMarkers(STATE.lots);
+                window.dispatchEvent(new CustomEvent('openpark:explore-filter-changed', { detail: STATE.activeFilter }));
               }
             });
           });
@@ -5501,15 +5521,8 @@
           };
           document.getElementById('btn-toggle-layers').onclick = () => {
             const nextStyle = STATE.config.activeStyle === 'google-hybrid' ? 'google-roadmap' : 'google-hybrid';
-            STATE.config.activeStyle = nextStyle;
-            localStorage.setItem('openpark_map_style', nextStyle);
-            const sel = document.getElementById('select-map-style');
-            if (sel) sel.value = nextStyle;
-            window.dispatchEvent(new CustomEvent('openpark:map-style-changed', { detail: nextStyle }));
             ParkingApp.showToast(`Map Style: ${styleLabels[nextStyle]}`);
-            MapEngine.clearPoiMarkers();
-            MapEngine.map.remove();
-            MapEngine.init();
+            MapEngine.switchMapStyle(nextStyle);
           };
 
           // Native Fullscreen API handler
@@ -5564,8 +5577,6 @@
               else ParkingApp.snapToDebrecan();
             } else if (e.key === 'v' || e.key === 'V') {
               ParkingApp.toggleVariableMotion();
-            } else if (e.key === '?') {
-              ParkingApp.showToast('Keyboard: [/] Search  [M] Layers  [L] Live GPS  [V] Variable Motion  [C] Snap Debrecan  [Shift+C] Calibrate  [Esc] Close');
             }
           });
 
@@ -5605,28 +5616,56 @@
 
           let holdInterval = null;
           let holdRemaining = 0;
+          let activeHoldId = null;
           const holdBtn = document.getElementById('btn-hold-spot');
           const holdText = document.getElementById('btn-hold-spot-text');
           if (holdBtn) {
-            holdBtn.onclick = () => {
+            holdBtn.onclick = async () => {
               if (holdInterval) {
                 clearInterval(holdInterval);
                 holdInterval = null;
                 holdRemaining = 0;
                 if (holdText) holdText.innerText = "⏳ Hold Spot (15m)";
                 holdBtn.style.color = "#34d399";
-                if (STATE.selectedLot) {
-                  STATE.selectedLot.free_spots++;
+                if (STATE.selectedLot && Number.isFinite(Number(STATE.selectedLot.id))) {
+                  try {
+                    const rel = await fetch(`/lots/${STATE.selectedLot.id}/hold${activeHoldId ? `?hold_id=${encodeURIComponent(activeHoldId)}` : ''}`, { method: 'DELETE' });
+                    if (rel.ok) {
+                      const d = await rel.json();
+                      STATE.selectedLot.free_spots = d.free_spots;
+                    } else {
+                      STATE.selectedLot.free_spots++;
+                    }
+                  } catch {
+                    STATE.selectedLot.free_spots++;
+                  }
                   const fsEl = document.getElementById('dt-free-spots');
                   if (fsEl) fsEl.innerText = STATE.selectedLot.free_spots;
                 }
+                activeHoldId = null;
                 ParkingApp.showToast("Spot hold released", "info");
               } else {
                 if (!STATE.selectedLot || STATE.selectedLot.free_spots <= 0) {
                   ParkingApp.showToast("No vacant spots available to hold", "warning");
                   return;
                 }
-                STATE.selectedLot.free_spots--;
+                if (Number.isFinite(Number(STATE.selectedLot.id))) {
+                  try {
+                    const res = await fetch(`/lots/${STATE.selectedLot.id}/hold?duration_mins=15`, { method: 'POST' });
+                    if (res.ok) {
+                      const d = await res.json();
+                      activeHoldId = d.hold_id || d.pass_code || null;
+                      STATE.selectedLot.free_spots = d.free_spots;
+                      STATE.selectedLot._holdPass = d;
+                    } else {
+                      STATE.selectedLot.free_spots--;
+                    }
+                  } catch {
+                    STATE.selectedLot.free_spots--;
+                  }
+                } else {
+                  STATE.selectedLot.free_spots--;
+                }
                 const fsEl = document.getElementById('dt-free-spots');
                 if (fsEl) fsEl.innerText = STATE.selectedLot.free_spots;
                 holdRemaining = 15 * 60;
@@ -5743,13 +5782,7 @@
           };
 
           document.getElementById('select-map-style').onchange = (e) => {
-            const style = e.target.value;
-            STATE.config.activeStyle = style;
-            localStorage.setItem('openpark_map_style', style);
-            window.dispatchEvent(new CustomEvent('openpark:map-style-changed', { detail: style }));
-            MapEngine.clearPoiMarkers();
-            MapEngine.map.remove();
-            MapEngine.init();
+            MapEngine.switchMapStyle(e.target.value);
           };
 
           const pitchSlider = document.getElementById('slider-pitch-angle');
@@ -5776,7 +5809,7 @@
           const settingOlaKey = document.getElementById('setting-olamaps-key');
           const btnSaveOlaKey = document.getElementById('btn-save-olamaps-key');
           if (settingOlaKey) {
-            settingOlaKey.value = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || 'dZZGLlB7JiE6fylbxaTkHwbm88QPQP';
+            settingOlaKey.value = STATE.config.olaMapsKey || localStorage.getItem('openpark_olamaps_key') || '';
           }
           if (btnSaveOlaKey && settingOlaKey) {
             btnSaveOlaKey.onclick = () => {
@@ -5785,13 +5818,7 @@
                 STATE.config.olaMapsKey = k;
                 localStorage.setItem('openpark_olamaps_key', k);
                 ParkingApp.showToast('Ola Maps API key saved! Loading map...');
-                STATE.config.activeStyle = 'ola-maps';
-                localStorage.setItem('openpark_map_style', 'ola-maps');
-                const sel = document.getElementById('select-map-style');
-                if (sel) sel.value = 'ola-maps';
-                MapEngine.clearPoiMarkers();
-                MapEngine.map.remove();
-                MapEngine.init();
+                MapEngine.switchMapStyle('ola-maps');
               }
             };
           }
@@ -7414,9 +7441,7 @@
           if (window.matchMedia) {
             window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
               if (STATE.config.activeStyle === 'openfreemap-auto' && MapEngine.map) {
-                MapEngine.clearPoiMarkers();
-                MapEngine.map.remove();
-                MapEngine.init();
+                MapEngine.switchMapStyle('openfreemap-auto');
               }
             });
           }
@@ -8328,6 +8353,7 @@
         },
 
         renderScan(data) {
+          this.lastScanPayload = data;
           this.clearMarkers();
           const banner = document.getElementById('ai-scan-banner');
           const sumText = document.getElementById('ai-scan-summary-text');
@@ -8466,6 +8492,7 @@
         },
 
         clear() {
+          this.lastScanPayload = null;
           this.clearMarkers();
           this.results = [];
           const banner = document.getElementById('ai-scan-banner');

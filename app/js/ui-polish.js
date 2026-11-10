@@ -423,10 +423,11 @@
   });
 
   UIPolish.register('themePersistenceSync', () => {
-    const THEME_KEY = 'openpark_theme_pref';
-    const saved = localStorage.getItem(THEME_KEY);
+    const THEME_KEY = 'openpark_glass_theme';
+    const saved = localStorage.getItem(THEME_KEY) || localStorage.getItem('openpark_theme_pref');
     if (saved === 'dark' || saved === 'light') {
       document.documentElement.setAttribute('data-theme', saved);
+      localStorage.setItem(THEME_KEY, saved);
     }
     const saveCurrentTheme = () => {
       setTimeout(() => {
@@ -895,14 +896,34 @@
         const bar = document.createElement('div');
         bar.className = 'ai-card-actions';
         bar.style.cssText = 'display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;';
+        const verifyHtml = spot.category === 'empty_ground' ? `
+          <button type="button" class="recent-search-chip" data-verify-verdict="open" title="Confirm ground is open & parkable">✅ Parkable</button>
+          <button type="button" class="recent-search-chip" data-verify-verdict="blocked" title="Report ground gated or blocked">🚫 Blocked</button>
+        ` : '';
         bar.innerHTML = `
           <a href="https://maps.google.com/?q=${spot.lat},${spot.lon}" target="_blank" rel="noopener" class="recent-search-chip" style="text-decoration:none;">🗺️ Maps</a>
           <button type="button" class="recent-search-chip" data-copy-coord="${spot.lat.toFixed(5)}, ${spot.lon.toFixed(5)}">📋 Copy GPS</button>
+          ${verifyHtml}
         `;
         bar.addEventListener('click', (e) => {
           e.stopPropagation();
           const cp = e.target.closest('[data-copy-coord]');
-          if (cp) up.copyText(cp.getAttribute('data-copy-coord'), `Copied ${spot.name} GPS`);
+          if (cp) {
+            up.copyText(cp.getAttribute('data-copy-coord'), `Copied ${spot.name} GPS`);
+            return;
+          }
+          const vb = e.target.closest('[data-verify-verdict]');
+          if (vb) {
+            const verdict = vb.getAttribute('data-verify-verdict');
+            fetch('/api/ai/verify-pocket', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pocket_id: spot.id, name: spot.name, lat: spot.lat, lon: spot.lon, verdict })
+            }).then(() => {
+              if (verdict === 'blocked') card.style.opacity = '0.45';
+              up.toast(verdict === 'open' ? `✅ Verified ${spot.name} as parkable` : `🚫 Reported ${spot.name} blocked — hidden in future scans`, 'success', 2400);
+            }).catch(() => {});
+          }
         });
         card.appendChild(bar);
       });
@@ -1372,21 +1393,53 @@
       if (!targetStyle || !ctx.STATE || !ctx.MapEngine) return;
       if (ctx.STATE.config.activeStyle === targetStyle) return;
 
-      ctx.STATE.config.activeStyle = targetStyle;
-      try { localStorage.setItem('openpark_map_style', targetStyle); } catch {}
-      const sel = document.getElementById('select-map-style');
-      if (sel) sel.value = targetStyle;
+      if (ctx.MapEngine.switchMapStyle) {
+        ctx.MapEngine.switchMapStyle(targetStyle);
+      } else {
+        ctx.STATE.config.activeStyle = targetStyle;
+        try { localStorage.setItem('openpark_map_style', targetStyle); } catch {}
+      }
       syncButtons();
       up.toast(targetStyle === 'google-hybrid' ? '🛰️ Google Maps Satellite Hybrid' : '🗺️ GMap Full Detail Retina', 'info', 2000);
-      if (ctx.MapEngine.clearPoiMarkers) ctx.MapEngine.clearPoiMarkers();
-      if (ctx.MapEngine.map) {
-        ctx.MapEngine.map.remove();
-        ctx.MapEngine.init();
-      }
     });
 
     window.addEventListener('openpark:map-style-changed', syncButtons);
     syncButtons();
+  });
+
+  UIPolish.register('exploreFilterSyncWithAI', (up) => {
+    const chips = document.getElementById('explore-filter-chips');
+    const resultsEl = document.getElementById('ai-scan-results');
+    if (!chips || !resultsEl) return;
+
+    const applyUnifiedLotFilter = (filterVal) => {
+      const ctx = up.getCtx();
+      const spots = (ctx.AIScannerEngine && ctx.AIScannerEngine.results) || [];
+      const f = filterVal || (ctx.STATE && ctx.STATE.activeFilter) || 'all';
+      resultsEl.querySelectorAll('.lot-card').forEach((card, idx) => {
+        const s = spots[idx];
+        if (!s) return;
+        let matches = true;
+        if (f === 'budget') {
+          const feeL = (s.fee || '').toLowerCase();
+          const num = parseInt(feeL.replace(/[^0-9]/g, ''), 10);
+          matches = feeL.includes('free') || (!Number.isNaN(num) && num <= 30);
+        } else if (f === 'covered') {
+          matches = s.category === 'mall_parking' || (s.name || '').toLowerCase().includes('garage');
+        } else if (f === 'ev') {
+          matches = (s.name || '').toLowerCase().includes('ev') || s.category === 'mall_parking';
+        }
+        const aiCat = window.__aiActiveCat || 'all';
+        const aiOk = aiCat === 'all' || s.category === aiCat;
+        card.style.display = (matches && aiOk) ? '' : 'none';
+      });
+    };
+
+    window.addEventListener('openpark:explore-filter-changed', (e) => applyUnifiedLotFilter(e.detail));
+    chips.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-lot-filter]');
+      if (b) setTimeout(() => applyUnifiedLotFilter(b.getAttribute('data-lot-filter')), 25);
+    });
   });
 
   // __EXTEND_HOOK__

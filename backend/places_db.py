@@ -75,6 +75,17 @@ def init_places_db(db_path: str = DB_PATH):
         END;
     """)
     cur.execute("CREATE INDEX IF NOT EXISTS idx_places_lat_lon ON places(lat, lon)")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS verified_pockets (
+            pocket_id TEXT PRIMARY KEY,
+            name TEXT,
+            lat REAL,
+            lon REAL,
+            open_votes INTEGER DEFAULT 0,
+            blocked_votes INTEGER DEFAULT 0,
+            updated_at TEXT
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -275,3 +286,46 @@ def update_place_coordinates(name_query: str, lat: float, lon: float, db_path: s
     conn.commit()
     conn.close()
     return changed
+
+
+def record_pocket_verification(
+    pocket_id: str,
+    name: str,
+    lat: float,
+    lon: float,
+    verdict: str,
+    db_path: str = DB_PATH,
+) -> Dict[str, Any]:
+    """Persists driver crowd verification ('open' or 'blocked') for an AI-discovered ground."""
+    from datetime import datetime, timezone
+    init_places_db(db_path)
+    conn = get_db_connection(db_path)
+    cur = conn.cursor()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    open_inc = 1 if verdict == "open" else 0
+    blocked_inc = 1 if verdict == "blocked" else 0
+    cur.execute(
+        """
+        INSERT INTO verified_pockets (pocket_id, name, lat, lon, open_votes, blocked_votes, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(pocket_id) DO UPDATE SET
+            name = excluded.name,
+            open_votes = verified_pockets.open_votes + excluded.open_votes,
+            blocked_votes = verified_pockets.blocked_votes + excluded.blocked_votes,
+            updated_at = excluded.updated_at
+        """,
+        (pocket_id, name, float(lat), float(lon), open_inc, blocked_inc, now_iso),
+    )
+    row = cur.execute("SELECT * FROM verified_pockets WHERE pocket_id = ?", (pocket_id,)).fetchone()
+    conn.commit()
+    conn.close()
+    return dict(row) if row else {"pocket_id": pocket_id, "open_votes": open_inc, "blocked_votes": blocked_inc}
+
+
+def get_verified_pockets_map(db_path: str = DB_PATH) -> Dict[str, Dict[str, Any]]:
+    """Returns pocket_id -> verification vote counts from SQLite."""
+    init_places_db(db_path)
+    conn = get_db_connection(db_path)
+    rows = conn.execute("SELECT * FROM verified_pockets").fetchall()
+    conn.close()
+    return {r["pocket_id"]: dict(r) for r in rows}

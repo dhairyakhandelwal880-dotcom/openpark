@@ -20,7 +20,7 @@ import json
 import asyncio
 from contextlib import asynccontextmanager, contextmanager
 from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 import math
 
 from dotenv import load_dotenv
@@ -895,6 +895,53 @@ async def ai_scan_parking_endpoint(
     )
 
 
+class PocketVerifyPayload(BaseModel):
+    pocket_id: str
+    name: str = "Empty Ground"
+    lat: float
+    lon: float
+    verdict: str = Field(..., pattern="^(open|blocked)$")
+
+
+@app.post("/api/ai/verify-pocket")
+def ai_verify_pocket_endpoint(payload: PocketVerifyPayload):
+    """Records driver crowd feedback ('open' or 'blocked') for an AI empty ground pocket."""
+    try:
+        from backend.places_db import record_pocket_verification
+        from backend.ai_parking_scanner import _SCAN_CACHE
+    except ImportError:
+        from places_db import record_pocket_verification
+        from ai_parking_scanner import _SCAN_CACHE
+    record = record_pocket_verification(
+        payload.pocket_id, payload.name, payload.lat, payload.lon, payload.verdict
+    )
+    _SCAN_CACHE.clear()
+    return {"status": "ok", "record": record}
+
+
+@app.get("/api/ai/verified-pockets")
+def ai_list_verified_pockets_endpoint():
+    """Lists crowd-verified AI pocket ground counts."""
+    try:
+        from backend.places_db import get_verified_pockets_map
+    except ImportError:
+        from places_db import get_verified_pockets_map
+    return {"status": "ok", "pockets": get_verified_pockets_map()}
+
+
+@app.get("/api/config/public")
+def public_runtime_config():
+    """Non-sensitive runtime configuration flags for client UI initialization."""
+    ola_env = os.getenv("OLAMAPS_API_KEY", "")
+    return {
+        "status": "ok",
+        "olamaps_configured": bool(ola_env),
+        "olamaps_key": ola_env,
+        "default_map_style": "google-hybrid",
+        "scan_radius_m": 1000,
+    }
+
+
 # --------------------------------------------------------------------------
 # OSM Overpass REST API (Parking Outlines, Fuel Stations, Toll Plazas)
 # --------------------------------------------------------------------------
@@ -1432,6 +1479,13 @@ async def websocket_traccar_standard_socket(websocket: WebSocket):
         manager.disconnect_vehicle(websocket)
 
 
+@app.get("/api/lots")
+def list_lots_api_alias(city: Optional[str] = None):
+    """REST alias returning wrapped lots list for API & test consumers."""
+    items = list_lots(city=city)
+    return {"status": "ok", "count": len(items), "lots": items}
+
+
 @app.get("/lots")
 def list_lots(city: Optional[str] = None):
     """Returns all parking lots for operators and selectors."""
@@ -1520,11 +1574,13 @@ def get_nearby_lots(
     lat: float = Query(..., description="Latitude of user/map center"),
     lon: float = Query(..., description="Longitude of user/map center"),
     radius: float = Query(5000.0, description="Search radius in meters (default 5000m)"),
+    radius_m: Optional[float] = Query(None, description="Optional strict radius override in meters"),
 ):
     """
     Core PostGIS query to retrieve lots within radius, ordered by distance,
     with latest availability status and confidence score.
     """
+    effective_radius = float(radius_m) if radius_m is not None else float(radius)
     query = """
     SELECT l.id, l.osm_ref, l.name, l.capacity, l.price_note, l.city,
            ST_Y(l.geom::geometry) AS lat, ST_X(l.geom::geometry) AS lon,
@@ -1539,47 +1595,49 @@ def get_nearby_lots(
     ORDER BY distance_meters ASC
     LIMIT 50;
     """
-    conn = get_db()
-    if conn:
-        try:
-            with conn:
+    with get_db() as conn:
+        if conn:
+            try:
                 with conn.cursor() as cur:
-                    cur.execute(query, (lon, lat, lon, lat, radius))
+                    cur.execute(query, (lon, lat, lon, lat, effective_radius))
                     rows = cur.fetchall()
 
-            results = []
-            for r in rows:
-                st = lot_status(r["free_spots"], r["capacity"], r["updated_at"])
-                conf_score, conf_level = get_confidence(r["source"], r["updated_at"])
-                results.append({
-                    "id": r["id"],
-                    "osm_ref": r["osm_ref"],
-                    "name": r["name"] or f"Parking Lot #{r['id']}",
-                    "city": r["city"],
-                    "capacity": r["capacity"] or 50,
-                    "price_note": r["price_note"] or "Standard parking rates",
-                    "lat": r["lat"],
-                    "lon": r["lon"],
-                    "distance_meters": round(r["distance_meters"], 1),
-                    "free_spots": r["free_spots"],
-                    "source": r["source"] or "unknown",
-                    "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
-                    "updated_human": human_time_ago(r["updated_at"]),
-                    "status": st,
-                    "confidence_score": conf_score,
-                    "confidence": conf_level,
-                })
-            return results
-        except Exception as e:
-            print(f"Database query error: {e}. Falling back to in-memory store.")
+                results = []
+                for r in rows:
+                    st = lot_status(r["free_spots"], r["capacity"], r["updated_at"])
+                    conf_score, conf_level = get_confidence(r["source"], r["updated_at"])
+                    dist_val = round(r["distance_meters"], 1)
+                    results.append({
+                        "id": r["id"],
+                        "osm_ref": r["osm_ref"],
+                        "name": r["name"] or f"Parking Lot #{r['id']}",
+                        "city": r["city"],
+                        "capacity": r["capacity"] or 50,
+                        "price_note": r["price_note"] or "Standard parking rates",
+                        "lat": r["lat"],
+                        "lon": r["lon"],
+                        "distance_meters": dist_val,
+                        "distance_m": dist_val,
+                        "free_spots": r["free_spots"],
+                        "source": r["source"] or "unknown",
+                        "updated_at": r["updated_at"].isoformat() if r["updated_at"] else None,
+                        "updated_human": human_time_ago(r["updated_at"]),
+                        "status": st,
+                        "confidence_score": conf_score,
+                        "confidence": conf_level,
+                    })
+                return results
+            except Exception as e:
+                print(f"Database query error: {e}. Falling back to in-memory store.")
 
-    # High-availability fallback
+    # High-availability fallback strictly bounded by effective_radius
     results = []
     for lot in FALLBACK_LOTS:
         dist = haversine_distance_meters(lat, lon, lot["lat"], lot["lon"])
-        if dist <= radius or len(results) < 10:
+        if dist <= effective_radius:
             st = lot_status(lot["free_spots"], lot["capacity"], lot["updated_at"])
             conf_score, conf_level = get_confidence(lot["source"], lot["updated_at"])
+            dist_val = round(dist, 1)
             results.append({
                 "id": lot["id"],
                 "osm_ref": lot["osm_ref"],
@@ -1589,7 +1647,8 @@ def get_nearby_lots(
                 "price_note": lot["price_note"],
                 "lat": lot["lat"],
                 "lon": lot["lon"],
-                "distance_meters": round(dist, 1),
+                "distance_meters": dist_val,
+                "distance_m": dist_val,
                 "free_spots": lot["free_spots"],
                 "source": lot["source"],
                 "updated_at": lot["updated_at"].isoformat(),
@@ -1841,8 +1900,65 @@ async def update_availability(
     }
 
 
-# Rate limiting dictionary: (reporter_id, lot_id) -> timestamp
+# Rate limiting & active 15-minute spot reservations
 REPORTS_RATE_LIMIT: Dict[tuple, datetime] = {}
+ACTIVE_HOLDS: Dict[str, Dict[str, Any]] = {}
+
+
+@app.post("/lots/{lot_id}/hold")
+async def hold_parking_spot(lot_id: int, duration_mins: int = Query(15, ge=5, le=60)):
+    """Reserves 1 bay at an OpenPark lot for 15 minutes and issues a pass code."""
+    lot = next((item for item in FALLBACK_LOTS if item["id"] == lot_id), None)
+    if not lot:
+        raise HTTPException(status_code=404, detail="Parking lot not found")
+    if (lot.get("free_spots") or 0) <= 0:
+        raise HTTPException(status_code=409, detail="No vacant bays available to hold")
+
+    lot["free_spots"] = max(0, int(lot["free_spots"]) - 1)
+    lot["updated_at"] = datetime.now(timezone.utc)
+    bay_letter = chr(65 + (lot_id % 4))
+    bay_num = (lot_id * 7 + len(ACTIVE_HOLDS)) % 30 + 1
+    pass_code = f"OP-PASS-{lot_id}{1000 + (len(ACTIVE_HOLDS) * 37) % 8999}-IN"
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=duration_mins)
+    hold_record = {
+        "hold_id": pass_code,
+        "lot_id": lot_id,
+        "lot_name": lot["name"],
+        "bay_number": f"Bay #{bay_letter}-{bay_num}",
+        "pass_code": pass_code,
+        "free_spots": lot["free_spots"],
+        "expires_at": expires_at.isoformat(),
+        "duration_mins": duration_mins,
+    }
+    ACTIVE_HOLDS[pass_code] = hold_record
+    if len(ACTIVE_HOLDS) > 500:
+        oldest = next(iter(ACTIVE_HOLDS))
+        ACTIVE_HOLDS.pop(oldest, None)
+    await manager.broadcast_lot(lot_id, {
+        "lot_id": lot_id,
+        "free_spots": lot["free_spots"],
+        "status": lot_status(lot["free_spots"], lot["capacity"], lot["updated_at"]),
+    })
+    return {"status": "held", **hold_record}
+
+
+@app.delete("/lots/{lot_id}/hold")
+async def release_parking_hold(lot_id: int, hold_id: Optional[str] = Query(None)):
+    """Releases an active parking bay hold and restores availability."""
+    lot = next((item for item in FALLBACK_LOTS if item["id"] == lot_id), None)
+    if not lot:
+        raise HTTPException(status_code=404, detail="Parking lot not found")
+    if hold_id and hold_id in ACTIVE_HOLDS:
+        ACTIVE_HOLDS.pop(hold_id, None)
+    cap = int(lot.get("capacity") or 100)
+    lot["free_spots"] = min(cap, int(lot.get("free_spots") or 0) + 1)
+    lot["updated_at"] = datetime.now(timezone.utc)
+    await manager.broadcast_lot(lot_id, {
+        "lot_id": lot_id,
+        "free_spots": lot["free_spots"],
+        "status": lot_status(lot["free_spots"], lot["capacity"], lot["updated_at"]),
+    })
+    return {"status": "released", "lot_id": lot_id, "free_spots": lot["free_spots"]}
 
 
 @app.post("/lots/{lot_id}/reports", status_code=status.HTTP_201_CREATED)

@@ -25,11 +25,22 @@ PHOTON_SEARCH_URL = "https://photon.komoot.io/api/"
 # India geographic bounding box for strict domestic scoping
 INDIA_BBOX_STR = "68.0,6.5,97.5,37.5"
 
-# Fast in-memory TTL caches
+# Fast bounded in-memory TTL caches
 _SCAN_CACHE: Dict[Tuple[float, float, int], Tuple[float, Dict[str, Any]]] = {}
 _CGIMAP_TILE_CACHE: Dict[Tuple[float, float], Tuple[float, List[Dict[str, Any]]]] = {}
 _CACHE_TTL_SEC = 300.0
 _TILE_TTL_SEC = 900.0
+_MAX_SCAN_CACHE = 250
+_MAX_TILE_CACHE = 120
+
+
+def _cache_put(cache: Dict[Any, Tuple[float, Any]], key: Any, value: Any, max_size: int) -> None:
+    """Stores a timestamped cache entry while bounding memory with oldest-entry eviction."""
+    now = time.time()
+    cache[key] = (now, value)
+    if len(cache) > max_size:
+        oldest_key = min(cache.keys(), key=lambda k: cache[k][0])
+        cache.pop(oldest_key, None)
 
 _OPEN_GROUNDS_PRECOMPUTED: Optional[List[Dict[str, Any]]] = None
 
@@ -454,6 +465,7 @@ def _detect_unbuilt_grid_plots(
 
     occupied = [[False] * grid_n for _ in range(grid_n)]
     has_road = [[False] * grid_n for _ in range(grid_n)]
+    bad_highway = [[False] * grid_n for _ in range(grid_n)]
     building_count = 0
 
     def mark_bbox(pts: List[Tuple[float, float]], target_grid: List[List[bool]], pad: int = 0) -> None:
@@ -496,7 +508,9 @@ def _detect_unbuilt_grid_plots(
                 cc = int((plon - min_lon) / d_lon)
                 if 0 <= rr < grid_n and 0 <= cc < grid_n:
                     occupied[rr][cc] = True
-                    if hw in ("residential", "unclassified", "service", "tertiary", "secondary"):
+                    if hw in ("motorway", "motorway_link", "trunk", "trunk_link"):
+                        bad_highway[rr][cc] = True
+                    elif hw in ("residential", "unclassified", "service", "tertiary", "secondary"):
                         has_road[rr][cc] = True
 
     if building_count < 100:
@@ -512,6 +526,11 @@ def _detect_unbuilt_grid_plots(
                 1 for dr in range(-2, 3) for dc in range(-2, 3) if occupied[r + dr][c + dc]
             )
             if local_occ < 4:
+                continue
+            near_expressway = any(
+                bad_highway[r + dr][c + dc] for dr in range(-1, 2) for dc in range(-1, 2)
+            )
+            if near_expressway:
                 continue
             road_adj = (
                 has_road[r - 1][c] or has_road[r + 1][c]
@@ -701,7 +720,7 @@ async def _fetch_osm_cgimap_fast(lat: float, lon: float) -> List[Dict[str, Any]]
                 return []
             raw_els = resp.json().get("elements", [])
             extracted = _extract_cgimap_elements(raw_els, bbox, lat, lon)
-            _CGIMAP_TILE_CACHE[tile_key] = (now, extracted)
+            _cache_put(_CGIMAP_TILE_CACHE, tile_key, extracted, _MAX_TILE_CACHE)
             return extracted
     except Exception as exc:
         logger.debug("CGImap live scan skipped/timed out: %s", exc)
@@ -1073,6 +1092,26 @@ async def scan_map_for_parking(
 
     discovered, geojson_features, excluded_existing = _process_elements(elements, lat, lon, effective_radius, existing)
 
+    # Apply community driver pocket verification votes (hide blocked pockets, boost open ones)
+    try:
+        from places_db import get_verified_pockets_map
+        ver_map = get_verified_pockets_map()
+        if ver_map:
+            kept = []
+            for item in discovered:
+                v = ver_map.get(item["id"])
+                if v:
+                    if v["blocked_votes"] >= 2 or v["blocked_votes"] > v["open_votes"]:
+                        continue
+                    if v["open_votes"] > v["blocked_votes"]:
+                        item["ai_score"] = min(98, item["ai_score"] + 6)
+                        item["crowd_verified"] = True
+                        item["open_votes"] = v["open_votes"]
+                kept.append(item)
+            discovered = kept
+    except Exception:
+        pass
+
     # Sort primarily by high AI score, breaking ties by shortest distance
     discovered.sort(key=lambda x: (-x["ai_score"], x["distance_km"]))
 
@@ -1121,6 +1160,6 @@ async def scan_map_for_parking(
     }
 
     if use_live_overpass and top_results:
-        _SCAN_CACHE[cache_key] = (now, payload)
+        _cache_put(_SCAN_CACHE, cache_key, payload, _MAX_SCAN_CACHE)
 
     return payload

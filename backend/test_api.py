@@ -615,6 +615,7 @@ def test_ai_parking_scanner_endpoint():
 
     # 5. Live API endpoint (strictly <= 1 km / 1000m radius + pre-indexed small ground checks)
     real_lots = client.get("/api/lots").json().get("lots", [])
+    assert len(real_lots) > 0
     for test_lat, test_lon in ((12.9716, 77.5946), (12.9031, 77.4975)):
         res = client.get(f"/api/ai/scan-parking?lat={test_lat}&lon={test_lon}&radius_m=1000&live=false")
         assert res.status_code == 200
@@ -633,6 +634,47 @@ def test_ai_parking_scanner_endpoint():
             if item["category"] == "empty_ground":
                 assert 45.0 <= item["area_m2"] <= 550.0
                 assert 3 <= item["estimated_spots"] <= 6
+
+
+def test_nearby_strict_radius_hold_verify_and_config():
+    """Verify strict /lots/nearby radius cutoff, spot hold API, pocket verification, and bounded cache."""
+    from ai_parking_scanner import _cache_put
+
+    # 1. Strict 1km cutoff on /lots/nearby using both radius_m and distance_m fields
+    r_near = client.get("/lots/nearby?lat=12.9716&lon=77.5946&radius_m=1000")
+    assert r_near.status_code == 200
+    lots = r_near.json()
+    for lot in lots:
+        assert lot["distance_meters"] <= 1000.0
+        assert lot["distance_m"] == lot["distance_meters"]
+
+    # 2. Persistent spot hold & release API
+    r_hold = client.post("/lots/1/hold?duration_mins=15")
+    assert r_hold.status_code == 200
+    d_hold = r_hold.json()
+    assert d_hold["status"] == "held" and "pass_code" in d_hold and "bay_number" in d_hold
+    r_rel = client.delete(f"/lots/1/hold?hold_id={d_hold['hold_id']}")
+    assert r_rel.status_code == 200
+    assert r_rel.json()["status"] == "released"
+
+    # 3. Public runtime config & crowd verification endpoint
+    r_cfg = client.get("/api/config/public")
+    assert r_cfg.status_code == 200 and r_cfg.json()["default_map_style"] == "google-hybrid"
+
+    r_ver = client.post("/api/ai/verify-pocket", json={
+        "pocket_id": "test-pocket-999",
+        "name": "Test Pocket",
+        "lat": 12.9716,
+        "lon": 77.5946,
+        "verdict": "open",
+    })
+    assert r_ver.status_code == 200 and r_ver.json()["record"]["open_votes"] >= 1
+
+    # 4. Bounded LRU eviction helper
+    c = {}
+    for i in range(10):
+        _cache_put(c, i, f"val_{i}", max_size=5)
+    assert len(c) == 5
 
 
 

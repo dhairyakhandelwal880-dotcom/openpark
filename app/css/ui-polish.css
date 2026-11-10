@@ -241,8 +241,8 @@
 @media (max-width: 768px) {
   .map-legend-pill {
     right: 12px;
-    top: 72px;
-    bottom: auto;
+    bottom: 84px;
+    top: auto;
     font-size: 10px;
     padding: 5px 9px;
   }
@@ -495,7 +495,9 @@
 }
 @media (max-width: 768px) {
   .map-style-switcher {
-    right: 64px;
+    top: max(12px, env(safe-area-inset-top));
+    left: 12px;
+    right: auto;
   }
   .map-style-pill-btn {
     padding: 4px 8px;
