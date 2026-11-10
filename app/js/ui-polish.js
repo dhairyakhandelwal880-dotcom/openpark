@@ -496,6 +496,22 @@
     });
   });
 
+  UIPolish.register('ariaLiveAnnouncer', () => {
+    const region = document.createElement('div');
+    region.id = 'ui-sr-announcer';
+    region.setAttribute('aria-live', 'polite');
+    region.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;';
+    document.body.appendChild(region);
+    window.__announceUI = (msg) => { region.textContent = msg; };
+
+    const aiSummary = document.getElementById('ai-scan-summary-text');
+    if (aiSummary) {
+      new MutationObserver(() => {
+        window.__announceUI(aiSummary.textContent || '');
+      }).observe(aiSummary, { childList: true, characterData: true, subtree: true });
+    }
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
