@@ -1322,6 +1322,12 @@
     sync();
   });
 
+  UIPolish.register('printPassAccessibility', () => {
+    const printBtn = document.getElementById('btn-print-receipt');
+    if (!printBtn) return;
+    printBtn.setAttribute('aria-label', 'Print or save Digital Parking Pass as PDF');
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
