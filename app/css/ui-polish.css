@@ -431,3 +431,13 @@
   touch-action: manipulation;
 }
 
+
+#btn-welcome-nearby:hover {
+  box-shadow: 0 10px 26px rgba(0, 113, 227, 0.32);
+  transform: translateY(-1px);
+}
+#btn-ai-scan:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 8px 22px rgba(88, 86, 214, 0.30);
+}
+
