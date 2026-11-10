@@ -397,3 +397,12 @@
   transition: width 380ms var(--spring-curve), background-color 280ms ease;
 }
 
+
+#telemetry-hud {
+  transition: opacity 220ms ease, transform 220ms var(--spring-curve);
+  opacity: 0.92;
+}
+#telemetry-hud:hover {
+  opacity: 1;
+}
+
