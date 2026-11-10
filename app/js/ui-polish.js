@@ -451,6 +451,15 @@
     card.appendChild(footer);
   });
 
+  UIPolish.register('welcomeFocusHandoff', () => {
+    const openBtn = document.getElementById('btn-open-welcome');
+    const wInput = document.getElementById('welcome-search-input');
+    if (!openBtn || !wInput) return;
+    openBtn.addEventListener('click', () => {
+      setTimeout(() => wInput.focus(), 160);
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
