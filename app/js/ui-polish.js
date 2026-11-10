@@ -931,6 +931,60 @@
     }).observe(resultsEl, { childList: true });
   });
 
+  UIPolish.register('aiMapPanRescanBanner', (up) => {
+    const banner = document.getElementById('ai-scan-banner');
+    if (!banner) return;
+
+    const btnRescan = document.createElement('button');
+    btnRescan.id = 'btn-ai-rescan-area';
+    btnRescan.type = 'button';
+    btnRescan.className = 'apple-glass pressable';
+    btnRescan.style.cssText = 'position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:22;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:600;color:var(--apple-blue);display:none;align-items:center;gap:6px;cursor:pointer;';
+    btnRescan.innerHTML = '<span>🔄</span><span>Re-scan Empty Grounds Here</span>';
+    document.body.appendChild(btnRescan);
+
+    let lastScanCenter = null;
+    const haversineKm = (a, b) => {
+      const r = 6371, dLat = (b.lat - a.lat) * Math.PI / 180, dLon = (b.lng - a.lng) * Math.PI / 180;
+      const x = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+      return 2 * r * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    };
+
+    const bind = () => {
+      const ctx = up.getCtx();
+      const map = ctx.MapEngine && ctx.MapEngine.map;
+      if (!map) return false;
+      new MutationObserver(() => {
+        if (banner.style.display !== 'none') {
+          lastScanCenter = map.getCenter();
+          btnRescan.style.display = 'none';
+        } else {
+          lastScanCenter = null;
+          btnRescan.style.display = 'none';
+        }
+      }).observe(banner, { attributes: true, attributeFilter: ['style'] });
+
+      map.on('moveend', () => {
+        if (!lastScanCenter || banner.style.display === 'none') return;
+        const welcome = document.getElementById('welcome-overlay');
+        if (welcome && !welcome.classList.contains('hidden')) return;
+        const movedKm = haversineKm(lastScanCenter, map.getCenter());
+        btnRescan.style.display = movedKm >= 0.6 ? 'inline-flex' : 'none';
+      });
+      return true;
+    };
+
+    btnRescan.addEventListener('click', () => {
+      btnRescan.style.display = 'none';
+      const ctx = up.getCtx();
+      if (ctx.AIScannerEngine) ctx.AIScannerEngine.scanCurrentArea();
+    });
+
+    if (!bind()) {
+      const t = setInterval(() => { if (bind()) clearInterval(t); }, 450);
+    }
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
