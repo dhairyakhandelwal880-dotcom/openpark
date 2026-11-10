@@ -201,6 +201,30 @@
     bindDropdownKeyboard('welcome-search-input', 'welcome-autocomplete-box');
   });
 
+  UIPolish.register('searchClearAndEscape', () => {
+    const input = document.getElementById('search-input');
+    const clearBtn = document.getElementById('search-clear');
+    const list = document.getElementById('search-autocomplete-box');
+    if (!input || !clearBtn) return;
+
+    const syncClear = () => {
+      clearBtn.style.opacity = input.value.trim().length > 0 ? '1' : '0';
+      clearBtn.style.pointerEvents = input.value.trim().length > 0 ? 'auto' : 'none';
+    };
+    input.addEventListener('input', syncClear);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && input.value.trim().length > 0) {
+        input.value = '';
+        if (list) list.classList.remove('open');
+        syncClear();
+      }
+    });
+    clearBtn.addEventListener('click', () => {
+      setTimeout(syncClear, 20);
+    });
+    syncClear();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
