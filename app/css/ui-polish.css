@@ -303,3 +303,34 @@
   animation: uiInputNudge 220ms ease-in-out;
 }
 
+.vehicle-type-toggle {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--text-contrast-layer);
+  border: 1px solid var(--color-border-subtle);
+  gap: 2px;
+}
+.vehicle-type-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+.vehicle-type-btn.active {
+  background: var(--apple-blue);
+  color: #ffffff;
+}
+#dt-sparkline-bars > div {
+  transition: transform 140ms ease, filter 140ms ease;
+  cursor: pointer;
+}
+#dt-sparkline-bars > div:hover {
+  transform: scaleY(1.12);
+  filter: brightness(1.15);
+}
+
