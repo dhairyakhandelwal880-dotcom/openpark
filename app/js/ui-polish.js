@@ -530,6 +530,51 @@
     banner.insertAdjacentElement('afterend', filterRow);
   });
 
+  UIPolish.register('aiFilterCardsLogic', (up) => {
+    const filterRow = document.getElementById('ai-filter-row');
+    const banner = document.getElementById('ai-scan-banner');
+    const resultsEl = document.getElementById('ai-scan-results');
+    if (!filterRow || !banner || !resultsEl) return;
+
+    window.__aiActiveCat = 'all';
+    const applyFilter = () => {
+      const ctx = up.getCtx();
+      const spots = (ctx.AIScannerEngine && ctx.AIScannerEngine.results) || [];
+      const hasData = spots.length > 0 && banner.style.display !== 'none';
+      filterRow.style.display = hasData ? 'flex' : 'none';
+
+      const counts = { all: spots.length, empty_ground: 0, mall_parking: 0, legal_bay: 0 };
+      spots.forEach((s) => { if (counts[s.category] !== undefined) counts[s.category]++; });
+
+      filterRow.querySelectorAll('.ai-filter-pill').forEach((btn) => {
+        const cat = btn.getAttribute('data-ai-cat');
+        const labelBase = cat === 'all' ? 'All' : cat === 'empty_ground' ? '🟩 Grounds' : cat === 'mall_parking' ? '🛍️ Malls' : '🅿️ Bays';
+        btn.textContent = `${labelBase} (${counts[cat] || 0})`;
+        btn.classList.toggle('active', cat === window.__aiActiveCat);
+      });
+
+      const cards = Array.from(resultsEl.querySelectorAll('.lot-card'));
+      cards.forEach((card, idx) => {
+        const spot = spots[idx];
+        if (!spot) return;
+        card.dataset.aiCategory = spot.category;
+        const show = window.__aiActiveCat === 'all' || spot.category === window.__aiActiveCat;
+        card.style.display = show ? '' : 'none';
+      });
+    };
+
+    filterRow.addEventListener('click', (e) => {
+      const btn = e.target.closest('.ai-filter-pill');
+      if (!btn) return;
+      window.__aiActiveCat = btn.getAttribute('data-ai-cat') || 'all';
+      applyFilter();
+      window.dispatchEvent(new CustomEvent('openpark:ai-filter-changed', { detail: window.__aiActiveCat }));
+    });
+
+    new MutationObserver(applyFilter).observe(resultsEl, { childList: true });
+    new MutationObserver(applyFilter).observe(banner, { attributes: true, attributeFilter: ['style'] });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
