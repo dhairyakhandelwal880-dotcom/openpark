@@ -460,6 +460,18 @@
     });
   });
 
+  UIPolish.register('welcomeChipsAriaSync', () => {
+    const row = document.getElementById('welcome-mode-row');
+    if (!row) return;
+    const sync = () => {
+      row.querySelectorAll('.chip-btn').forEach((b) => {
+        b.setAttribute('aria-pressed', b.classList.contains('active') ? 'true' : 'false');
+      });
+    };
+    row.addEventListener('click', () => setTimeout(sync, 20));
+    sync();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
