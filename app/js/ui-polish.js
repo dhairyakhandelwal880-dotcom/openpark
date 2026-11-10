@@ -1226,6 +1226,16 @@
     });
   });
 
+  UIPolish.register('receiptCopyPassCode', (up) => {
+    const codeEl = document.getElementById('rcpt-pass-code');
+    if (!codeEl) return;
+    codeEl.style.cursor = 'pointer';
+    codeEl.title = 'Click to copy Parking Pass Code';
+    codeEl.addEventListener('click', () => {
+      up.copyText(codeEl.textContent.trim(), 'Parking Pass code copied');
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
