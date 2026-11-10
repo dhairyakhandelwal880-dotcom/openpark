@@ -789,6 +789,53 @@
     window.addEventListener('openpark:favs-updated', applySortAndFavs);
   });
 
+  UIPolish.register('lotCardBookmarkButtons', (up) => {
+    const viewExplore = document.getElementById('view-explore');
+    if (!viewExplore) return;
+
+    const decorateCards = () => {
+      const ctx = up.getCtx();
+      const lots = (ctx.STATE && ctx.STATE.lots) || [];
+      viewExplore.querySelectorAll('.lot-card').forEach((card) => {
+        const hdr = card.querySelector('.lot-card-header');
+        if (!hdr || hdr.querySelector('.fav-toggle-btn')) return;
+        const title = (card.querySelector('.lot-title')?.textContent || '').trim();
+        const lot = lots.find((l) => l.name === title);
+        const lotId = lot ? lot.id : title;
+        card.dataset.lotId = String(lotId);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'fav-toggle-btn';
+        const saved = window.__openparkFavs ? window.__openparkFavs.has(lotId) : false;
+        btn.classList.toggle('is-saved', saved);
+        btn.textContent = saved ? '★' : '☆';
+        btn.title = saved ? 'Remove from Saved Lots' : 'Bookmark Parking Lot';
+        btn.setAttribute('aria-label', btn.title);
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const nowSaved = window.__openparkFavs.toggle(lotId);
+          btn.classList.toggle('is-saved', nowSaved);
+          btn.textContent = nowSaved ? '★' : '☆';
+          up.toast(nowSaved ? `⭐ Saved ${title}` : `Removed ${title}`, 'info', 1600);
+        });
+        hdr.appendChild(btn);
+      });
+    };
+
+    new MutationObserver(decorateCards).observe(viewExplore, { childList: true });
+    window.addEventListener('openpark:favs-updated', () => {
+      viewExplore.querySelectorAll('.lot-card').forEach((card) => {
+        const btn = card.querySelector('.fav-toggle-btn');
+        if (!btn || !card.dataset.lotId) return;
+        const saved = window.__openparkFavs.has(card.dataset.lotId);
+        btn.classList.toggle('is-saved', saved);
+        btn.textContent = saved ? '★' : '☆';
+      });
+    });
+    decorateCards();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
