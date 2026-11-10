@@ -384,3 +384,11 @@
   background: var(--text-contrast-layer);
 }
 
+
+#ai-scan-banner {
+  flex-wrap: wrap;
+}
+#ai-scan-summary-text {
+  line-height: 1.35;
+}
+
