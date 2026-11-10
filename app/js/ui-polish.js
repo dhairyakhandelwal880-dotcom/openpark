@@ -1278,6 +1278,25 @@
     checkSpeed();
   });
 
+  UIPolish.register('networkOfflineBannerWatcher', (up) => {
+    const banner = document.getElementById('network-status-banner');
+    if (!banner) return;
+    const syncOnline = () => {
+      if (navigator.onLine) {
+        banner.style.display = 'none';
+      } else {
+        banner.style.display = 'flex';
+        up.toast('You appear offline — showing cached local parking spaces.', 'warning', 3200);
+      }
+    };
+    window.addEventListener('online', () => {
+      syncOnline();
+      up.toast('🌐 Connection restored', 'success', 2000);
+    });
+    window.addEventListener('offline', syncOnline);
+    syncOnline();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
