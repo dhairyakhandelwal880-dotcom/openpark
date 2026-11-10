@@ -1328,6 +1328,22 @@
     printBtn.setAttribute('aria-label', 'Print or save Digital Parking Pass as PDF');
   });
 
+  UIPolish.register('hudShortcutsTriggerButton', () => {
+    const cluster = document.querySelector('.control-cluster');
+    if (!cluster || document.getElementById('btn-hud-shortcuts')) return;
+    const btn = document.createElement('button');
+    btn.id = 'btn-hud-shortcuts';
+    btn.type = 'button';
+    btn.className = 'cluster-btn pressable';
+    btn.ariaLabel = 'Show keyboard shortcuts';
+    btn.title = 'Keyboard Shortcuts (?)';
+    btn.innerHTML = '<span style="font-size:13px;font-weight:800;">?</span>';
+    btn.addEventListener('click', () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: '?' }));
+    });
+    cluster.appendChild(btn);
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
