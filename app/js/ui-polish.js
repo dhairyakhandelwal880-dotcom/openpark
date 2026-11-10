@@ -985,6 +985,23 @@
     }
   });
 
+  UIPolish.register('aiClearFilterReset', (up) => {
+    const clearBtn = document.getElementById('btn-ai-clear');
+    if (!clearBtn) return;
+    clearBtn.addEventListener('click', () => {
+      window.__aiActiveCat = 'all';
+      const ctx = up.getCtx();
+      const map = ctx.MapEngine && ctx.MapEngine.map;
+      if (map) {
+        ['ai-scan-fill', 'ai-scan-outline'].forEach((id) => {
+          if (map.getLayer(id)) map.setFilter(id, null);
+        });
+      }
+      const rescan = document.getElementById('btn-ai-rescan-area');
+      if (rescan) rescan.style.display = 'none';
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
