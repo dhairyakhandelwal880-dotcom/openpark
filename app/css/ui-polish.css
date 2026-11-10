@@ -419,3 +419,15 @@
   }
 }
 
+
+.parking-pin,
+.welcome-dest-card,
+.cluster-btn,
+.chip-btn,
+.explore-sort-chip,
+.ai-filter-pill {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
