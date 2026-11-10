@@ -584,19 +584,21 @@ def test_ai_parking_scanner_endpoint():
     assert classify_and_score_candidate({"access": "private", "amenity": "parking"}, "Private Lot", 1500, 200) is None
     assert classify_and_score_candidate({"landuse": "military"}, "Restricted Zone", 5000, 300) is None
 
-    # 3. Valid empty ground (including OSM natural=scrub, landuse=vacant, AI gap plots) & mall plaza
-    ground = classify_and_score_candidate({"landuse": "brownfield", "surface": "unpaved"}, "Open Ground", 1200, 250)
-    assert ground is not None and ground["category"] == "empty_ground" and ground["estimated_spots"] >= 10
-    scrub_ground = classify_and_score_candidate({"natural": "scrub"}, "Open Scrub Ground (1,400 m²)", 1400, 180)
-    assert scrub_ground is not None and scrub_ground["category"] == "empty_ground"
-    vacant_ground = classify_and_score_candidate({"landuse": "vacant"}, "Vacant Open Lot (950 m²)", 950, 120)
+    # 3. Valid SMALL empty ground (45..550 m2 -> 3-6 cars) & rejection of LARGE grounds (>550 m2)
+    ground = classify_and_score_candidate({"landuse": "brownfield", "surface": "unpaved"}, "Small Empty Ground (95 m²)", 95, 250)
+    assert ground is not None and ground["category"] == "empty_ground" and 3 <= ground["estimated_spots"] <= 6
+    scrub_ground = classify_and_score_candidate({"natural": "scrub"}, "Small Scrub Pocket (115 m²)", 115, 180)
+    assert scrub_ground is not None and scrub_ground["category"] == "empty_ground" and 3 <= scrub_ground["estimated_spots"] <= 6
+    vacant_ground = classify_and_score_candidate({"landuse": "vacant"}, "Small Vacant Lot (85 m²)", 85, 120)
     assert vacant_ground is not None and vacant_ground["category"] == "empty_ground"
-    gap_ground = classify_and_score_candidate({"ai_gap_plot": "yes", "surface": "unpaved"}, "Open Unbuilt Ground (900 m²)", 900, 110)
-    assert gap_ground is not None and gap_ground["category"] == "empty_ground"
-    # Tiny median islands & sports pitches must be rejected
+    gap_ground = classify_and_score_candidate({"ai_gap_plot": "yes", "surface": "unpaved"}, "Small Unused Pocket (90 m²)", 90, 110)
+    assert gap_ground is not None and gap_ground["category"] == "empty_ground" and 3 <= gap_ground["estimated_spots"] <= 6
+    # Large fields (>550 m2), traffic islands, tiny slivers (<45 m2), and sports clubs must be rejected
+    assert classify_and_score_candidate({"natural": "scrub"}, "Huge Scrub Field", 1800, 150) is None
+    assert classify_and_score_candidate({"landuse": "grass"}, "Large Maidan", 10000, 150) is None
     assert classify_and_score_candidate({"landuse": "grass", "area:highway": "traffic_island"}, "Traffic Island", 60, 100) is None
-    assert classify_and_score_candidate({"landuse": "grass"}, "Median Strip", 90, 100) is None
-    assert classify_and_score_candidate({"leisure": "common", "sport": "basketball"}, "Indiranagar Basketball Club", 800, 200) is None
+    assert classify_and_score_candidate({"landuse": "grass"}, "Tiny Curb Patch", 25, 100) is None
+    assert classify_and_score_candidate({"leisure": "common", "sport": "basketball"}, "Indiranagar Basketball Club", 200, 200) is None
 
     mall = classify_and_score_candidate({"shop": "mall"}, "Forum Mall", 3000, 400)
     assert mall is not None and mall["category"] == "mall_parking"
@@ -626,6 +628,9 @@ def test_ai_parking_scanner_endpoint():
             assert item["category"] in ("empty_ground", "mall_parking", "legal_bay")
             assert 35 <= item["ai_score"] <= 98
             assert is_duplicate_of_existing(item["lat"], item["lon"], item["name"], real_lots) is False
+            if item["category"] == "empty_ground":
+                assert 45.0 <= item["area_m2"] <= 550.0
+                assert 3 <= item["estimated_spots"] <= 6
 
 
 

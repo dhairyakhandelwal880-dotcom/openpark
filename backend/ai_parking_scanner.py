@@ -36,14 +36,14 @@ _OPEN_GROUNDS_PRECOMPUTED: Optional[List[Dict[str, Any]]] = None
 # OSM unused / vacant open ground & plot classifications
 EMPTY_GROUND_LANDUSE = {
     "vacant", "brownfield", "greenfield", "grass", "meadow",
-    "recreation_ground", "village_green", "farmland",
+    "recreation_ground", "village_green",
 }
 EMPTY_GROUND_NATURAL = {"scrub", "grassland", "bare_rock", "sand", "heath"}
 EMPTY_GROUND_LEISURE = {"common"}
 EMPTY_SURFACE_VALUES = {"unpaved", "gravel", "dirt", "compacted", "ground", "earth", "sand", "grass"}
 
 ILLEGAL_ACCESS = {"private", "no", "restricted", "military", "permit", "delivery", "employees", "students"}
-ILLEGAL_LANDUSE = {"military", "cemetery", "quarry", "landfill", "railway", "industrial", "construction", "forest"}
+ILLEGAL_LANDUSE = {"military", "cemetery", "quarry", "landfill", "railway", "industrial", "construction", "forest", "farmland"}
 ILLEGAL_NATURAL = {"water", "wetland", "mud", "cliff", "glacier", "wood"}
 ILLEGAL_HIGHWAY = {"motorway", "motorway_link", "trunk", "trunk_link", "pedestrian", "footway", "cycleway", "steps"}
 ILLEGAL_AMENITY = {"fire_station", "prison", "school", "kindergarten", "police", "hospital", "college", "university", "place_of_worship"}
@@ -69,8 +69,9 @@ TRUE_GROUND_WORDS = (
     "staging area", "parking field", "fairground", "open space", "unpaved lot"
 )
 
-MIN_GROUND_AREA_M2 = 160.0
-MAX_GROUND_AREA_M2 = 250000.0
+MIN_GROUND_AREA_M2 = 45.0
+MAX_GROUND_AREA_M2 = 550.0
+LARGE_GROUND_STOPWORDS = ("maidan", "stadium", "exhibition", "fairground", "parade", "complex", "playfield")
 
 
 def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -155,20 +156,17 @@ def _descriptive_ground_name(tags: Dict[str, str], area_m2: float, dist_m: float
         return raw
     lu = (tags.get("landuse") or "").lower()
     nat = (tags.get("natural") or "").lower()
-    area_str = f" ({round(area_m2):,} m²)" if area_m2 >= MIN_GROUND_AREA_M2 else f" ({round(dist_m)}m away)"
-    if tags.get("ai_gap_plot") == "yes":
-        return f"Open Unbuilt Ground{area_str}"
+    cars_hint = max(3, min(6, int(round((max(area_m2, 65.0) * 0.52) / 16.0))))
+    area_str = f" ({round(area_m2)} m² • ~{cars_hint} cars)" if area_m2 >= MIN_GROUND_AREA_M2 else f" ({round(dist_m)}m away)"
+    if tags.get("ai_gap_plot") == "yes" or tags.get("ai_pocket_slice") == "yes":
+        return f"Small Unused Pocket{area_str}"
     if lu in ("vacant", "brownfield", "greenfield"):
-        return f"Vacant Open Lot{area_str}"
+        return f"Small Vacant Lot{area_str}"
     if nat in ("scrub", "heath", "bare_rock", "sand"):
-        return f"Open Scrub Ground{area_str}"
+        return f"Small Scrub Pocket{area_str}"
     if lu in ("grass", "meadow", "grassland", "village_green") or nat == "grassland":
-        return f"Open Grass Ground{area_str}"
-    if lu == "recreation_ground" or tags.get("leisure") == "common":
-        return f"Open Public Ground{area_str}"
-    if lu == "farmland":
-        return f"Open Uncultivated Plot{area_str}"
-    return f"Open Ground{area_str}"
+        return f"Small Grass Pocket{area_str}"
+    return f"Small Open Ground{area_str}"
 
 
 def is_duplicate_of_existing(
@@ -271,8 +269,12 @@ def classify_and_score_candidate(
     elif is_ground:
         if 0 < area_m2 < MIN_GROUND_AREA_M2 or area_m2 > MAX_GROUND_AREA_M2:
             return None
+        if area_m2 == 0 and tags.get("ai_gap_plot") != "yes" and tags.get("ai_pocket_slice") != "yes":
+            return None
+        if _matches_any_word(name_lower, LARGE_GROUND_STOPWORDS):
+            return None
         cat_key = "empty_ground"
-        cat_label = "Empty Open Ground"
+        cat_label = "Small Empty Ground (3-4 Cars)"
         badge = "🟩"
         color = "#ff9500"
     elif is_legal_bay:
@@ -283,13 +285,13 @@ def classify_and_score_candidate(
     else:
         return None
 
-    # Realistic vehicle bay estimate from polygon area or road/mall class
-    if area_m2 >= 60:
+    # Realistic vehicle bay estimate (small empty grounds hold ~3-6 cars)
+    if cat_key == "empty_ground":
+        est_spots = max(3, min(6, int(round((max(area_m2, 65.0) * 0.52) / 16.0))))
+    elif area_m2 >= 60:
         est_spots = max(4, min(350, int(round((area_m2 * 0.58) / 14.5))))
     elif cat_key == "mall_parking":
         est_spots = 60
-    elif cat_key == "empty_ground":
-        est_spots = 26
     elif is_street_pocket:
         est_spots = 6
     else:
@@ -444,7 +446,7 @@ def _detect_unbuilt_grid_plots(
     that contributors left untagged on OpenStreetMap.
     """
     min_lon, min_lat, max_lon, max_lat = bbox
-    grid_n = 28
+    grid_n = 44
     d_lon = (max_lon - min_lon) / grid_n
     d_lat = (max_lat - min_lat) / grid_n
     if d_lon <= 0 or d_lat <= 0:
@@ -497,7 +499,7 @@ def _detect_unbuilt_grid_plots(
                     if hw in ("residential", "unclassified", "service", "tertiary", "secondary"):
                         has_road[rr][cc] = True
 
-    if building_count < 140:
+    if building_count < 100:
         return []
 
     candidates: List[Tuple[float, float, float]] = []
@@ -505,11 +507,11 @@ def _detect_unbuilt_grid_plots(
         for c in range(2, grid_n - 2):
             if occupied[r][c]:
                 continue
-            # Require nearby mapped structures within 3 cells (~95m) so outer unmapped voids don't false-trigger
+            # Require nearby mapped structures so outer unmapped voids don't false-trigger
             local_occ = sum(
                 1 for dr in range(-2, 3) for dc in range(-2, 3) if occupied[r + dr][c + dc]
             )
-            if local_occ < 5:
+            if local_occ < 4:
                 continue
             road_adj = (
                 has_road[r - 1][c] or has_road[r + 1][c]
@@ -526,10 +528,10 @@ def _detect_unbuilt_grid_plots(
     chosen: List[Dict[str, Any]] = []
     chosen_pts: List[Tuple[float, float]] = []
     for dist, c_lat, c_lon in candidates:
-        if any(haversine_m(c_lat, c_lon, p_lat, p_lon) < 180.0 for p_lat, p_lon in chosen_pts):
+        if any(haversine_m(c_lat, c_lon, p_lat, p_lon) < 150.0 for p_lat, p_lon in chosen_pts):
             continue
         chosen_pts.append((c_lat, c_lon))
-        ring = _square_ring(c_lat, c_lon, half_m=15.0)
+        ring = _square_ring(c_lat, c_lon, half_m=4.8)
         chosen.append({
             "type": "way",
             "id": f"gap_{len(chosen)}_{round(c_lat,4)}_{round(c_lon,4)}",
@@ -537,7 +539,7 @@ def _detect_unbuilt_grid_plots(
             "center": {"lat": c_lat, "lon": c_lon},
             "geometry": [{"lat": pt[1], "lon": pt[0]} for pt in ring],
         })
-        if len(chosen) >= 4:
+        if len(chosen) >= 5:
             break
     return chosen
 
@@ -548,12 +550,20 @@ def _extract_cgimap_elements(
     center_lat: float,
     center_lon: float,
 ) -> List[Dict[str, Any]]:
-    """Extracts empty grounds, malls, parking bays, nearest street shoulders, and AI gap plots from CGImap JSON."""
+    """Extracts small 3-4 car empty grounds, malls, parking bays, street shoulders, and AI pocket plots from CGImap JSON."""
     node_map: Dict[int, Tuple[float, float]] = {
         e["id"]: (float(e["lat"]), float(e["lon"]))
         for e in raw_elements
         if e.get("type") == "node" and "lat" in e and "lon" in e
     }
+
+    road_pts: List[Tuple[float, float]] = []
+    for e in raw_elements:
+        if e.get("type") == "way" and "tags" in e:
+            if e["tags"].get("highway") in ("residential", "unclassified", "service", "tertiary", "secondary"):
+                for nid in e.get("nodes", [])[::3]:
+                    if nid in node_map:
+                        road_pts.append(node_map[nid])
 
     extracted: List[Dict[str, Any]] = []
     street_candidates: List[Tuple[float, Dict[str, Any]]] = []
@@ -585,10 +595,13 @@ def _extract_cgimap_elements(
         am = (tags.get("amenity") or "").lower()
         hw = (tags.get("highway") or "").lower()
 
-        is_interesting = (
+        is_ground_tag = (
             lu in EMPTY_GROUND_LANDUSE
             or nat in EMPTY_GROUND_NATURAL
             or lei in EMPTY_GROUND_LEISURE
+        )
+        is_interesting = (
+            is_ground_tag
             or sh in ("mall", "supermarket", "department_store")
             or am in ("parking", "parking_space", "marketplace")
             or lu == "retail"
@@ -615,6 +628,41 @@ def _extract_cgimap_elements(
                     "center": {"lat": c_lat, "lon": c_lon},
                     "geometry": geom,
                 }))
+        elif is_ground_tag:
+            area_m2 = compute_polygon_area_m2([[p[1], p[0]] for p in pts])
+            if MIN_GROUND_AREA_M2 <= area_m2 <= MAX_GROUND_AREA_M2:
+                extracted.append({
+                    "type": "way",
+                    "id": f"cg_w_{e['id']}",
+                    "tags": tags,
+                    "center": {"lat": c_lat, "lon": c_lon},
+                    "geometry": geom,
+                })
+            elif area_m2 > MAX_GROUND_AREA_M2 and road_pts:
+                # Carve ONLY a 3-4 car roadside corner pocket (~92 m2) from edge of large unused land
+                best_pt = None
+                best_d2 = 1e9
+                for pt in pts[::2]:
+                    for rpt in road_pts[::2]:
+                        d2 = (pt[0] - rpt[0]) ** 2 + (pt[1] - rpt[1]) ** 2
+                        if d2 < best_d2:
+                            best_d2 = d2
+                            best_pt = pt
+                if best_pt and best_d2 < (0.0007 ** 2):
+                    ring = _square_ring(best_pt[0], best_pt[1], half_m=4.8)
+                    extracted.append({
+                        "type": "way",
+                        "id": f"cg_p_{e['id']}",
+                        "tags": {
+                            "landuse": lu,
+                            "natural": nat,
+                            "leisure": lei,
+                            "surface": "unpaved",
+                            "ai_pocket_slice": "yes",
+                        },
+                        "center": {"lat": best_pt[0], "lon": best_pt[1]},
+                        "geometry": [{"lat": rp[1], "lon": rp[0]} for rp in ring],
+                    })
         else:
             extracted.append({
                 "type": "way",
@@ -739,6 +787,12 @@ async def _fetch_photon_spaces(lat: float, lon: float, radius_m: int) -> List[Di
                     tags["surface"] = "unpaved"
 
                 ring = _extent_to_ring(props.get("extent"))
+                if prefix == "ground":
+                    if not ring:
+                        continue
+                    ext_area = compute_polygon_area_m2(ring)
+                    if ext_area < MIN_GROUND_AREA_M2 or ext_area > MAX_GROUND_AREA_M2:
+                        continue
                 if ring:
                     elements.append({
                         "type": "way",
@@ -912,6 +966,7 @@ def _process_elements(
             default_name = raw_name
         elif (
             tags.get("ai_gap_plot") == "yes"
+            or tags.get("ai_pocket_slice") == "yes"
             or (tags.get("landuse") or "").lower() in EMPTY_GROUND_LANDUSE
             or (tags.get("natural") or "").lower() in EMPTY_GROUND_NATURAL
             or (tags.get("leisure") or "").lower() in EMPTY_GROUND_LEISURE
