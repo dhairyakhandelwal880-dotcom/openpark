@@ -318,17 +318,15 @@ def _load_local_fallback_candidates(lat: float, lon: float, radius_m: int) -> Li
 
     try:
         from places_db import search_places_nearby
-        nearby = search_places_nearby(lat=lat, lon=lon, radius_km=max(0.5, radius_m / 1000.0), limit=40)
+        nearby = search_places_nearby(lat=lat, lon=lon, radius_km=max(0.8, (radius_m * 1.3) / 1000.0), limit=100)
         for p in nearby:
             cat_l = (p.get("category") or "").lower()
             name_l = (p.get("name") or "").lower()
             tags: Dict[str, str] = {"name": p.get("name") or "Area"}
-            if any(k in cat_l or k in name_l for k in ("mall", "shopping", "market", "plaza", "commercial", "complex")):
+            if any(k in cat_l or k in name_l for k in ("mall", "shopping", "market", "plaza", "commercial", "complex", "galleria", "centre", "center")):
                 tags["shop"] = "mall"
                 tags["access"] = "customers"
-            elif any(k in cat_l or k in name_l for k in ("ground", "park", "garden", "maidan", "stadium")):
-                if "park" in cat_l and "parking" not in cat_l and "ground" not in name_l:
-                    continue
+            elif any(k in cat_l or k in name_l for k in ("ground", "maidan", "stadium", "open", "field")):
                 tags["landuse"] = "brownfield"
                 tags["surface"] = "unpaved"
             elif "parking" in cat_l or "parking" in name_l:
@@ -346,6 +344,37 @@ def _load_local_fallback_candidates(lat: float, lon: float, radius_m: int) -> Li
             })
     except Exception as exc:
         logger.debug("Local places_db fallback error: %s", exc)
+
+    try:
+        from traccar_service import BENGALURU_PLACES_CATALOG
+        for idx, item in enumerate(BENGALURU_PLACES_CATALOG):
+            c_lat = float(item.get("lat", 0.0))
+            c_lon = float(item.get("lon", 0.0))
+            if haversine_m(lat, lon, c_lat, c_lon) > max(radius_m, 2000):
+                continue
+            cat_l = (item.get("category") or "").lower()
+            name_l = (item.get("name") or "").lower()
+            tags_cat: Dict[str, str] = {"name": item["name"]}
+            if any(k in cat_l or k in name_l for k in ("mall", "shopping", "plaza", "commercial", "forum", "orion", "ub city", "mantri", "garuda", "vega")):
+                tags_cat["shop"] = "mall"
+                tags_cat["access"] = "customers"
+            elif any(k in cat_l or k in name_l for k in ("ground", "maidan", "stadium", "sports", "palace")):
+                tags_cat["landuse"] = "brownfield"
+                tags_cat["surface"] = "unpaved"
+            elif "parking" in cat_l or "parking" in name_l:
+                tags_cat["amenity"] = "parking"
+                tags_cat["access"] = "yes"
+            else:
+                continue
+            elements.append({
+                "type": "node",
+                "id": f"cat_{idx}",
+                "tags": tags_cat,
+                "lat": c_lat,
+                "lon": c_lon,
+            })
+    except Exception as exc:
+        logger.debug("Catalog enrichment error: %s", exc)
 
     return elements
 
@@ -461,7 +490,24 @@ async def scan_map_for_parking(
             })
 
     discovered.sort(key=lambda x: (-x["ai_score"], x["distance_km"]))
-    top_results = discovered[:25]
+
+    # Diversify top results so malls & empty grounds appear alongside legal street/surface bays
+    top_results: List[Dict[str, Any]] = []
+    chosen_ids = set()
+    for cat_name, quota in (("empty_ground", 8), ("mall_parking", 8), ("legal_bay", 9)):
+        bucket = [r for r in discovered if r["category"] == cat_name][:quota]
+        for r in bucket:
+            top_results.append(r)
+            chosen_ids.add(r["id"])
+    for r in discovered:
+        if len(top_results) >= 25:
+            break
+        if r["id"] not in chosen_ids:
+            top_results.append(r)
+            chosen_ids.add(r["id"])
+
+    top_results.sort(key=lambda x: (-x["ai_score"], x["distance_km"]))
+    filtered_geojson = [f for f in geojson_features if f["properties"].get("id") in chosen_ids]
 
     counts = {
         "empty_grounds": sum(1 for r in top_results if r["category"] == "empty_ground"),
@@ -483,6 +529,6 @@ async def scan_map_for_parking(
         "results": top_results,
         "geojson": {
             "type": "FeatureCollection",
-            "features": geojson_features[:25],
+            "features": filtered_geojson,
         },
     }
