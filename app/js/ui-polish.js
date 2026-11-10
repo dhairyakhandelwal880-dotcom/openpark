@@ -440,6 +440,17 @@
     if (wBtn) wBtn.addEventListener('click', saveCurrentTheme);
   });
 
+  UIPolish.register('welcomeKeyboardFooterHint', () => {
+    const card = document.querySelector('.welcome-card');
+    if (!card || document.getElementById('welcome-kbd-footer')) return;
+    const footer = document.createElement('div');
+    footer.id = 'welcome-kbd-footer';
+    footer.className = 'kbd-hint';
+    footer.style.cssText = 'width:100%;height:auto;padding:4px 0 0;background:none;border:none;font-family:inherit;font-size:11px;justify-content:center;gap:10px;';
+    footer.innerHTML = '<span>Press <b>/</b> to search</span><span>•</span><span><b>G</b> Parking Near Me</span><span>•</span><span><b>?</b> Shortcuts</span>';
+    card.appendChild(footer);
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
