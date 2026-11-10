@@ -380,6 +380,14 @@
     render();
   });
 
+  UIPolish.register('welcomeTimeGreeting', () => {
+    const el = document.getElementById('welcome-greeting');
+    if (!el) return;
+    const hr = new Date().getHours();
+    const icon = hr < 12 ? '🌅 Good morning' : hr < 17 ? '☀️ Good afternoon' : hr < 21 ? '🌆 Good evening' : '🌙 Good night';
+    el.textContent = `${icon} • OpenPark Smart Mobility`;
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
