@@ -3037,10 +3037,10 @@
   <div id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-heading">
     <div class="apple-glass welcome-card">
       <div class="welcome-topbar">
-        <button class="welcome-gps-pill pressable" id="btn-welcome-gps" title="Refresh my GPS fix">
+        <div class="welcome-gps-pill" style="cursor: default;">
           <span class="status-pulse status-green"></span>
-          <span id="welcome-gps-label">📍 Bengaluru • Ready</span>
-        </button>
+          <span>OpenPark • India</span>
+        </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <button class="welcome-skip-btn pressable" id="btn-welcome-theme" title="Switch Light / Dark Liquid Glass">🌓</button>
           <button class="welcome-skip-btn pressable" id="btn-welcome-skip">
@@ -3123,14 +3123,10 @@
       </div>
 
       <!-- Bottom Direct CTAs -->
-      <div class="welcome-footer-actions" style="grid-template-columns: 1.2fr 1.2fr 0.9fr;">
+      <div class="welcome-footer-actions">
         <button class="btn-primary pressable" id="btn-welcome-nearby">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-          Park Near Me
-        </button>
-        <button class="btn-primary pressable" id="btn-welcome-ai-scan" style="background: linear-gradient(135deg, #5856d6 0%, #0071e3 100%);">
-          <span>🤖</span>
-          AI Scan Grounds
+          Parking Near Me
         </button>
         <button class="btn-secondary pressable" id="btn-welcome-skip-bottom">
           Open Map
@@ -7532,13 +7528,8 @@
             }
 
             if (isFirstFix || (isHighAccSource && prevBest > 300 && accMeters <= 100)) {
-              const label = accMeters > 250
-                ? `📍 Approximate Location: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}] (±${accMeters}m — drag pin to fine-tune)`
-                : `📍 Tracking Device: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}] (±${accMeters}m)`;
-              ParkingApp.showToast(label, accMeters > 250 ? 'info' : 'success', 3200);
-            }
-            if (typeof WelcomeController !== 'undefined' && WelcomeController.updateGpsLabel) {
-              WelcomeController.updateGpsLabel(fix);
+              const label = `📍 Tracking Device: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}]`;
+              ParkingApp.showToast(label, 'success', 2800);
             }
           };
 
@@ -7991,15 +7982,6 @@
             };
           }
 
-          // GPS refresh pill on Welcome screen
-          const btnWelcomeGps = document.getElementById('btn-welcome-gps');
-          if (btnWelcomeGps) {
-            btnWelcomeGps.onclick = () => {
-              ParkingApp.toggleLiveLocation();
-              this.updateGpsLabel(STATE.userLocation);
-            };
-          }
-
           // Travel mode / preference chips
           document.querySelectorAll('#welcome-mode-row .chip-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -8051,7 +8033,7 @@
             });
           });
 
-          // Find Parking Near Me CTA
+          // Unified "Parking Near Me" CTA (combines uploaded nearby lots + AI ground/mall/legal scan)
           const btnNearby = document.getElementById('btn-welcome-nearby');
           if (btnNearby) {
             btnNearby.onclick = async () => {
@@ -8059,15 +8041,24 @@
               this.hide();
               const lat = STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1];
               const lng = STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0];
-              if (!STATE.lots || !STATE.lots.length) {
-                await ParkingApp.loadNearbyLots(lat, lng);
+
+              if (MapEngine.map) {
+                MapEngine.map.flyTo({ center: [lng, lat], zoom: 16.0, duration: 600 });
               }
-              const filtered = UIController.filterLots(STATE.lots || []);
-              const best = filtered.find(l => (l.free_spots || 0) > 0) || filtered[0] || (STATE.lots && STATE.lots[0]);
-              if (best) {
-                ParkingApp.selectLot(best.id);
-              } else {
-                ParkingApp.toggleLiveLocation();
+
+              await Promise.all([
+                ParkingApp.loadNearbyLots(lat, lng),
+                AIScannerEngine.scanCurrentArea(lat, lng)
+              ]);
+
+              const filteredLots = UIController.filterLots(STATE.lots || []);
+              const bestLot = filteredLots.find(l => (l.free_spots || 0) > 0) || filteredLots[0];
+              const bestAi = (AIScannerEngine.results && AIScannerEngine.results[0]) || null;
+
+              if (bestAi && (!bestLot || Number(bestAi.distance_km) <= Number(bestLot.distance_km || 99))) {
+                AIScannerEngine.selectDiscoveredSpot(bestAi);
+              } else if (bestLot) {
+                ParkingApp.selectLot(bestLot.id);
               }
             };
           }
@@ -8185,20 +8176,7 @@
           SearchEngine.selectResult(item);
         },
 
-        updateGpsLabel(fix) {
-          const lbl = document.getElementById('welcome-gps-label');
-          if (!lbl || !fix) return;
-          const acc = Math.round(fix.accuracy || 5);
-          if (STATE.hasRealDeviceFix && acc <= 250) {
-            lbl.textContent = `📍 Live GPS Ready (±${acc}m)`;
-          } else if (STATE.hasRealDeviceFix) {
-            lbl.textContent = `📍 Approximate GPS (±${acc}m • Tap to refresh)`;
-          } else if (fix.city) {
-            lbl.textContent = `📍 ${fix.city} (Network IP)`;
-          } else {
-            lbl.textContent = `📍 Near Bengaluru (${Number(fix.lat).toFixed(3)}, ${Number(fix.lng).toFixed(3)})`;
-          }
-        },
+        updateGpsLabel() {},
 
         show() {
           const overlay = document.getElementById('welcome-overlay');
@@ -8231,20 +8209,13 @@
           const btnSidebar = document.getElementById('btn-ai-scan');
           const btnHud = document.getElementById('btn-hud-ai-scan');
           const btnClear = document.getElementById('btn-ai-clear');
-          const btnWelcomeAi = document.getElementById('btn-welcome-ai-scan');
 
           if (btnSidebar) btnSidebar.onclick = () => this.scanCurrentArea();
           if (btnHud) btnHud.onclick = () => this.scanCurrentArea();
           if (btnClear) btnClear.onclick = () => this.clear();
-          if (btnWelcomeAi) {
-            btnWelcomeAi.onclick = () => {
-              WelcomeController.hide();
-              this.scanCurrentArea();
-            };
-          }
         },
 
-        async scanCurrentArea() {
+        async scanCurrentArea(overrideLat = null, overrideLon = null) {
           if (this.isScanning) return;
           this.isScanning = true;
 
@@ -8253,9 +8224,11 @@
           if (labelEl) labelEl.textContent = 'AI Reading Map Geometry...';
           if (hudBtn) hudBtn.classList.add('active-blue', 'active-pulse');
 
-          const center = MapEngine.map
-            ? MapEngine.map.getCenter()
-            : { lat: STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1], lng: STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0] };
+          const center = (Number.isFinite(overrideLat) && Number.isFinite(overrideLon))
+            ? { lat: overrideLat, lng: overrideLon }
+            : (MapEngine.map
+              ? MapEngine.map.getCenter()
+              : { lat: STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1], lng: STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0] });
 
           ParkingApp.showToast('🤖 AI scanning map for empty grounds, malls & legal bays...', 'info', 2500);
 
