@@ -866,6 +866,23 @@
     });
   });
 
+  UIPolish.register('exploreTabBadgeCount', (up) => {
+    const tabExplore = document.getElementById('tab-explore');
+    const aiList = document.getElementById('ai-scan-results');
+    const lotsCountEl = document.getElementById('total-lots-count');
+    if (!tabExplore) return;
+
+    const updateTabLabel = () => {
+      const ctx = up.getCtx();
+      const aiCount = (ctx.AIScannerEngine && Array.isArray(ctx.AIScannerEngine.results)) ? ctx.AIScannerEngine.results.length : 0;
+      const lotCount = lotsCountEl ? parseInt(lotsCountEl.textContent || '0', 10) : 0;
+      tabExplore.textContent = aiCount > 0 ? `Explore (${aiCount} AI)` : lotCount > 0 ? `Explore (${lotCount})` : 'Explore';
+    };
+
+    if (aiList) new MutationObserver(updateTabLabel).observe(aiList, { childList: true });
+    if (lotsCountEl) new MutationObserver(updateTabLabel).observe(lotsCountEl, { childList: true, characterData: true, subtree: true });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
