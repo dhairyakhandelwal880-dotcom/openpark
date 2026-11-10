@@ -52,12 +52,13 @@
       --transition-standard: 180ms var(--spring-curve);
       --transition-smooth: 320ms var(--spring-curve);
 
-      /* Apple Light Glass (Default) */
+      /* Apple Liquid Glass (iOS 18 / visionOS Light Default) */
       --glass-bg: rgba(255, 255, 255, 0.72);
+      --glass-bg-hover: rgba(255, 255, 255, 0.86);
       --glass-border-color: rgba(255, 255, 255, 0.65);
       --glass-border: 1px solid var(--glass-border-color);
-      --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.75);
-      --glass-shadow: 0 12px 36px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+      --glass-highlight: inset 0 1px 1px 0 rgba(255, 255, 255, 0.75);
+      --glass-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.08), 0 2px 8px 0 rgba(0, 0, 0, 0.04);
 
       --text-primary: #1d1d1f;
       --text-secondary: rgba(60, 60, 67, 0.65);
@@ -76,12 +77,13 @@
     }
 
     @media (prefers-color-scheme: dark) {
-      :root {
-        --glass-bg: rgba(28, 28, 30, 0.78);
+      :root:not([data-theme="light"]) {
+        --glass-bg: rgba(28, 28, 30, 0.76);
+        --glass-bg-hover: rgba(38, 38, 42, 0.88);
         --glass-border-color: rgba(255, 255, 255, 0.12);
         --glass-border: 1px solid var(--glass-border-color);
-        --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12);
-        --glass-shadow: 0 16px 45px rgba(0, 0, 0, 0.4);
+        --glass-highlight: inset 0 1px 1px 0 rgba(255, 255, 255, 0.18);
+        --glass-shadow: 0 16px 45px rgba(0, 0, 0, 0.45);
 
         --text-primary: #f5f5f7;
         --text-secondary: rgba(235, 235, 245, 0.6);
@@ -95,6 +97,27 @@
         --color-hover: rgba(255, 255, 255, 0.1);
         --color-active: rgba(255, 255, 255, 0.18);
       }
+    }
+
+    [data-theme="dark"] {
+      --glass-bg: rgba(28, 28, 30, 0.76);
+      --glass-bg-hover: rgba(38, 38, 42, 0.88);
+      --glass-border-color: rgba(255, 255, 255, 0.12);
+      --glass-border: 1px solid var(--glass-border-color);
+      --glass-highlight: inset 0 1px 1px 0 rgba(255, 255, 255, 0.18);
+      --glass-shadow: 0 16px 45px rgba(0, 0, 0, 0.45);
+
+      --text-primary: #f5f5f7;
+      --text-secondary: rgba(235, 235, 245, 0.6);
+      --solid-panel-bg: rgba(28, 28, 30, 0.92);
+      --text-contrast-layer: rgba(120, 120, 128, 0.16);
+      --text-contrast-subtle: rgba(120, 120, 128, 0.24);
+
+      --accent-subtle: #38bdf8;
+      --color-text-tertiary: rgba(235, 235, 245, 0.45);
+      --color-border-subtle: rgba(255, 255, 255, 0.12);
+      --color-hover: rgba(255, 255, 255, 0.1);
+      --color-active: rgba(255, 255, 255, 0.18);
     }
 
     /* Reset & Base */
@@ -261,6 +284,12 @@
     .cluster-btn.active-blue {
       color: var(--apple-blue);
       background: rgba(0, 113, 227, 0.14);
+    }
+
+    .hud-divider {
+      height: 1px;
+      background: var(--glass-border-color);
+      margin: 2px 8px;
     }
 
     .cluster-btn#btn-compass-north.has-bearing {
@@ -1200,43 +1229,63 @@
       will-change: transform;
     }
 
-    /* Live Apple Glass Parking Map Pins */
+    /* Live Apple Liquid Glass Parking Map Pins */
     .parking-pin {
       padding: 6px 12px;
       display: flex;
       align-items: center;
       gap: 7px;
-      border-radius: 14px;
+      border-radius: 16px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       white-space: nowrap;
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
-      transition: transform 0.18s var(--spring-curve), box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      transition: transform 0.2s var(--spring-curve), box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
     }
     .parking-pin:hover {
-      transform: translateY(-2px) scale(1.04);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+      transform: scale(1.08) translateY(-2px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
       z-index: 60 !important;
     }
     .parking-pin.is-selected {
-      background: var(--apple-blue);
-      color: #ffffff;
-      border-color: rgba(255, 255, 255, 0.45);
-      transform: scale(1.08);
-      box-shadow: 0 10px 26px rgba(0, 113, 227, 0.45);
+      border-color: var(--apple-blue);
+      background: rgba(255, 255, 255, 0.96);
+      color: #1d1d1f;
+      transform: scale(1.12) translateY(-4px);
+      box-shadow: 0 10px 28px rgba(0, 113, 227, 0.4);
       z-index: 80 !important;
     }
-    .parking-pin .status-dot {
+    .status-pulse {
       width: 8px;
       height: 8px;
       border-radius: 50%;
+      position: relative;
       flex-shrink: 0;
     }
-    .parking-pin .status-dot.status-available { background: var(--apple-green); box-shadow: 0 0 8px var(--apple-green); }
-    .parking-pin .status-dot.status-filling   { background: var(--apple-orange); box-shadow: 0 0 8px var(--apple-orange); }
-    .parking-pin .status-dot.status-full      { background: var(--apple-red); }
-    .parking-pin .status-dot.status-unknown   { background: var(--status-unknown); }
+    .status-pulse::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      border-radius: 50%;
+      animation: pulse-ring 1.8s infinite;
+    }
+    .status-green { background: var(--apple-green); }
+    .status-green::after { background: var(--apple-green); }
+    .status-orange { background: var(--apple-orange); }
+    .status-orange::after { background: var(--apple-orange); }
+    .status-red { background: var(--apple-red); }
+    .status-red::after { display: none; }
+    .status-muted { background: var(--status-unknown); }
+    .status-muted::after { display: none; }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
 
     /* Sliding Apple Glass Parking Spot Details Drawer */
     .bottom-drawer {
@@ -1291,14 +1340,62 @@
       margin: 0;
     }
     .capacity-card {
-      margin: 14px 0;
-      padding: 12px 16px;
-      border-radius: 14px;
+      margin: 12px 0;
+      padding: 13px 16px;
+      border-radius: 16px;
       background: var(--text-contrast-layer);
       border: 1px solid var(--color-border-subtle);
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      gap: 14px;
+    }
+    .gauge-wrapper {
+      position: relative;
+      width: 52px;
+      height: 52px;
+      flex-shrink: 0;
+    }
+    .gauge-svg {
+      transform: rotate(-90deg);
+      width: 52px;
+      height: 52px;
+    }
+    .gauge-bg {
+      fill: none;
+      stroke: rgba(120, 120, 128, 0.22);
+      stroke-width: 5;
+    }
+    .gauge-bar {
+      fill: none;
+      stroke: var(--apple-green);
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-dasharray: 125.6;
+      stroke-dashoffset: 40;
+      transition: stroke-dashoffset 0.8s var(--spring-curve), stroke 0.3s ease;
+    }
+    .gauge-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 12px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+    .badges-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .feature-tag {
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: var(--text-contrast-subtle);
+      color: var(--text-primary);
     }
     .spots-count {
       font-size: 22px;
@@ -2418,6 +2515,19 @@
     <button class="cluster-btn pressable" id="btn-tilt-3d" aria-label="Toggle 3D tilt" title="Toggle 3D View">
       <span style="font-size: 12px; font-weight: 700; letter-spacing: -0.5px;">3D</span>
     </button>
+    <div class="hud-divider"></div>
+    <button class="cluster-btn pressable" id="btn-theme" aria-label="Toggle dark or light glass" title="Toggle Dark / Light Liquid Glass">
+      <svg class="svg-icon" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="5"></circle>
+        <line x1="12" y1="1" x2="12" y2="3"></line>
+        <line x1="12" y1="21" x2="12" y2="23"></line>
+        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+        <line x1="1" y1="12" x2="3" y2="12"></line>
+        <line x1="21" y1="12" x2="23" y2="12"></line>
+      </svg>
+    </button>
+    <div class="hud-divider"></div>
     <button class="cluster-btn pressable" id="btn-toggle-layers" aria-label="Toggle map detail layers" title="Cycle Detail Styles (Google Maps Vector / OSM Full Detail / Carto Voyager)">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
     </button>
@@ -2641,11 +2751,23 @@
     </div>
 
     <div class="capacity-card">
-      <div>
-        <div style="font-size: 11.5px; color: var(--text-secondary); text-transform: uppercase; font-weight: 600; letter-spacing: 0.4px;">Live Availability</div>
-        <div style="font-size: 13px; font-weight: 500;" id="drawer-lot-sub">Electric & Standard Bays</div>
+      <div class="gauge-wrapper">
+        <svg class="gauge-svg">
+          <circle class="gauge-bg" cx="26" cy="26" r="20"></circle>
+          <circle class="gauge-bar" id="drawer-gauge-bar" cx="26" cy="26" r="20"></circle>
+        </svg>
+        <div class="gauge-text" id="drawer-gauge-text">78%</div>
       </div>
-      <div class="spots-count" id="drawer-lot-spots">24 Free</div>
+      <div style="flex: 1;">
+        <div style="font-size: 15px; font-weight: 700;" id="drawer-lot-spots">24 Free Bays Available</div>
+        <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;" id="drawer-lot-sub">Real-time telemetry verified</div>
+      </div>
+    </div>
+
+    <div class="badges-row" id="drawer-badges">
+      <span class="feature-tag">⚡ EV Ready</span>
+      <span class="feature-tag">🏢 Covered Bay</span>
+      <span class="feature-tag">🔒 24/7 Access</span>
     </div>
 
     <div class="action-grid">
@@ -4711,21 +4833,22 @@
             if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
 
             const free = Number(lot.free_spots || 0);
-            let statusDotClass = 'status-available';
-            if (lot.status === 'Full' || free === 0) statusDotClass = 'status-full';
-            else if (lot.status === 'Filling up' || free <= 5) statusDotClass = 'status-filling';
-            else if (lot.status === 'Unknown') statusDotClass = 'status-unknown';
+            let pulseClass = 'status-green';
+            if (lot.status === 'Full' || free === 0) pulseClass = 'status-red';
+            else if (lot.status === 'Filling up' || free < 15) pulseClass = 'status-orange';
+            else if (lot.status === 'Unknown') pulseClass = 'status-muted';
 
+            const cleanRate = String(lot.price_car || lot.price_note || '₹40').replace('/hr', '');
             const el = document.createElement('div');
             el.className = 'apple-glass parking-pin pressable';
             if (STATE.selectedLot && STATE.selectedLot.id == lot.id) {
               el.classList.add('is-selected');
             }
             el.innerHTML = `
-              <span class="status-dot ${statusDotClass}"></span>
-              <span>${free > 0 ? free + ' spots' : 'Full'}</span>
+              <div class="status-pulse ${pulseClass}"></div>
+              <span>${free > 0 ? free + ' bays' : 'Full'} • ${cleanRate}</span>
             `;
-            el.title = `${lot.name} • ${free} spots free (${lot.price_car || '₹40'}/hr)`;
+            el.title = `${lot.name} • ${free} spots free (${cleanRate}/hr)`;
 
             el.addEventListener('click', (e) => {
               e.stopPropagation();
@@ -4814,6 +4937,35 @@
               }
             };
           }
+
+          // Liquid Glass Light/Dark Theme Switcher
+          const savedTheme = localStorage.getItem('openpark_glass_theme');
+          if (savedTheme === 'dark' || savedTheme === 'light') {
+            document.documentElement.setAttribute('data-theme', savedTheme);
+          }
+          const btnTheme = document.getElementById('btn-theme');
+          if (btnTheme) {
+            btnTheme.onclick = () => {
+              const curAttr = document.documentElement.getAttribute('data-theme');
+              const isCurrentlyDark = curAttr === 'dark' || (!curAttr && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+              const nextTheme = isCurrentlyDark ? 'light' : 'dark';
+              document.documentElement.setAttribute('data-theme', nextTheme);
+              localStorage.setItem('openpark_glass_theme', nextTheme);
+              btnTheme.classList.toggle('active-blue', nextTheme === 'dark');
+              if (navigator.vibrate) navigator.vibrate(8);
+              ParkingApp.showToast(`${nextTheme.toUpperCase()} Liquid Glass activated`, 'info', 2000);
+            };
+          }
+
+          // ESC key dismisses open drawer cleanly
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              const drawer = document.getElementById('parking-drawer');
+              if (drawer && drawer.classList.contains('open')) {
+                ParkingApp.closeDrawer();
+              }
+            }
+          });
 
           // Category Quick Search chips (Google Maps Style)
           document.querySelectorAll('.filter-chip-row .chip-btn').forEach(btn => {
@@ -7045,8 +7197,32 @@
             document.getElementById('drawer-lot-sub').textContent = `${lot.has_ev || (lot.id % 2 === 0) ? 'EV & Standard Bays' : 'Standard Parking Bays'} • Updated ${lot.updated_mins}m ago`;
 
             const spotsEl = document.getElementById('drawer-lot-spots');
-            spotsEl.textContent = free > 0 ? `${free} Free` : 'Full';
-            spotsEl.style.color = free > 5 ? 'var(--apple-green)' : (free > 0 ? 'var(--apple-orange)' : 'var(--apple-red)');
+            spotsEl.textContent = free > 0 ? `${free} Free Bays Available` : 'Lot Currently Full';
+            spotsEl.style.color = free > 5 ? 'var(--text-primary)' : (free > 0 ? 'var(--apple-orange)' : 'var(--apple-red)');
+
+            // Animate SVG Circular Capacity Gauge
+            const totalCap = Math.max(1, Number(lot.capacity || 100));
+            const pct = Math.min(100, Math.max(0, Math.round((free / totalCap) * 100)));
+            const circumference = 125.6;
+            const offset = circumference - (pct / 100) * circumference;
+            const gaugeBar = document.getElementById('drawer-gauge-bar');
+            const gaugeText = document.getElementById('drawer-gauge-text');
+            if (gaugeBar) {
+              gaugeBar.style.strokeDashoffset = offset;
+              gaugeBar.style.stroke = pct > 30 ? 'var(--apple-green)' : (pct > 10 ? 'var(--apple-orange)' : 'var(--apple-red)');
+            }
+            if (gaugeText) gaugeText.textContent = `${pct}%`;
+
+            // Feature Badges
+            const badgesEl = document.getElementById('drawer-badges');
+            if (badgesEl) {
+              const hasEv = lot.has_ev || (lot.id % 2 === 0);
+              badgesEl.innerHTML = `
+                ${hasEv ? '<span class="feature-tag">⚡ Fast EV Charge</span>' : ''}
+                ${isCovered ? '<span class="feature-tag">🏢 Covered Space</span>' : '<span class="feature-tag">☀️ Open Sky Lot</span>'}
+                <span class="feature-tag">🔒 Telemetry Verified</span>
+              `;
+            }
 
             drawer.classList.add('open');
           }
