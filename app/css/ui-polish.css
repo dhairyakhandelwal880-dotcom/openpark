@@ -14,3 +14,24 @@
   }
 }
 
+.sidebar-views,
+#welcome-autocomplete-box,
+#search-autocomplete-box {
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 128, 0.35) transparent;
+}
+.sidebar-views::-webkit-scrollbar,
+#welcome-autocomplete-box::-webkit-scrollbar,
+#search-autocomplete-box::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.sidebar-views::-webkit-scrollbar-thumb,
+#welcome-autocomplete-box::-webkit-scrollbar-thumb,
+#search-autocomplete-box::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 128, 0.32);
+  border-radius: 999px;
+}
+
