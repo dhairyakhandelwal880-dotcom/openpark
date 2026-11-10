@@ -1033,6 +1033,17 @@
     });
   });
 
+  UIPolish.register('activeExploreFilterHighlight', () => {
+    const chips = document.getElementById('explore-filter-chips');
+    if (!chips) return;
+    chips.addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip-btn');
+      if (!btn) return;
+      const sortBar = document.getElementById('explore-sort-bar');
+      if (sortBar) sortBar.style.opacity = btn.getAttribute('data-lot-filter') === 'all' ? '1' : '0.96';
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
