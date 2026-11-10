@@ -38,6 +38,36 @@
 
   window.OpenParkUIPolish = UIPolish;
 
+  UIPolish.register('escapeDismiss', (up) => {
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const scModal = document.getElementById('modal-shortcuts');
+      if (scModal && scModal.classList.contains('open')) {
+        scModal.classList.remove('open');
+        return;
+      }
+      for (const id of ['modal-receipt', 'modal-report', 'modal-traccar']) {
+        const el = document.getElementById(id);
+        if (el && el.classList.contains('open')) {
+          el.classList.remove('open');
+          return;
+        }
+      }
+      const drawer = document.getElementById('parking-drawer');
+      if (drawer && drawer.classList.contains('open')) {
+        drawer.classList.remove('open');
+        return;
+      }
+      const welcome = document.getElementById('welcome-overlay');
+      if (welcome && !welcome.classList.contains('hidden')) {
+        const ctx = up.getCtx();
+        if (ctx.WelcomeController && typeof ctx.WelcomeController.hide === 'function') {
+          ctx.WelcomeController.hide();
+        }
+      }
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
