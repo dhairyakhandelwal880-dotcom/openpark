@@ -159,6 +159,48 @@
     });
   });
 
+  UIPolish.register('sidebarAutocompleteNav', () => {
+    const bindDropdownKeyboard = (inputId, listId) => {
+      const input = document.getElementById(inputId);
+      const list = document.getElementById(listId);
+      if (!input || !list) return;
+      let activeIdx = -1;
+
+      const syncHighlight = () => {
+        const items = Array.from(list.querySelectorAll('.autocomplete-item'));
+        items.forEach((el, idx) => el.classList.toggle('is-active', idx === activeIdx));
+        if (activeIdx >= 0 && items[activeIdx]) {
+          items[activeIdx].scrollIntoView({ block: 'nearest' });
+        }
+      };
+
+      const obs = new MutationObserver(() => { activeIdx = -1; });
+      obs.observe(list, { childList: true });
+
+      input.addEventListener('keydown', (e) => {
+        if (!list.classList.contains('open')) return;
+        const items = Array.from(list.querySelectorAll('.autocomplete-item'));
+        if (!items.length) return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          activeIdx = (activeIdx + 1) % items.length;
+          syncHighlight();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          activeIdx = (activeIdx <= 0 ? items.length - 1 : activeIdx - 1);
+          syncHighlight();
+        } else if (e.key === 'Enter' && activeIdx >= 0 && items[activeIdx]) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          items[activeIdx].click();
+        }
+      }, true);
+    };
+
+    bindDropdownKeyboard('search-input', 'search-autocomplete-box');
+    bindDropdownKeyboard('welcome-search-input', 'welcome-autocomplete-box');
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
