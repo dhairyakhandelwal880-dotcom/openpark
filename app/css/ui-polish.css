@@ -441,3 +441,14 @@
   box-shadow: 0 8px 22px rgba(88, 86, 214, 0.30);
 }
 
+
+#toast.show {
+  animation: uiCardEnter 200ms var(--spring-curve);
+}
+@media (max-width: 768px) {
+  #toast {
+    bottom: 24px;
+    max-width: 90vw;
+  }
+}
+
