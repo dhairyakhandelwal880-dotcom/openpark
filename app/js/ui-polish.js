@@ -388,6 +388,24 @@
     el.textContent = `${icon} • OpenPark Smart Mobility`;
   });
 
+  UIPolish.register('welcomeThemeIconSync', () => {
+    const wBtn = document.getElementById('btn-welcome-theme');
+    const mainThemeBtn = document.getElementById('btn-theme');
+    if (!wBtn) return;
+
+    const syncIcon = () => {
+      const theme = document.documentElement.getAttribute('data-theme');
+      const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = theme === 'dark' || (!theme && sysDark);
+      wBtn.textContent = isDark ? '☀️' : '🌙';
+      wBtn.title = isDark ? 'Switch to Light Liquid Glass' : 'Switch to Dark Liquid Glass';
+    };
+
+    if (mainThemeBtn) mainThemeBtn.addEventListener('click', () => setTimeout(syncIcon, 30));
+    wBtn.addEventListener('click', () => setTimeout(syncIcon, 30));
+    syncIcon();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
