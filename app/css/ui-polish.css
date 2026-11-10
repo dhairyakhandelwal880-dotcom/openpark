@@ -459,3 +459,9 @@
   scrollbar-width: thin;
 }
 
+
+.autocomplete-list.open {
+  z-index: 60 !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.18), 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
