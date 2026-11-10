@@ -42,14 +42,14 @@
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
       const scModal = document.getElementById('modal-shortcuts');
-      if (scModal && scModal.classList.contains('open')) {
-        scModal.classList.remove('open');
+      if (scModal && scModal.classList.contains('active')) {
+        scModal.classList.remove('active');
         return;
       }
       for (const id of ['modal-receipt', 'modal-report', 'modal-traccar']) {
         const el = document.getElementById(id);
-        if (el && el.classList.contains('open')) {
-          el.classList.remove('open');
+        if (el && el.classList.contains('active')) {
+          el.classList.remove('active');
           return;
         }
       }
@@ -59,7 +59,7 @@
         return;
       }
       const welcome = document.getElementById('welcome-overlay');
-      if (welcome && !welcome.classList.contains('hidden')) {
+      if (welcome && !welcome.classList.contains('is-hidden')) {
         const ctx = up.getCtx();
         if (ctx.WelcomeController && typeof ctx.WelcomeController.hide === 'function') {
           ctx.WelcomeController.hide();
@@ -73,7 +73,7 @@
       const backdrop = document.getElementById(id);
       if (!backdrop) return;
       backdrop.addEventListener('click', (e) => {
-        if (e.target === backdrop) backdrop.classList.remove('open');
+        if (e.target === backdrop) backdrop.classList.remove('active');
       });
     });
   });
@@ -83,7 +83,7 @@
       if (e.key !== '/' || up.isTyping(e.target) || e.metaKey || e.ctrlKey) return;
       e.preventDefault();
       const welcome = document.getElementById('welcome-overlay');
-      const targetId = (welcome && !welcome.classList.contains('hidden')) ? 'welcome-search-input' : 'search-input';
+      const targetId = (welcome && !welcome.classList.contains('is-hidden')) ? 'welcome-search-input' : 'search-input';
       const el = document.getElementById(targetId);
       if (el) {
         el.focus();
@@ -104,7 +104,7 @@
     document.addEventListener('keydown', (e) => {
       if (e.key.toLowerCase() !== 'a' || up.isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
       const welcome = document.getElementById('welcome-overlay');
-      if (welcome && !welcome.classList.contains('hidden')) return;
+      if (welcome && !welcome.classList.contains('is-hidden')) return;
       const ctx = up.getCtx();
       if (ctx.AIScannerEngine && typeof ctx.AIScannerEngine.scanCurrentArea === 'function') {
         ctx.AIScannerEngine.scanCurrentArea();
@@ -147,7 +147,7 @@
       `;
       document.body.appendChild(modal);
       modal.addEventListener('click', (e) => {
-        if (e.target === modal || e.target.id === 'modal-shortcuts-close') modal.classList.remove('open');
+        if (e.target === modal || e.target.id === 'modal-shortcuts-close') modal.classList.remove('active');
       });
       return modal;
     };
@@ -155,7 +155,7 @@
     document.addEventListener('keydown', (e) => {
       if (e.key !== '?' || up.isTyping(e.target)) return;
       e.preventDefault();
-      createModal().classList.toggle('open');
+      createModal().classList.toggle('active');
     });
   });
 
@@ -255,7 +255,7 @@
     const origFetch = window.fetch;
     let activeSearchReqs = 0;
     window.fetch = function (...args) {
-      const url = String(args[0] || '');
+      const url = typeof args[0] === 'string' ? args[0] : (args[0] && args[0].url ? String(args[0].url) : '');
       const isPlaceSearch = url.includes('/api/traccar/search') || url.includes('/api/places/search');
       if (isPlaceSearch) {
         activeSearchReqs++;
@@ -729,10 +729,9 @@
       };
     };
 
-    let sortingNow = false;
+    const exploreObs = new MutationObserver(() => applySortAndFavs());
     const applySortAndFavs = () => {
-      if (sortingNow) return;
-      sortingNow = true;
+      exploreObs.disconnect();
       try {
         const mode = window.__exploreSortMode || 'distance';
         const cards = Array.from(viewExplore.querySelectorAll('.lot-card'));
@@ -772,7 +771,7 @@
           emptySaved.remove();
         }
       } finally {
-        sortingNow = false;
+        exploreObs.observe(viewExplore, { childList: true });
       }
     };
 
@@ -785,7 +784,7 @@
       applySortAndFavs();
     });
 
-    new MutationObserver(applySortAndFavs).observe(viewExplore, { childList: true });
+    exploreObs.observe(viewExplore, { childList: true });
     window.addEventListener('openpark:favs-updated', applySortAndFavs);
   });
 
@@ -967,7 +966,7 @@
       map.on('moveend', () => {
         if (!lastScanCenter || banner.style.display === 'none') return;
         const welcome = document.getElementById('welcome-overlay');
-        if (welcome && !welcome.classList.contains('hidden')) return;
+        if (welcome && !welcome.classList.contains('is-hidden')) return;
         const movedKm = haversineKm(lastScanCenter, map.getCenter());
         btnRescan.style.display = movedKm >= 0.6 ? 'inline-flex' : 'none';
       });
@@ -1242,7 +1241,7 @@
     if (!modal || !tsEl) return;
 
     new MutationObserver(() => {
-      if (modal.classList.contains('open')) {
+      if (modal.classList.contains('active')) {
         const now = new Date();
         tsEl.textContent = `Issued: ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Valid Today`;
       }
@@ -1335,7 +1334,7 @@
     btn.id = 'btn-hud-shortcuts';
     btn.type = 'button';
     btn.className = 'cluster-btn pressable';
-    btn.ariaLabel = 'Show keyboard shortcuts';
+    btn.setAttribute('aria-label', 'Show keyboard shortcuts');
     btn.title = 'Keyboard Shortcuts (?)';
     btn.innerHTML = '<span style="font-size:13px;font-weight:800;">?</span>';
     btn.addEventListener('click', () => {
