@@ -15,6 +15,19 @@
 
 ---
 
+## 🚀 Live Demo & 1-Click Deployment
+
+OpenPark is ready to deploy on any cloud platform:
+
+| Platform | Type | Status & Deploy Link |
+| :--- | :--- | :--- |
+| **Render** | Full-Stack (FastAPI + WebSockets + UI) | [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/dhairyakhandelwal880-dotcom/openpark) |
+| **Railway** | Full-Stack (FastAPI + Container) | [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new) |
+| **GitHub Pages** | Frontend Web App | [https://dhairyakhandelwal880-dotcom.github.io/openpark/](https://dhairyakhandelwal880-dotcom.github.io/openpark/) |
+| **Docker** | Production Container | `docker build -t openpark . && docker run -p 8000:8000 openpark` |
+
+---
+
 ## 🌟 Key Features & Integrations
 
 ### 1. 🗺️ High-Performance Vector Mapping ([MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/API/))

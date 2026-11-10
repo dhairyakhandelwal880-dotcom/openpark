@@ -10,6 +10,12 @@ Implements Steps 5, 6, 13, and 14 from the OpenPark Build Guide:
 """
 
 import os
+import sys
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 import json
 import asyncio
 from contextlib import asynccontextmanager, contextmanager
