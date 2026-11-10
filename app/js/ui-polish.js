@@ -1310,6 +1310,18 @@
     });
   });
 
+  UIPolish.register('sidebarToggleAriaSync', () => {
+    const btn = document.getElementById('btn-toggle-sidebar');
+    const sidebar = document.getElementById('sidebar');
+    if (!btn || !sidebar) return;
+    const sync = () => {
+      const collapsed = document.body.classList.contains('sidebar-collapsed') || sidebar.classList.contains('is-collapsed');
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    };
+    btn.addEventListener('click', () => setTimeout(sync, 25));
+    sync();
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
