@@ -1021,6 +1021,18 @@
     }
   });
 
+  UIPolish.register('refreshButtonSpinFeedback', () => {
+    const btn = document.getElementById('btn-refresh-top');
+    if (!btn) return;
+    btn.addEventListener('click', () => {
+      const icon = btn.querySelector('span') || btn;
+      icon.style.display = 'inline-block';
+      icon.style.transition = 'transform 450ms ease';
+      icon.style.transform = 'rotate(360deg)';
+      setTimeout(() => { icon.style.transform = ''; }, 460);
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
