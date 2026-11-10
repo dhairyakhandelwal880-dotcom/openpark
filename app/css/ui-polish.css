@@ -35,3 +35,12 @@
   border-radius: 999px;
 }
 
+@supports (padding: max(0px)) {
+  .bottom-drawer {
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+  .control-cluster {
+    top: max(16px, env(safe-area-inset-top));
+  }
+}
+
