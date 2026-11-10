@@ -533,6 +533,16 @@ def test_olamaps_endpoints():
     assert isinstance(d_dir, dict)
 
 
+def test_geolocate_endpoint():
+    """Verify server-assisted IP geolocation endpoint returns valid coordinates."""
+    res = client.get("/api/geolocate")
+    assert res.status_code == 200
+    data = res.json()
+    assert "lat" in data and "lon" in data
+    assert isinstance(data["lat"], (int, float))
+    assert isinstance(data["lon"], (int, float))
+
+
 
 
 

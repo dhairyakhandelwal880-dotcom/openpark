@@ -3141,7 +3141,13 @@
       let lastKnownFix = null;
       try {
         const rawFix = localStorage.getItem('openpark_last_device_fix');
-        if (rawFix) lastKnownFix = JSON.parse(rawFix);
+        if (rawFix) {
+          const parsedFix = JSON.parse(rawFix);
+          // Only use cached device fix as initial warm center if < 30 minutes old
+          if (parsedFix && parsedFix.ts && (Date.now() - parsedFix.ts) < 1800000) {
+            lastKnownFix = parsedFix;
+          }
+        }
       } catch {}
 
       const CONFIG = {
@@ -3175,14 +3181,15 @@
       // 5.2 Application State
       // --------------------------------------------------------------------------
       const STATE = {
-        hasRealDeviceFix: !!lastKnownFix,
+        hasRealDeviceFix: false,
+        bestFixAccuracy: Infinity,
         userLocation: {
           lng: lastKnownFix ? lastKnownFix.lng : CONFIG.DEFAULT_COORDS[0],
           lat: lastKnownFix ? lastKnownFix.lat : CONFIG.DEFAULT_COORDS[1],
           heading: lastKnownFix ? (lastKnownFix.heading || 0) : 0,
           speed: 0,
           altitude: 920,
-          accuracy: lastKnownFix ? (lastKnownFix.accuracy || 5) : 5
+          accuracy: lastKnownFix ? (lastKnownFix.accuracy || 500) : 500
         },
         targetLocation: null,
         isTrackingLocation: false,
@@ -4629,6 +4636,9 @@
               }
             });
             this.tracker.start();
+            if (STATE.hasRealDeviceFix && STATE.userLocation) {
+              this.tracker.feedDirectFix(STATE.userLocation);
+            }
           });
 
           const updateCompassState = () => {
@@ -5072,12 +5082,15 @@
 
           this.vehicleEl.title = "Your Location Pointer (Drag to place anywhere on map)";
 
+          const initLng = (STATE.userLocation && Number.isFinite(STATE.userLocation.lng)) ? STATE.userLocation.lng : CONFIG.DEFAULT_COORDS[0];
+          const initLat = (STATE.userLocation && Number.isFinite(STATE.userLocation.lat)) ? STATE.userLocation.lat : CONFIG.DEFAULT_COORDS[1];
+
           this.vehicleMarker = new maplibregl.Marker({
             element: this.vehicleEl,
             anchor: 'center',
             draggable: true
           })
-            .setLngLat(CONFIG.DEFAULT_COORDS)
+            .setLngLat([initLng, initLat])
             .addTo(this.map);
 
           this.vehicleMarker.on('dragstart', () => {
@@ -7386,6 +7399,14 @@
             const { latitude, longitude, heading, speed, altitude, accuracy } = pos.coords;
             if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return;
 
+            const accMeters = Math.round(accuracy || 25);
+            const isHighAccSource = (source === 'high-acc-gps' || source === 'live-gps');
+
+            // Never let a much coarser cached fix override a crisp live GPS lock
+            if (!isHighAccSource && STATE.hasRealDeviceFix && accMeters > Math.max(250, STATE.bestFixAccuracy * 2.5)) {
+              return;
+            }
+
             const fix = {
               lat: latitude,
               lng: longitude,
@@ -7393,12 +7414,16 @@
               speedMs: speed || 0,
               heading: (heading !== null && !isNaN(heading)) ? heading : (STATE.userLocation.heading || 0),
               altitude: altitude || 920,
-              accuracy: Math.round(accuracy || 5),
+              accuracy: accMeters,
               timestamp: pos.timestamp || Date.now()
             };
 
             const isFirstFix = !STATE.hasRealDeviceFix;
+            const prevBest = STATE.bestFixAccuracy || Infinity;
             STATE.hasRealDeviceFix = true;
+            if (accMeters < prevBest || isHighAccSource) {
+              STATE.bestFixAccuracy = accMeters;
+            }
             STATE.userLocation = fix;
             STATE.isTrackingLocation = true;
             try {
@@ -7423,7 +7448,7 @@
             if (STATE.isCameraFollowing && MapEngine.map) {
               MapEngine.map.flyTo({
                 center: [fix.lng, fix.lat],
-                zoom: Math.max(MapEngine.map.getZoom(), 17.5),
+                zoom: accMeters > 400 ? Math.max(MapEngine.map.getZoom(), 15) : Math.max(MapEngine.map.getZoom(), 17.2),
                 duration: isFirstFix ? 700 : 400
               });
             }
@@ -7436,22 +7461,25 @@
               NavigationEngine.trimRouteFrom(fix.lng, fix.lat);
             }
 
-            if (isFirstFix) {
-              ParkingApp.showToast(`📍 Tracking Device: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}] (±${fix.accuracy}m)`, 'success', 3000);
+            if (isFirstFix || (isHighAccSource && prevBest > 300 && accMeters <= 100)) {
+              const label = accMeters > 250
+                ? `📍 Approximate Location: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}] (±${accMeters}m — drag pin to fine-tune)`
+                : `📍 Tracking Device: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}] (±${accMeters}m)`;
+              ParkingApp.showToast(label, accMeters > 250 ? 'info' : 'success', 3200);
             }
             if (typeof WelcomeController !== 'undefined' && WelcomeController.updateGpsLabel) {
               WelcomeController.updateGpsLabel(fix);
             }
           };
 
-          // Tier 1: Fast cached / network fix (< 300ms)
+          // Tier 1: Quick recent fix (< 60s old) for immediate positioning
           navigator.geolocation.getCurrentPosition(
             (pos) => applyPositionFix(pos, 'fast-gps'),
             (err) => console.debug('[Geolocation] fast lock skip:', err.message),
-            { enableHighAccuracy: false, timeout: 3000, maximumAge: 300000 }
+            { enableHighAccuracy: false, timeout: 3000, maximumAge: 60000 }
           );
 
-          // Tier 2: Precision GPS hardware lock
+          // Tier 2: Precision GPS hardware lock (fresh fix, no cache)
           navigator.geolocation.getCurrentPosition(
             (pos) => applyPositionFix(pos, 'high-acc-gps'),
             (err) => {
@@ -7459,10 +7487,10 @@
               if (err.code === 1) { // PERMISSION_DENIED
                 if (locBtn) locBtn.classList.remove('active-blue', 'active-pulse');
                 STATE.isTrackingLocation = false;
-                ParkingApp.showToast("Location permission denied. Click map or drag pointer to set position.", "warning", 4000);
-                this.fallbackToIpLocation();
+                ParkingApp.showToast("Location access blocked. Using network IP location (drag pin to adjust).", "warning", 4000);
+                this.fallbackToIpLocation(true);
               } else if (!STATE.hasRealDeviceFix) {
-                this.fallbackToIpLocation();
+                this.fallbackToIpLocation(true);
               }
             },
             { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
@@ -7487,23 +7515,49 @@
                 );
               }
             },
-            { enableHighAccuracy: true, timeout: 20000, maximumAge: 2000 }
+            { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
           );
         },
 
-        async fallbackToIpLocation() {
-          if (STATE.hasRealDeviceFix) return;
-          try {
-            const resp = await fetch('https://freeipapi.com/api/json');
-            if (resp.ok) {
-              const data = await resp.json();
-              if (data && data.latitude && data.longitude) {
-                this.setUserLocation(data.latitude, data.longitude, 'ip');
-                this.showToast(`📍 Approximate Network Location: ${data.cityName || 'Bengaluru'} (Drag pin to adjust)`, 'info', 4000);
-              }
+        async fallbackToIpLocation(force = false) {
+          if (STATE.hasRealDeviceFix && !force) return;
+          const providers = [
+            async () => {
+              const r = await fetch('/api/geolocate');
+              if (!r.ok) return null;
+              const d = await r.json();
+              return (d && d.lat && d.lon) ? { lat: d.lat, lon: d.lon, city: d.city || 'Your Area' } : null;
+            },
+            async () => {
+              const r = await fetch('https://ipwho.is/');
+              if (!r.ok) return null;
+              const d = await r.json();
+              return (d && d.success && d.latitude && d.longitude) ? { lat: d.latitude, lon: d.longitude, city: d.city || 'Your Area' } : null;
+            },
+            async () => {
+              const r = await fetch('https://ipapi.co/json/');
+              if (!r.ok) return null;
+              const d = await r.json();
+              return (d && d.latitude && d.longitude) ? { lat: d.latitude, lon: d.longitude, city: d.city || 'Your Area' } : null;
             }
-          } catch (e) {
-            console.debug('[IP Geolocation] unavailable:', e);
+          ];
+
+          for (const fetchProvider of providers) {
+            if (STATE.hasRealDeviceFix) return; // Stop if real GPS just arrived
+            try {
+              const loc = await fetchProvider();
+              if (loc && Number.isFinite(Number(loc.lat)) && Number.isFinite(Number(loc.lon))) {
+                if (STATE.hasRealDeviceFix) return;
+                this.setUserLocation(loc.lat, loc.lon, 'ip');
+                if (typeof WelcomeController !== 'undefined' && WelcomeController.updateGpsLabel) {
+                  WelcomeController.updateGpsLabel({ lat: loc.lat, lng: loc.lon, accuracy: 2000, city: loc.city });
+                }
+                this.showToast(`📍 Network Location: ${loc.city} (Enable GPS or drag pin for exact spot)`, 'info', 4000);
+                return;
+              }
+            } catch (e) {
+              console.debug('[IP Geolocation] provider skip:', e);
+            }
           }
         },
 
@@ -7628,18 +7682,12 @@
         },
 
         toggleLiveLocation() {
-          const locBtn = document.getElementById('btn-my-location');
           this.showToast("Locating precise device GPS...", "info", 1500);
+          STATE.hasRealDeviceFix = false;
+          STATE.bestFixAccuracy = Infinity;
+          STATE.isCameraFollowing = true;
+          if (MapEngine.tracker) MapEngine.tracker.o.follow = true;
           this.startRealtimeDeviceLocation();
-          if (STATE.userLocation && MapEngine.map) {
-            STATE.isCameraFollowing = true;
-            if (MapEngine.tracker) MapEngine.tracker.o.follow = true;
-            MapEngine.map.flyTo({
-              center: [STATE.userLocation.lng, STATE.userLocation.lat],
-              zoom: Math.max(MapEngine.map.getZoom(), 17),
-              duration: 600
-            });
-          }
         },
 
         snapToDebrecan() {
@@ -8070,8 +8118,13 @@
         updateGpsLabel(fix) {
           const lbl = document.getElementById('welcome-gps-label');
           if (!lbl || !fix) return;
-          if (STATE.hasRealDeviceFix) {
-            lbl.textContent = `📍 Live GPS Ready (±${Math.round(fix.accuracy || 5)}m)`;
+          const acc = Math.round(fix.accuracy || 5);
+          if (STATE.hasRealDeviceFix && acc <= 250) {
+            lbl.textContent = `📍 Live GPS Ready (±${acc}m)`;
+          } else if (STATE.hasRealDeviceFix) {
+            lbl.textContent = `📍 Approximate GPS (±${acc}m • Tap to refresh)`;
+          } else if (fix.city) {
+            lbl.textContent = `📍 ${fix.city} (Network IP)`;
           } else {
             lbl.textContent = `📍 Near Bengaluru (${Number(fix.lat).toFixed(3)}, ${Number(fix.lng).toFixed(3)})`;
           }

@@ -603,6 +603,55 @@ def health_details():
     }
 
 
+@app.get("/api/geolocate")
+async def geolocate_client(request: Request):
+    """
+    Accurate server-assisted IP geolocation fallback using the visitor's real
+    forwarded IP (X-Forwarded-For / X-Real-IP), avoiding CORS/ad-blocker blocks.
+    """
+    import httpx
+    forwarded = request.headers.get("x-forwarded-for", "")
+    client_ip = forwarded.split(",")[0].strip() if forwarded else (
+        request.headers.get("x-real-ip") or (request.client.host if request.client else "")
+    )
+    if client_ip in ("127.0.0.1", "::1", "localhost", "testclient", ""):
+        client_ip = ""
+
+    providers = [
+        (f"https://ipwho.is/{client_ip}" if client_ip else "https://ipwho.is/", "ipwho"),
+        (f"http://ip-api.com/json/{client_ip}" if client_ip else "http://ip-api.com/json/", "ip-api"),
+    ]
+    async with httpx.AsyncClient(timeout=4.0, follow_redirects=True) as client:
+        for url, tag in providers:
+            try:
+                resp = await client.get(url)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                lat = data.get("latitude") or data.get("lat")
+                lon = data.get("longitude") or data.get("lon")
+                if lat is not None and lon is not None:
+                    return {
+                        "status": "ok",
+                        "lat": float(lat),
+                        "lon": float(lon),
+                        "city": data.get("city") or "",
+                        "region": data.get("region") or data.get("regionName") or "",
+                        "country": data.get("country") or "",
+                        "source": tag
+                    }
+            except Exception:
+                continue
+
+    return {
+        "status": "fallback",
+        "lat": 12.9716,
+        "lon": 77.5946,
+        "city": "Bengaluru",
+        "source": "default"
+    }
+
+
 @app.get("/config/map")
 def get_map_config():
     return {
