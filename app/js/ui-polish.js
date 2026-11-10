@@ -847,6 +847,25 @@
     });
   });
 
+  UIPolish.register('sidebarBackToTop', () => {
+    const scroller = document.querySelector('.sidebar-views');
+    if (!scroller || document.getElementById('btn-sidebar-top')) return;
+    const btn = document.createElement('button');
+    btn.id = 'btn-sidebar-top';
+    btn.type = 'button';
+    btn.className = 'sidebar-scroll-top pressable';
+    btn.innerHTML = '↑ Top';
+    btn.setAttribute('aria-label', 'Scroll back to top of results');
+    scroller.appendChild(btn);
+
+    scroller.addEventListener('scroll', () => {
+      btn.classList.toggle('visible', scroller.scrollTop > 220);
+    }, { passive: true });
+    btn.addEventListener('click', () => {
+      scroller.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
