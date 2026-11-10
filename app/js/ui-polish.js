@@ -484,6 +484,18 @@
     sync();
   });
 
+  UIPolish.register('recordEnterQueries', () => {
+    ['search-input', 'welcome-search-input'].forEach((id) => {
+      const inp = document.getElementById(id);
+      if (!inp) return;
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && inp.value.trim().length >= 2 && window.__openparkRecent) {
+          window.__openparkRecent.save(inp.value.trim());
+        }
+      });
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
