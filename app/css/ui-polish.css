@@ -1,0 +1,7 @@
+/* OpenPark UI & UX Polish Layer */
+:where(button, input, a, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--apple-blue, #0071e3);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.18);
+}
+
