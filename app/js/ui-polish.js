@@ -622,6 +622,19 @@
     document.body.appendChild(legend);
   });
 
+  UIPolish.register('mapLegendClickFilter', () => {
+    const legend = document.getElementById('map-legend-pill');
+    if (!legend) return;
+    legend.addEventListener('click', (e) => {
+      const item = e.target.closest('[data-legend-cat]');
+      const filterRow = document.getElementById('ai-filter-row');
+      if (!item || !filterRow) return;
+      const cat = item.getAttribute('data-legend-cat');
+      const targetBtn = filterRow.querySelector(`[data-ai-cat="${window.__aiActiveCat === cat ? 'all' : cat}"]`);
+      if (targetBtn) targetBtn.click();
+    });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
