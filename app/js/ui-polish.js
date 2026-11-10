@@ -512,6 +512,24 @@
     }
   });
 
+  UIPolish.register('aiFilterStripUI', () => {
+    const banner = document.getElementById('ai-scan-banner');
+    const resultsEl = document.getElementById('ai-scan-results');
+    if (!banner || !resultsEl || document.getElementById('ai-filter-row')) return;
+
+    const filterRow = document.createElement('div');
+    filterRow.id = 'ai-filter-row';
+    filterRow.className = 'ai-filter-row';
+    filterRow.style.display = 'none';
+    filterRow.innerHTML = `
+      <button type="button" class="ai-filter-pill active" data-ai-cat="all">All</button>
+      <button type="button" class="ai-filter-pill" data-ai-cat="empty_ground">🟩 Empty Grounds</button>
+      <button type="button" class="ai-filter-pill" data-ai-cat="mall_parking">🛍️ Malls</button>
+      <button type="button" class="ai-filter-pill" data-ai-cat="legal_bay">🅿️ Legal Bays</button>
+    `;
+    banner.insertAdjacentElement('afterend', filterRow);
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
