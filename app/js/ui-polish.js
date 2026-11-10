@@ -270,6 +270,42 @@
     };
   });
 
+  UIPolish.register('recentSearchesStore', () => {
+    const KEY = 'openpark_recent_searches_v1';
+    window.__openparkRecent = {
+      load() {
+        try {
+          return JSON.parse(localStorage.getItem(KEY) || '[]').slice(0, 5);
+        } catch { return []; }
+      },
+      save(query) {
+        const clean = (query || '').trim();
+        if (clean.length < 2) return;
+        const items = [clean, ...this.load().filter((x) => x.toLowerCase() !== clean.toLowerCase())].slice(0, 5);
+        try { localStorage.setItem(KEY, JSON.stringify(items)); } catch {}
+        window.dispatchEvent(new CustomEvent('openpark:recent-updated'));
+      },
+      clear() {
+        try { localStorage.removeItem(KEY); } catch {}
+        window.dispatchEvent(new CustomEvent('openpark:recent-updated'));
+      }
+    };
+
+    const hookAutocomplete = (boxId) => {
+      const box = document.getElementById(boxId);
+      if (!box) return;
+      box.addEventListener('click', (e) => {
+        const item = e.target.closest('.autocomplete-item');
+        if (!item) return;
+        const titleEl = item.querySelector('.autocomplete-title, strong, span') || item;
+        const txt = (titleEl.textContent || '').trim().split('\n')[0].slice(0, 42);
+        if (txt) window.__openparkRecent.save(txt);
+      }, true);
+    };
+    hookAutocomplete('search-autocomplete-box');
+    hookAutocomplete('welcome-autocomplete-box');
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
