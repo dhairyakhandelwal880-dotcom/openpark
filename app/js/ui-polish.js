@@ -588,6 +588,25 @@
     });
   });
 
+  UIPolish.register('aiScanSkeletonLoader', (up) => {
+    const labelEl = document.getElementById('btn-ai-scan-label');
+    const resultsEl = document.getElementById('ai-scan-results');
+    if (!labelEl || !resultsEl) return;
+
+    new MutationObserver(() => {
+      const txt = (labelEl.textContent || '').toLowerCase();
+      if (txt.includes('reading map') && !resultsEl.querySelector('.lot-card')) {
+        resultsEl.style.display = 'flex';
+        resultsEl.innerHTML = [1, 2, 3].map(() => `
+          <div class="ui-skeleton-card" aria-hidden="true">
+            <div class="ui-skeleton-line" style="width: 68%;"></div>
+            <div class="ui-skeleton-line" style="width: 44%; height: 8px;"></div>
+          </div>
+        `).join('');
+      }
+    }).observe(labelEl, { childList: true, characterData: true, subtree: true });
+  });
+
   // __EXTEND_HOOK__
 
   if (window.__openpark) {
