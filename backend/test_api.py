@@ -580,9 +580,20 @@ def test_ai_parking_scanner_endpoint():
     assert classify_and_score_candidate({"access": "private", "amenity": "parking"}, "Private Lot", 1500, 200) is None
     assert classify_and_score_candidate({"landuse": "military"}, "Restricted Zone", 5000, 300) is None
 
-    # 3. Valid empty ground & mall plaza must be scored cleanly
+    # 3. Valid empty ground (including OSM natural=scrub, landuse=vacant, AI gap plots) & mall plaza
     ground = classify_and_score_candidate({"landuse": "brownfield", "surface": "unpaved"}, "Open Ground", 1200, 250)
     assert ground is not None and ground["category"] == "empty_ground" and ground["estimated_spots"] >= 10
+    scrub_ground = classify_and_score_candidate({"natural": "scrub"}, "Open Scrub Ground (1,400 m²)", 1400, 180)
+    assert scrub_ground is not None and scrub_ground["category"] == "empty_ground"
+    vacant_ground = classify_and_score_candidate({"landuse": "vacant"}, "Vacant Open Lot (950 m²)", 950, 120)
+    assert vacant_ground is not None and vacant_ground["category"] == "empty_ground"
+    gap_ground = classify_and_score_candidate({"ai_gap_plot": "yes", "surface": "unpaved"}, "Open Unbuilt Ground (900 m²)", 900, 110)
+    assert gap_ground is not None and gap_ground["category"] == "empty_ground"
+    # Tiny median islands & sports pitches must be rejected
+    assert classify_and_score_candidate({"landuse": "grass", "area:highway": "traffic_island"}, "Traffic Island", 60, 100) is None
+    assert classify_and_score_candidate({"landuse": "grass"}, "Median Strip", 90, 100) is None
+    assert classify_and_score_candidate({"leisure": "common", "sport": "basketball"}, "Indiranagar Basketball Club", 800, 200) is None
+
     mall = classify_and_score_candidate({"shop": "mall"}, "Forum Mall", 3000, 400)
     assert mall is not None and mall["category"] == "mall_parking"
 
@@ -591,17 +602,21 @@ def test_ai_parking_scanner_endpoint():
     assert is_duplicate_of_existing(12.97165, 77.59465, "Some Name", existing) is True
     assert is_duplicate_of_existing(12.9800, 77.6100, "New Ground", existing) is False
 
-    # 5. Live API endpoint (using offline index mode for fast deterministic test)
-    res = client.get("/api/ai/scan-parking?lat=12.9716&lon=77.5946&radius_m=2000&live=false")
-    assert res.status_code == 200
-    data = res.json()
-    assert data["status"] == "ok"
-    assert "summary" in data and "results" in data and "geojson" in data
-    assert data["geojson"]["type"] == "FeatureCollection"
-    for item in data["results"]:
-        assert item["category"] in ("empty_ground", "mall_parking", "legal_bay")
-        assert 35 <= item["ai_score"] <= 98
-        assert is_duplicate_of_existing(item["lat"], item["lon"], item["name"], existing) is False
+    # 5. Live API endpoint (using offline pre-indexed open-grounds + OSM cache for fast deterministic test)
+    for test_lat, test_lon in ((12.9716, 77.5946), (12.9031, 77.4975)):
+        res = client.get(f"/api/ai/scan-parking?lat={test_lat}&lon={test_lon}&radius_m=2000&live=false")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "ok"
+        assert "summary" in data and "results" in data and "geojson" in data
+        assert data["geojson"]["type"] == "FeatureCollection"
+        assert data["summary"]["empty_grounds"] >= 1
+        assert data["elapsed_ms"] < 200.0
+        for item in data["results"]:
+            assert item["category"] in ("empty_ground", "mall_parking", "legal_bay")
+            assert 35 <= item["ai_score"] <= 98
+            if test_lat == 12.9716:
+                assert is_duplicate_of_existing(item["lat"], item["lon"], item["name"], existing) is False
 
 
 

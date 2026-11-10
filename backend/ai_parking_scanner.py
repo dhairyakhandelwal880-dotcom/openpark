@@ -1,14 +1,16 @@
 """
-OpenPark AI Map Space & Legal Parking Scanner (Fast & Proximity-Aware)
----------------------------------------------------------------------
-Reads OpenStreetMap vector geometry (parallel Overpass + Photon + local OSM/FTS5 index)
-to rapidly discover empty grounds, genuine malls/markets, and legal street-side/surface bays
-near any coordinates in India, excluding already-uploaded OpenPark lots.
+OpenPark AI Map Space & Legal Parking Scanner (Fast & Accuracy-Focused)
+-----------------------------------------------------------------------
+Reads OpenStreetMap vector geometry (OSM CGImap + Photon + pre-indexed open-ground/OSM caches
++ spatial unbuilt-plot detection) to rapidly discover unused empty grounds, genuine malls/markets,
+and legal street-side/surface bays near any coordinates in India, excluding uploaded OpenPark lots.
 """
 
 import asyncio
+import json
 import logging
 import math
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -16,26 +18,44 @@ import httpx
 
 logger = logging.getLogger("openpark.ai_scanner")
 
-OVERPASS_ENDPOINTS = [
-    "https://overpass-api.de/api/interpreter",
-    "https://overpass.kumi.systems/api/interpreter",
-]
+CGIMAP_ENDPOINT = "https://api.openstreetmap.org/api/0.6/map.json"
+PHOTON_REVERSE_URL = "https://photon.komoot.io/reverse"
+PHOTON_SEARCH_URL = "https://photon.komoot.io/api/"
 
-# Fast spatial TTL cache: (lat_q, lon_q, radius_m) -> (timestamp, payload)
+# India geographic bounding box for strict domestic scoping
+INDIA_BBOX_STR = "68.0,6.5,97.5,37.5"
+
+# Fast in-memory TTL caches
 _SCAN_CACHE: Dict[Tuple[float, float, int], Tuple[float, Dict[str, Any]]] = {}
-_CACHE_TTL_SEC = 180.0
+_CGIMAP_TILE_CACHE: Dict[Tuple[float, float], Tuple[float, List[Dict[str, Any]]]] = {}
+_CACHE_TTL_SEC = 300.0
+_TILE_TTL_SEC = 900.0
+
+_OPEN_GROUNDS_PRECOMPUTED: Optional[List[Dict[str, Any]]] = None
+
+# OSM unused / vacant open ground & plot classifications
+EMPTY_GROUND_LANDUSE = {
+    "vacant", "brownfield", "greenfield", "grass", "meadow",
+    "recreation_ground", "village_green", "farmland",
+}
+EMPTY_GROUND_NATURAL = {"scrub", "grassland", "bare_rock", "sand", "heath"}
+EMPTY_GROUND_LEISURE = {"common"}
+EMPTY_SURFACE_VALUES = {"unpaved", "gravel", "dirt", "compacted", "ground", "earth", "sand", "grass"}
 
 ILLEGAL_ACCESS = {"private", "no", "restricted", "military", "permit", "delivery", "employees", "students"}
-ILLEGAL_LANDUSE = {"military", "cemetery", "quarry", "landfill", "railway", "industrial", "construction"}
-ILLEGAL_NATURAL = {"water", "wetland", "mud", "cliff", "glacier"}
+ILLEGAL_LANDUSE = {"military", "cemetery", "quarry", "landfill", "railway", "industrial", "construction", "forest"}
+ILLEGAL_NATURAL = {"water", "wetland", "mud", "cliff", "glacier", "wood"}
 ILLEGAL_HIGHWAY = {"motorway", "motorway_link", "trunk", "trunk_link", "pedestrian", "footway", "cycleway", "steps"}
-ILLEGAL_AMENITY = {"fire_station", "prison", "school", "kindergarten", "police", "hospital"}
+ILLEGAL_AMENITY = {"fire_station", "prison", "school", "kindergarten", "police", "hospital", "college", "university", "place_of_worship"}
+ILLEGAL_LEISURE = {"park", "garden", "golf_course", "stadium", "sports_centre", "playground", "swimming_pool"}
 
 NON_PARKING_ENTITY_WORDS = (
     "pg", "paying guest", "hostel", "apartment", "apartments", "residency", "residencies",
     "villa", "flats", "deluxe", "ladies", "gents", "mens", "womens", "stanza living",
     "zolo", "colive", "salon", "dental", "clinic", "infotech", "technologies", "solutions",
-    "pvt ltd", "private limited", "consultancy", "tuition", "coaching", "temple", "church", "mosque"
+    "pvt ltd", "private limited", "consultancy", "tuition", "coaching", "temple", "church",
+    "mosque", "graveyard", "cemetery", "lake", "pond", "basketball", "tennis", "badminton",
+    "cricket", "football", "skating", "club"
 )
 
 TRUE_MALL_WORDS = (
@@ -45,8 +65,12 @@ TRUE_MALL_WORDS = (
 )
 
 TRUE_GROUND_WORDS = (
-    "ground", "maidan", "open lot", "open ground", "staging area", "parking field", "fairground"
+    "ground", "maidan", "open lot", "open ground", "vacant lot", "vacant land",
+    "staging area", "parking field", "fairground", "open space", "unpaved lot"
 )
+
+MIN_GROUND_AREA_M2 = 160.0
+MAX_GROUND_AREA_M2 = 250000.0
 
 
 def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
@@ -97,6 +121,56 @@ def _has_non_parking_name(name: str) -> bool:
     return _matches_any_word(name, NON_PARKING_ENTITY_WORDS)
 
 
+def _extent_to_ring(extent: Any) -> List[List[float]]:
+    """Converts Photon extent [min_lon, max_lat, max_lon, min_lat] into a closed GeoJSON ring."""
+    if not isinstance(extent, list) or len(extent) != 4:
+        return []
+    min_lon, max_lat, max_lon, min_lat = [float(x) for x in extent]
+    if abs(max_lon - min_lon) < 1e-6 or abs(max_lat - min_lat) < 1e-6:
+        return []
+    return [
+        [min_lon, min_lat],
+        [max_lon, min_lat],
+        [max_lon, max_lat],
+        [min_lon, max_lat],
+        [min_lon, min_lat],
+    ]
+
+
+def _square_ring(lat: float, lon: float, half_m: float = 15.0) -> List[List[float]]:
+    d_lat = half_m / 111132.92
+    d_lon = half_m / (111412.84 * max(0.1, math.cos(math.radians(lat))))
+    return [
+        [round(lon - d_lon, 6), round(lat - d_lat, 6)],
+        [round(lon + d_lon, 6), round(lat - d_lat, 6)],
+        [round(lon + d_lon, 6), round(lat + d_lat, 6)],
+        [round(lon - d_lon, 6), round(lat + d_lat, 6)],
+        [round(lon - d_lon, 6), round(lat - d_lat, 6)],
+    ]
+
+
+def _descriptive_ground_name(tags: Dict[str, str], area_m2: float, dist_m: float) -> str:
+    raw = (tags.get("name") or "").strip()
+    if raw:
+        return raw
+    lu = (tags.get("landuse") or "").lower()
+    nat = (tags.get("natural") or "").lower()
+    area_str = f" ({round(area_m2):,} m²)" if area_m2 >= MIN_GROUND_AREA_M2 else f" ({round(dist_m)}m away)"
+    if tags.get("ai_gap_plot") == "yes":
+        return f"Open Unbuilt Ground{area_str}"
+    if lu in ("vacant", "brownfield", "greenfield"):
+        return f"Vacant Open Lot{area_str}"
+    if nat in ("scrub", "heath", "bare_rock", "sand"):
+        return f"Open Scrub Ground{area_str}"
+    if lu in ("grass", "meadow", "grassland", "village_green") or nat == "grassland":
+        return f"Open Grass Ground{area_str}"
+    if lu == "recreation_ground" or tags.get("leisure") == "common":
+        return f"Open Public Ground{area_str}"
+    if lu == "farmland":
+        return f"Open Uncultivated Plot{area_str}"
+    return f"Open Ground{area_str}"
+
+
 def is_duplicate_of_existing(
     lat: float,
     lon: float,
@@ -128,8 +202,8 @@ def classify_and_score_candidate(
 ) -> Optional[Dict[str, Any]]:
     """
     AI Legality, Suitability & Proximity Scoring Engine.
-    Strictly filters out PGs, residential buildings, and restricted/illegal areas,
-    and boosts close-by legal spaces.
+    Strictly filters out PGs, traffic islands, parks, water, residential buildings,
+    and restricted/illegal areas while highlighting true unused grounds, malls & bays.
     """
     access = (tags.get("access") or "").lower()
     parking_tag = (tags.get("parking") or "").lower()
@@ -145,16 +219,20 @@ def classify_and_score_candidate(
     lit = (tags.get("lit") or "").lower()
     name_lower = (name or "").lower()
 
-    # Reject illegal / restricted / unsafe / non-parking buildings
+    # Reject illegal / restricted / unsafe / non-parking buildings / road medians
     if access in ILLEGAL_ACCESS:
         return None
     if parking_tag == "no" or tags.get("motor_vehicle") == "no" or tags.get("parking:both") == "no":
         return None
-    if landuse in ILLEGAL_LANDUSE or natural in ILLEGAL_NATURAL:
+    if tags.get("area:highway") == "traffic_island" or tags.get("barrier") == "kerb":
+        return None
+    if tags.get("sport") and amenity not in ("parking", "parking_space"):
+        return None
+    if landuse in ILLEGAL_LANDUSE or natural in ILLEGAL_NATURAL or leisure in ILLEGAL_LEISURE:
         return None
     if highway in ILLEGAL_HIGHWAY or amenity in ILLEGAL_AMENITY:
         return None
-    if any(bad in name_lower for bad in ("private", "restricted", "army", "cantonment", "no parking", "graveyard", "lake")):
+    if any(bad in name_lower for bad in ("private", "restricted", "army", "cantonment", "no parking")):
         return None
     if _has_non_parking_name(name) and amenity not in ("parking", "parking_space"):
         return None
@@ -167,9 +245,11 @@ def classify_and_score_candidate(
         or _matches_any_word(name_lower, TRUE_MALL_WORDS)
     )
     is_ground = (
-        landuse in ("brownfield", "greenfield", "grass", "meadow", "recreation_ground", "village_green")
-        or leisure in ("common",)
-        or surface in ("unpaved", "gravel", "dirt", "compacted", "ground", "earth")
+        tags.get("ai_gap_plot") == "yes"
+        or landuse in EMPTY_GROUND_LANDUSE
+        or natural in EMPTY_GROUND_NATURAL
+        or leisure in EMPTY_GROUND_LEISURE
+        or (surface in EMPTY_SURFACE_VALUES and not highway and amenity not in ("parking", "parking_space"))
         or _matches_any_word(name_lower, TRUE_GROUND_WORDS)
     )
     is_street_pocket = (
@@ -189,7 +269,7 @@ def classify_and_score_candidate(
         badge = "🛍️"
         color = "#0071e3"
     elif is_ground:
-        if 0 < area_m2 < 160:
+        if 0 < area_m2 < MIN_GROUND_AREA_M2 or area_m2 > MAX_GROUND_AREA_M2:
             return None
         cat_key = "empty_ground"
         cat_label = "Empty Open Ground"
@@ -205,11 +285,11 @@ def classify_and_score_candidate(
 
     # Realistic vehicle bay estimate from polygon area or road/mall class
     if area_m2 >= 60:
-        est_spots = max(2, int(round((area_m2 * 0.58) / 14.5)))
+        est_spots = max(4, min(350, int(round((area_m2 * 0.58) / 14.5))))
     elif cat_key == "mall_parking":
         est_spots = 60
     elif cat_key == "empty_ground":
-        est_spots = 22
+        est_spots = 26
     elif is_street_pocket:
         est_spots = 6
     else:
@@ -218,7 +298,7 @@ def classify_and_score_candidate(
     if tags.get("capacity") and str(tags["capacity"]).isdigit():
         est_spots = max(2, int(tags["capacity"]))
 
-    # Proximity-first + legality AI score (0..98)
+    # Proximity-first + suitability AI score (0..98)
     score = 58
     reasons: List[str] = []
 
@@ -231,9 +311,22 @@ def classify_and_score_candidate(
         reasons.append("Mall visitor parking")
         legality = "Commercial Visitor Legal"
     elif cat_key == "empty_ground":
-        score += 5
-        reasons.append("Open flat ground (verify local signage)")
-        legality = "Open Ground (Verify Sign)"
+        if tags.get("ai_gap_plot") == "yes":
+            score += 6
+            reasons.append("Unbuilt road-adjacent open plot (AI Geometry Scan)")
+            legality = "Open Unbuilt Ground"
+        elif landuse in ("vacant", "brownfield", "greenfield") or natural in ("scrub", "bare_rock", "sand"):
+            score += 9
+            reasons.append("Unused open terrain (verify local signage)")
+            legality = "Unused Open Ground"
+        elif landuse == "farmland":
+            score += 2
+            reasons.append("Uncultivated open plot (verify permission)")
+            legality = "Open Plot (Verify Permission)"
+        else:
+            score += 7
+            reasons.append("Open flat ground (verify local signage)")
+            legality = "Open Ground (Verify Sign)"
     elif is_street_pocket:
         score += 6
         reasons.append("Low-traffic service/residential lane shoulder")
@@ -268,7 +361,7 @@ def classify_and_score_candidate(
     else:
         reasons.append(f"Est. ~{est_spots} bays")
 
-    # Strong proximity weighting so close-by spaces always win
+    # Strong proximity weighting so close-by spaces always rank highest
     if dist_m <= 250:
         score += 20
         reasons.insert(0, f"Very close ({int(dist_m)}m)")
@@ -296,65 +389,301 @@ def classify_and_score_candidate(
     }
 
 
-async def _fetch_overpass_single(client: httpx.AsyncClient, endpoint: str, query: str) -> Optional[List[Dict[str, Any]]]:
-    resp = await client.post(endpoint, data={"data": query})
-    if resp.status_code == 200:
-        return resp.json().get("elements", [])
-    return None
+def _load_open_grounds_precomputed() -> List[Dict[str, Any]]:
+    """Loads pre-indexed OSM empty grounds & malls cache once into memory (~5ms)."""
+    global _OPEN_GROUNDS_PRECOMPUTED
+    if _OPEN_GROUNDS_PRECOMPUTED is not None:
+        return _OPEN_GROUNDS_PRECOMPUTED
+
+    loaded: List[Dict[str, Any]] = []
+    candidates_paths = [
+        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "osm_open_grounds_cache.geojson"),
+        os.path.join(os.getcwd(), "data", "osm_open_grounds_cache.geojson"),
+    ]
+    for path in candidates_paths:
+        if os.path.exists(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    gj = json.load(f)
+                for feat in gj.get("features", []):
+                    geom = feat.get("geometry") or {}
+                    props = feat.get("properties") or {}
+                    if geom.get("type") != "Polygon":
+                        continue
+                    ring = (geom.get("coordinates") or [[]])[0]
+                    if len(ring) < 3:
+                        continue
+                    c_lat, c_lon = compute_centroid(ring)
+                    loaded.append({
+                        "type": "way",
+                        "id": f"ogc_{props.get('osm_id', len(loaded))}",
+                        "tags": props,
+                        "c_lat": c_lat,
+                        "c_lon": c_lon,
+                        "center": {"lat": c_lat, "lon": c_lon},
+                        "geometry": [{"lat": pt[1], "lon": pt[0]} for pt in ring],
+                    })
+                break
+            except Exception as exc:
+                logger.warning("Failed reading %s: %s", path, exc)
+
+    _OPEN_GROUNDS_PRECOMPUTED = loaded
+    return _OPEN_GROUNDS_PRECOMPUTED
 
 
-async def _fetch_overpass_fast(lat: float, lon: float, radius_m: int) -> Optional[List[Dict[str, Any]]]:
+def _detect_unbuilt_grid_plots(
+    raw_elements: List[Dict[str, Any]],
+    node_map: Dict[int, Tuple[float, float]],
+    bbox: Tuple[float, float, float, float],
+    center_lat: float,
+    center_lon: float,
+) -> List[Dict[str, Any]]:
     """
-    Races Overpass mirrors concurrently with a strict 2.2s hard cap so scans never lag.
-    Includes surface parking, malls, open grounds, and nearby residential/service shoulders.
+    AI Spatial Occupancy Grid: In densely mapped urban boxes (>= 140 buildings), locates
+    empty unbuilt cells (zero buildings, zero water/park/school/hospital, road-adjacent)
+    that contributors left untagged on OpenStreetMap.
     """
-    r = max(300, min(int(radius_m), 2500))
-    street_r = min(500, r)
-    query = f"""
-    [out:json][timeout:3];
-    (
-      way["amenity"="parking"](around:{r},{lat},{lon});
-      way["amenity"="parking_space"](around:{r},{lat},{lon});
-      way["shop"="mall"](around:{r},{lat},{lon});
-      node["shop"="mall"](around:{r},{lat},{lon});
-      way["amenity"="marketplace"](around:{r},{lat},{lon});
-      way["landuse"="brownfield"](around:{r},{lat},{lon});
-      way["landuse"="greenfield"](around:{r},{lat},{lon});
-      way["highway"="rest_area"](around:{r},{lat},{lon});
-      way["highway"~"^(service|unclassified|residential)$"]["name"](around:{street_r},{lat},{lon});
-    );
-    out tags center geom 45;
+    min_lon, min_lat, max_lon, max_lat = bbox
+    grid_n = 28
+    d_lon = (max_lon - min_lon) / grid_n
+    d_lat = (max_lat - min_lat) / grid_n
+    if d_lon <= 0 or d_lat <= 0:
+        return []
+
+    occupied = [[False] * grid_n for _ in range(grid_n)]
+    has_road = [[False] * grid_n for _ in range(grid_n)]
+    building_count = 0
+
+    def mark_bbox(pts: List[Tuple[float, float]], target_grid: List[List[bool]], pad: int = 0) -> None:
+        lats = [p[0] for p in pts]
+        lons = [p[1] for p in pts]
+        r0 = max(0, min(grid_n - 1, int((min(lats) - min_lat) / d_lat) - pad))
+        r1 = max(0, min(grid_n - 1, int((max(lats) - min_lat) / d_lat) + pad))
+        c0 = max(0, min(grid_n - 1, int((min(lons) - min_lon) / d_lon) - pad))
+        c1 = max(0, min(grid_n - 1, int((max(lons) - min_lon) / d_lon) + pad))
+        for rr in range(r0, r1 + 1):
+            for cc in range(c0, c1 + 1):
+                target_grid[rr][cc] = True
+
+    for e in raw_elements:
+        if e.get("type") != "way" or "tags" not in e:
+            continue
+        t = e["tags"]
+        pts = [node_map[nid] for nid in e.get("nodes", []) if nid in node_map]
+        if not pts:
+            continue
+        hw = t.get("highway", "")
+        if "building" in t:
+            building_count += 1
+            mark_bbox(pts, occupied)
+        elif (
+            t.get("natural") in ILLEGAL_NATURAL
+            or t.get("landuse") in ILLEGAL_LANDUSE
+            or t.get("leisure") in ILLEGAL_LEISURE
+            or t.get("amenity") in ILLEGAL_AMENITY
+            or t.get("amenity") in ("parking", "parking_space")
+            or t.get("shop") in ("mall", "supermarket", "department_store")
+            or t.get("landuse") in EMPTY_GROUND_LANDUSE
+            or t.get("natural") in EMPTY_GROUND_NATURAL
+        ):
+            mark_bbox(pts, occupied)
+        elif hw:
+            # Mark road centerline cells occupied & road-accessible for neighbors
+            for plat, plon in pts:
+                rr = int((plat - min_lat) / d_lat)
+                cc = int((plon - min_lon) / d_lon)
+                if 0 <= rr < grid_n and 0 <= cc < grid_n:
+                    occupied[rr][cc] = True
+                    if hw in ("residential", "unclassified", "service", "tertiary", "secondary"):
+                        has_road[rr][cc] = True
+
+    if building_count < 140:
+        return []
+
+    candidates: List[Tuple[float, float, float]] = []
+    for r in range(2, grid_n - 2):
+        for c in range(2, grid_n - 2):
+            if occupied[r][c]:
+                continue
+            # Require nearby mapped structures within 3 cells (~95m) so outer unmapped voids don't false-trigger
+            local_occ = sum(
+                1 for dr in range(-2, 3) for dc in range(-2, 3) if occupied[r + dr][c + dc]
+            )
+            if local_occ < 5:
+                continue
+            road_adj = (
+                has_road[r - 1][c] or has_road[r + 1][c]
+                or has_road[r][c - 1] or has_road[r][c + 1]
+            )
+            if not road_adj:
+                continue
+            c_lat = min_lat + (r + 0.5) * d_lat
+            c_lon = min_lon + (c + 0.5) * d_lon
+            dist = haversine_m(center_lat, center_lon, c_lat, c_lon)
+            candidates.append((dist, c_lat, c_lon))
+
+    candidates.sort(key=lambda x: x[0])
+    chosen: List[Dict[str, Any]] = []
+    chosen_pts: List[Tuple[float, float]] = []
+    for dist, c_lat, c_lon in candidates:
+        if any(haversine_m(c_lat, c_lon, p_lat, p_lon) < 180.0 for p_lat, p_lon in chosen_pts):
+            continue
+        chosen_pts.append((c_lat, c_lon))
+        ring = _square_ring(c_lat, c_lon, half_m=15.0)
+        chosen.append({
+            "type": "way",
+            "id": f"gap_{len(chosen)}_{round(c_lat,4)}_{round(c_lon,4)}",
+            "tags": {"ai_gap_plot": "yes", "surface": "unpaved", "access": "permissive"},
+            "center": {"lat": c_lat, "lon": c_lon},
+            "geometry": [{"lat": pt[1], "lon": pt[0]} for pt in ring],
+        })
+        if len(chosen) >= 4:
+            break
+    return chosen
+
+
+def _extract_cgimap_elements(
+    raw_elements: List[Dict[str, Any]],
+    bbox: Tuple[float, float, float, float],
+    center_lat: float,
+    center_lon: float,
+) -> List[Dict[str, Any]]:
+    """Extracts empty grounds, malls, parking bays, nearest street shoulders, and AI gap plots from CGImap JSON."""
+    node_map: Dict[int, Tuple[float, float]] = {
+        e["id"]: (float(e["lat"]), float(e["lon"]))
+        for e in raw_elements
+        if e.get("type") == "node" and "lat" in e and "lon" in e
+    }
+
+    extracted: List[Dict[str, Any]] = []
+    street_candidates: List[Tuple[float, Dict[str, Any]]] = []
+
+    for e in raw_elements:
+        etype = e.get("type")
+        tags = e.get("tags")
+        if not tags:
+            continue
+
+        if etype == "node" and "lat" in e and "lon" in e:
+            if tags.get("shop") in ("mall", "supermarket", "department_store") or tags.get("amenity") in ("parking", "marketplace"):
+                extracted.append({
+                    "type": "node",
+                    "id": f"cg_n_{e['id']}",
+                    "tags": tags,
+                    "lat": float(e["lat"]),
+                    "lon": float(e["lon"]),
+                })
+            continue
+
+        if etype != "way":
+            continue
+
+        lu = (tags.get("landuse") or "").lower()
+        nat = (tags.get("natural") or "").lower()
+        lei = (tags.get("leisure") or "").lower()
+        sh = (tags.get("shop") or "").lower()
+        am = (tags.get("amenity") or "").lower()
+        hw = (tags.get("highway") or "").lower()
+
+        is_interesting = (
+            lu in EMPTY_GROUND_LANDUSE
+            or nat in EMPTY_GROUND_NATURAL
+            or lei in EMPTY_GROUND_LEISURE
+            or sh in ("mall", "supermarket", "department_store")
+            or am in ("parking", "parking_space", "marketplace")
+            or lu == "retail"
+            or hw in ("rest_area", "services")
+        )
+        is_street = hw in ("service", "unclassified", "residential") and bool(tags.get("name"))
+        if not (is_interesting or is_street):
+            continue
+
+        pts = [node_map[nid] for nid in e.get("nodes", []) if nid in node_map]
+        if not pts:
+            continue
+        c_lat = sum(p[0] for p in pts) / len(pts)
+        c_lon = sum(p[1] for p in pts) / len(pts)
+        geom = [{"lat": p[0], "lon": p[1]} for p in pts]
+
+        if is_street and not is_interesting:
+            dist = haversine_m(center_lat, center_lon, c_lat, c_lon)
+            if dist <= 650.0:
+                street_candidates.append((dist, {
+                    "type": "way",
+                    "id": f"cg_w_{e['id']}",
+                    "tags": tags,
+                    "center": {"lat": c_lat, "lon": c_lon},
+                    "geometry": geom,
+                }))
+        else:
+            extracted.append({
+                "type": "way",
+                "id": f"cg_w_{e['id']}",
+                "tags": tags,
+                "center": {"lat": c_lat, "lon": c_lon},
+                "geometry": geom,
+            })
+
+    street_candidates.sort(key=lambda x: x[0])
+    extracted.extend(item for _, item in street_candidates[:10])
+    extracted.extend(_detect_unbuilt_grid_plots(raw_elements, node_map, bbox, center_lat, center_lon))
+    return extracted
+
+
+async def _fetch_osm_cgimap_fast(lat: float, lon: float) -> List[Dict[str, Any]]:
     """
+    Fetches live OSM map geometry via CGImap (/api/0.6/map.json) with a 2.6s timeout
+    and spatial tile caching so subsequent scans in the same 1km zone take 0ms.
+    """
+    tile_key = (round(lat, 2), round(lon, 2))
+    now = time.time()
+    cached = _CGIMAP_TILE_CACHE.get(tile_key)
+    if cached and (now - cached[0]) < _TILE_TTL_SEC:
+        return cached[1]
+
+    delta = 0.0040
+    bbox = (lon - delta, lat - delta, lon + delta, lat + delta)
+    url = f"{CGIMAP_ENDPOINT}?bbox={bbox[0]:.5f},{bbox[1]:.5f},{bbox[2]:.5f},{bbox[3]:.5f}"
+    headers = {"User-Agent": "OpenPark/1.0", "Accept": "application/json"}
+
     try:
-        async with httpx.AsyncClient(timeout=2.2) as client:
-            tasks = [asyncio.create_task(_fetch_overpass_single(client, ep, query)) for ep in OVERPASS_ENDPOINTS]
-            done, pending = await asyncio.wait(tasks, timeout=2.4, return_when=asyncio.FIRST_COMPLETED)
-            result = None
-            for t in done:
-                if not t.cancelled() and t.exception() is None and t.result():
-                    result = t.result()
-                    break
-            for p in pending:
-                p.cancel()
-            return result
+        async with httpx.AsyncClient(timeout=2.6, headers=headers) as client:
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                return []
+            raw_els = resp.json().get("elements", [])
+            extracted = _extract_cgimap_elements(raw_els, bbox, lat, lon)
+            _CGIMAP_TILE_CACHE[tile_key] = (now, extracted)
+            return extracted
     except Exception as exc:
-        logger.debug("Fast Overpass race fallback: %s", exc)
-        return None
+        logger.debug("CGImap live scan skipped/timed out: %s", exc)
+        return []
 
 
-async def _fetch_nearby_streets_photon(lat: float, lon: float) -> List[Dict[str, Any]]:
-    """Fast reverse/proximity lookup via Photon (~0.4s) to detect real nearby street shoulders if sparse."""
+async def _fetch_photon_spaces(lat: float, lon: float, radius_m: int) -> List[Dict[str, Any]]:
+    """Concurrent Photon lookup (~0.5s) for malls, named grounds, and nearest street shoulders."""
     headers = {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "application/json",
     }
+    elements: List[Dict[str, Any]] = []
+    max_search_r = max(float(radius_m), 2500.0)
+
     try:
-        async with httpx.AsyncClient(timeout=1.8, headers=headers) as client:
-            resp = await client.get(f"https://photon.komoot.io/reverse?lat={lat}&lon={lon}&limit=6")
-            if resp.status_code != 200:
-                return []
-            elements: List[Dict[str, Any]] = []
-            for idx, feat in enumerate(resp.json().get("features", [])):
+        async with httpx.AsyncClient(timeout=1.9, headers=headers) as client:
+            rev_req = client.get(f"{PHOTON_REVERSE_URL}?lat={lat}&lon={lon}&limit=6")
+            mall_req = client.get(
+                f"{PHOTON_SEARCH_URL}?q=mall&lat={lat}&lon={lon}&bbox={INDIA_BBOX_STR}&limit=8"
+            )
+            ground_req = client.get(
+                f"{PHOTON_SEARCH_URL}?q=ground&lat={lat}&lon={lon}&bbox={INDIA_BBOX_STR}&limit=8"
+            )
+            rev_resp, mall_resp, ground_resp = await asyncio.gather(
+                rev_req, mall_req, ground_req, return_exceptions=True
+            )
+
+        if isinstance(rev_resp, httpx.Response) and rev_resp.status_code == 200:
+            for idx, feat in enumerate(rev_resp.json().get("features", [])):
                 props = feat.get("properties") or {}
                 coords = (feat.get("geometry") or {}).get("coordinates") or []
                 if len(coords) < 2:
@@ -377,17 +706,72 @@ async def _fetch_nearby_streets_photon(lat: float, lon: float) -> List[Dict[str,
                     "lat": float(coords[1]),
                     "lon": float(coords[0]),
                 })
-            return elements
-    except Exception:
-        return []
+
+        for prefix, resp_obj in (("mall", mall_resp), ("ground", ground_resp)):
+            if not isinstance(resp_obj, httpx.Response) or resp_obj.status_code != 200:
+                continue
+            for idx, feat in enumerate(resp_obj.json().get("features", [])):
+                props = feat.get("properties") or {}
+                coords = (feat.get("geometry") or {}).get("coordinates") or []
+                if len(coords) < 2:
+                    continue
+                c_lon, c_lat = float(coords[0]), float(coords[1])
+                if haversine_m(lat, lon, c_lat, c_lon) > max_search_r:
+                    continue
+                name = props.get("name") or ""
+                if not name or _has_non_parking_name(name):
+                    continue
+                osm_key = (props.get("osm_key") or "").lower()
+                osm_val = (props.get("osm_value") or "").lower()
+                if osm_key in ("amenity", "shop") and osm_val in ("cafe", "restaurant", "coffee") and prefix == "ground":
+                    continue
+                if osm_key in ("water",) or osm_val in ILLEGAL_NATURAL or osm_val in ILLEGAL_LEISURE:
+                    continue
+
+                tags: Dict[str, str] = {"name": name}
+                if prefix == "mall":
+                    tags["shop"] = "mall"
+                    tags["access"] = "customers"
+                else:
+                    tags[osm_key or "landuse"] = osm_val or "brownfield"
+                    if osm_key not in ("landuse", "natural", "leisure"):
+                        tags["landuse"] = "brownfield"
+                    tags["surface"] = "unpaved"
+
+                ring = _extent_to_ring(props.get("extent"))
+                if ring:
+                    elements.append({
+                        "type": "way",
+                        "id": f"photon_{prefix}_{idx}",
+                        "tags": tags,
+                        "center": {"lat": c_lat, "lon": c_lon},
+                        "geometry": [{"lat": pt[1], "lon": pt[0]} for pt in ring],
+                    })
+                else:
+                    elements.append({
+                        "type": "node",
+                        "id": f"photon_{prefix}_{idx}",
+                        "tags": tags,
+                        "lat": c_lat,
+                        "lon": c_lon,
+                    })
+    except Exception as exc:
+        logger.debug("Photon spaces lookup error: %s", exc)
+
+    return elements
 
 
 def _load_local_candidates(lat: float, lon: float, radius_m: int) -> List[Dict[str, Any]]:
     """
-    Reads local OSM Overpass GeoJSON (793 polygons) + SQLite FTS5 + curated places
-    with automatic radius expansion if sparse.
+    Reads pre-indexed OSM empty grounds cache (310+ grounds/malls), OSM parking cache (793 polygons),
+    SQLite FTS5 catalog, and curated Bengaluru places in ~2ms.
     """
     elements: List[Dict[str, Any]] = []
+
+    for og in _load_open_grounds_precomputed():
+        if haversine_m(lat, lon, og["c_lat"], og["c_lon"]) <= radius_m:
+            elements.append(og)
+
     try:
         from overpass_service import load_overpass_cache
         cache = load_overpass_cache()
@@ -520,24 +904,32 @@ def _process_elements(
         if dist_m > max_radius_m:
             continue
 
-        area_m2 = compute_polygon_area_m2(ring_lon_lat) if len(ring_lon_lat) >= 3 else 0.0
-        raw_name = tags.get("name") or ""
+        area_m2 = compute_polygon_area_m2(ring_lon_lat) if len(ring_lon_lat) >= 3 else float(tags.get("area_m2") or 0.0)
+        raw_name = (tags.get("name") or "").strip()
         if tags.get("highway") in ("service", "unclassified", "residential") and raw_name and "pocket" not in raw_name.lower():
             default_name = f"{raw_name} (Legal Roadside Pocket)"
+        elif raw_name:
+            default_name = raw_name
+        elif (
+            tags.get("ai_gap_plot") == "yes"
+            or (tags.get("landuse") or "").lower() in EMPTY_GROUND_LANDUSE
+            or (tags.get("natural") or "").lower() in EMPTY_GROUND_NATURAL
+            or (tags.get("leisure") or "").lower() in EMPTY_GROUND_LEISURE
+        ):
+            default_name = _descriptive_ground_name(tags, area_m2, dist_m)
+        elif (tags.get("shop") or "").lower() in ("mall", "supermarket", "department_store") or (tags.get("landuse") or "").lower() == "retail":
+            default_name = f"Commercial Plaza ({round(area_m2):,} m²)" if area_m2 >= 120 else f"Retail Complex ({round(dist_m)}m away)"
         else:
-            default_name = (
-                raw_name
-                or (f"Open Ground ({round(area_m2)} m²)" if area_m2 > 200 and tags.get("landuse") else None)
-                or f"Public Bay ({round(dist_m)}m away)"
-            )
+            default_name = f"Public Bay ({round(dist_m)}m away)"
 
         if is_duplicate_of_existing(c_lat, c_lon, default_name, existing):
             excluded_existing += 1
             continue
 
+        dedup_name_m = 520.0 if "roadside pocket" in default_name.lower() else 350.0
         if any(
             haversine_m(c_lat, c_lon, s_lat, s_lon) < 75.0
-            or (default_name.lower() == s_name and haversine_m(c_lat, c_lon, s_lat, s_lon) < 350.0)
+            or (default_name.lower() == s_name and haversine_m(c_lat, c_lon, s_lat, s_lon) < dedup_name_m)
             for s_lat, s_lon, s_name in seen_coords
         ):
             continue
@@ -597,8 +989,9 @@ async def scan_map_for_parking(
     use_live_overpass: bool = True,
 ) -> Dict[str, Any]:
     """
-    Fast (< 2.5s max, < 5ms cached) AI map scanner with automatic radius expansion
-    and street-pocket fallback so a nearby legal space is always returned.
+    Fast (< 2.5s uncached, < 5ms cached) AI map scanner with pre-indexed empty-ground
+    polygons, live OSM CGImap + Photon geometry, unbuilt-plot detection, and
+    automatic radius expansion.
     """
     t0 = time.perf_counter()
     cache_key = (round(lat, 3), round(lon, 3), int(radius_m))
@@ -614,20 +1007,20 @@ async def scan_map_for_parking(
 
     if use_live_overpass:
         live_els, photon_els = await asyncio.gather(
-            _fetch_overpass_fast(lat, lon, radius_m),
-            _fetch_nearby_streets_photon(lat, lon),
+            _fetch_osm_cgimap_fast(lat, lon),
+            _fetch_photon_spaces(lat, lon, radius_m),
         )
         if live_els:
             elements = live_els + elements
-            scan_source = "live_overpass_osm"
+            scan_source = "live_osm_ai_vision"
         if photon_els:
             elements.extend(photon_els)
 
     discovered, geojson_features, excluded_existing = _process_elements(elements, lat, lon, radius_m, existing)
 
-    # Auto-expand local radius up to 4.5 km if fewer than 3 spots were found nearby
+    # Auto-expand local radius up to 4.5 km if fewer than 3 spots or zero grounds found nearby
     effective_radius = radius_m
-    if len(discovered) < 3:
+    if len(discovered) < 3 or not any(d["category"] == "empty_ground" for d in discovered):
         effective_radius = max(radius_m, 4500)
         expanded_els = _load_local_candidates(lat, lon, effective_radius)
         discovered, geojson_features, excluded_existing = _process_elements(
@@ -637,10 +1030,10 @@ async def scan_map_for_parking(
     # Sort primarily by high AI score, breaking ties by shortest distance
     discovered.sort(key=lambda x: (-x["ai_score"], x["distance_km"]))
 
-    # Diversify top results across all 3 categories (grounds, malls, legal bays)
+    # Diversify top results across empty grounds, malls, and legal bays (prioritizing empty grounds cleanly)
     top_results: List[Dict[str, Any]] = []
     chosen_ids = set()
-    for cat_name, quota in (("empty_ground", 8), ("mall_parking", 8), ("legal_bay", 9)):
+    for cat_name, quota in (("empty_ground", 10), ("mall_parking", 7), ("legal_bay", 8)):
         for r in [item for item in discovered if item["category"] == cat_name][:quota]:
             top_results.append(r)
             chosen_ids.add(r["id"])
@@ -651,8 +1044,8 @@ async def scan_map_for_parking(
             top_results.append(r)
             chosen_ids.add(r["id"])
 
-    # Final ordering: bring the best-scoring closest spots right to the top
-    top_results.sort(key=lambda x: (x["distance_km"] > 0.6, -x["ai_score"], x["distance_km"]))
+    # Final ordering: bring the closest high-confidence candidates right to the top
+    top_results.sort(key=lambda x: (x["distance_km"] > 0.7, -x["ai_score"], x["distance_km"]))
     filtered_geojson = [f for f in geojson_features if f["properties"].get("id") in chosen_ids]
 
     counts = {
