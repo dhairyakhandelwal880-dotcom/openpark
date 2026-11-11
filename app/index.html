@@ -13,7 +13,6 @@
   <!-- MapLibre GL JS (100% Free & Open-Source Vector Map Engine: https://maplibre.org/maplibre-gl-js/docs/API/) -->
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
   <link rel="stylesheet" href="css/ui-polish.css" />
 
   <style>
@@ -2077,120 +2076,51 @@
       padding-bottom: 2px;
     }
     .welcome-mode-row::-webkit-scrollbar { display: none; }
-    /* React Bits TechText Big Wordmark Section */
-    .rb-tech-hero {
-      padding: 12px 14px 10px;
-      border-radius: 18px;
-      background: rgba(9, 12, 20, 0.72);
-      border: 1px dashed rgba(56, 189, 248, 0.35);
-      position: relative;
-      user-select: none;
-    }
-    html[data-theme="light"] .rb-tech-hero {
-      background: rgba(244, 246, 250, 0.92);
-      border-color: rgba(0, 113, 227, 0.32);
-    }
-    .rb-tech-topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 6px;
-      font-family: var(--font-mono);
-      font-size: 10.5px;
+    .welcome-section-label {
+      font-size: 11.5px;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
       color: var(--text-secondary);
+      margin-bottom: -8px;
     }
-    .rb-tech-frame {
-      position: relative;
-      padding: 6px 4px;
-      border: 1px solid rgba(148, 163, 184, 0.25);
-      border-radius: 8px;
-      cursor: crosshair;
-      overflow: hidden;
+    .welcome-quick-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
     }
-    .rb-tech-handle {
-      position: absolute;
-      width: 7px;
-      height: 7px;
-      background: #38bdf8;
-      border: 1px solid #090d16;
-      z-index: 3;
+    .welcome-dest-card {
+      padding: 12px 12px;
+      border-radius: 16px;
+      background: var(--text-contrast-layer);
+      border: 1px solid var(--color-border-subtle);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      text-align: left;
+      color: var(--text-primary);
+      cursor: pointer;
     }
-    .rb-tech-handle.tl { top: -1px; left: -1px; }
-    .rb-tech-handle.tr { top: -1px; right: -1px; }
-    .rb-tech-handle.bl { bottom: -1px; left: -1px; }
-    .rb-tech-handle.br { bottom: -1px; right: -1px; }
-    .rb-tech-svg {
-      display: block;
-      width: 100%;
-      height: auto;
-      overflow: visible;
+    .welcome-dest-card:hover {
+      background: var(--color-hover);
+      border-color: rgba(0, 113, 227, 0.35);
+      transform: translateY(-2px);
     }
-    .rb-tech-rule {
-      stroke: rgba(148, 163, 184, 0.38);
-      stroke-width: 1;
-      stroke-dasharray: 4 3;
+    .welcome-dest-icon {
+      font-size: 20px;
+      line-height: 1;
+      margin-bottom: 2px;
     }
-    .rb-tech-axis {
-      font-family: var(--font-mono);
-      font-size: 8px;
-      font-weight: 600;
-      fill: rgba(148, 163, 184, 0.72);
-      letter-spacing: 0.08em;
+    .welcome-dest-name {
+      font-size: 13.5px;
+      font-weight: 700;
+      line-height: 1.2;
     }
-    .rb-tech-wire,
-    .rb-tech-fill {
-      font-family: var(--font-stack);
-      font-size: 92px;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      transition: fill-opacity 0.16s ease, stroke-opacity 0.16s ease, opacity 0.16s ease;
-    }
-    .rb-tech-wire {
-      fill: transparent;
-      stroke: rgba(148, 163, 184, 0.55);
-      stroke-width: 1.5;
-      stroke-dasharray: 6 3;
-      opacity: 0.38;
-    }
-    .rb-tech-wire.accent {
-      stroke: #38bdf8;
-    }
-    .rb-tech-fill {
-      fill: var(--text-primary);
-    }
-    .rb-tech-fill.accent {
-      fill: #0a84ff;
-    }
-    .rb-tech-glyph.is-wireframe .rb-tech-fill {
-      fill-opacity: 0.08;
-    }
-    .rb-tech-glyph.is-wireframe .rb-tech-wire {
-      stroke: #38bdf8;
-      stroke-width: 2;
-      opacity: 1;
-      animation: rbTechDashFlow 0.75s linear infinite;
-    }
-    .rb-tech-bounds {
-      fill: transparent;
-      stroke: transparent;
-      stroke-width: 1;
-    }
-    .rb-tech-glyph.is-wireframe .rb-tech-bounds {
-      stroke: rgba(56, 189, 248, 0.45);
-      stroke-dasharray: 3 2;
-    }
-    .rb-tech-speck {
-      fill: #38bdf8;
-    }
-    .rb-tech-cursor {
-      stroke: #38bdf8;
-      stroke-width: 1.2;
-      stroke-dasharray: 2 2;
-    }
-    @keyframes rbTechDashFlow {
-      to { stroke-dashoffset: -18; }
+    .welcome-dest-sub {
+      font-size: 11.5px;
+      color: var(--text-secondary);
+      line-height: 1.25;
     }
     .welcome-footer-actions {
       display: grid;
@@ -2203,6 +2133,9 @@
         padding: 20px 16px 18px 16px;
         gap: 14px;
         border-radius: 22px;
+      }
+      .welcome-quick-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
       .welcome-footer-actions {
         grid-template-columns: 1fr;
@@ -3155,8 +3088,40 @@
         <button class="chip-btn pressable" data-welcome-filter="covered">🏢 Covered Garage</button>
       </div>
 
-      <!-- Big Interactive OPENPARK Wordmark (React Bits TechText Animation) -->
-      <section id="openpark-tech-hero" class="rb-tech-hero" aria-label="OpenPark interactive logo"></section>
+      <!-- Quick Popular Destinations -->
+      <div class="welcome-section-label">Popular Head-Outs</div>
+      <div class="welcome-quick-grid">
+        <button class="welcome-dest-card pressable" data-quick-dest="Stanza Living Debrecan House" data-quick-lat="12.90310" data-quick-lon="77.49750">
+          <span class="welcome-dest-icon">🏠</span>
+          <span class="welcome-dest-name">Debrecan House</span>
+          <span class="welcome-dest-sub">Kengeri • Home Base</span>
+        </button>
+        <button class="welcome-dest-card pressable" data-quick-dest="BGS Global Institute">
+          <span class="welcome-dest-icon">🏥</span>
+          <span class="welcome-dest-name">BGS Hospital</span>
+          <span class="welcome-dest-sub">Medical & Parking</span>
+        </button>
+        <button class="welcome-dest-card pressable" data-quick-category="Shopping">
+          <span class="welcome-dest-icon">🛍️</span>
+          <span class="welcome-dest-name">Malls & Shops</span>
+          <span class="welcome-dest-sub">UB City, Orion, Vega</span>
+        </button>
+        <button class="welcome-dest-card pressable" data-quick-dest="Metro Station">
+          <span class="welcome-dest-icon">🚇</span>
+          <span class="welcome-dest-name">Metro Stations</span>
+          <span class="welcome-dest-sub">Park & Ride Namma Metro</span>
+        </button>
+        <button class="welcome-dest-card pressable" data-quick-category="Cafes">
+          <span class="welcome-dest-icon">☕</span>
+          <span class="welcome-dest-name">Cafes & Hangouts</span>
+          <span class="welcome-dest-sub">Indiranagar, Koramangala</span>
+        </button>
+        <button class="welcome-dest-card pressable" data-quick-dest="Kempegowda International Airport">
+          <span class="welcome-dest-icon">✈️</span>
+          <span class="welcome-dest-name">BLR Airport</span>
+          <span class="welcome-dest-sub">Terminal Route & Parking</span>
+        </button>
+      </div>
 
       <!-- Bottom Direct CTAs -->
       <div class="welcome-footer-actions">
@@ -4629,23 +4594,17 @@
         init() {
           const styleUrl = resolveMapStyleUrl(STATE.config.activeStyle);
 
-          try {
-            this.map = new maplibregl.Map({
-              container: 'map-viewport',
-              style: styleUrl,
-              center: CONFIG.DEFAULT_COORDS,
-              zoom: CONFIG.INITIAL_ZOOM,
-              maxZoom: 22,
-              pitch: 0,
-              bearing: 0,
-              antialias: true,
-              attributionControl: false
-            });
-          } catch (err) {
-            this.map = null;
-            console.warn('MapLibre initialization skipped:', err && err.message);
-            return;
-          }
+          this.map = new maplibregl.Map({
+            container: 'map-viewport',
+            style: styleUrl,
+            center: CONFIG.DEFAULT_COORDS,
+            zoom: CONFIG.INITIAL_ZOOM,
+            maxZoom: 22,
+            pitch: 0,
+            bearing: 0,
+            antialias: true,
+            attributionControl: false
+          });
 
           // Ensure map viewport always resizes to 100% full screen
           const viewportEl = document.getElementById('map-viewport');
@@ -7442,7 +7401,7 @@
         async init() {
           WakeLockManager.init();
           GPSMonitor.init();
-          try { MapEngine.init(); } catch (err) { console.warn('MapEngine init warning:', err); }
+          MapEngine.init();
           UIController.init();
           SearchEngine.init();
           API.loadTraccarServerConfig();
@@ -8082,8 +8041,41 @@
             });
           });
 
-          // React Bits TechText Animation for Big OPENPARK Hero Wordmark
-          this.mountTechTextLogo();
+          // Quick Popular Destination cards
+          document.querySelectorAll('.welcome-dest-card').forEach(card => {
+            card.addEventListener('click', async () => {
+              if (navigator.vibrate) navigator.vibrate(8);
+              const qDest = card.dataset.quickDest;
+              const qCat = card.dataset.quickCategory;
+              const qLat = parseFloat(card.dataset.quickLat);
+              const qLon = parseFloat(card.dataset.quickLon);
+
+              this.hide();
+
+              if (qDest && Number.isFinite(qLat) && Number.isFinite(qLon)) {
+                SearchEngine.selectResult({
+                  id: 'quick-' + Date.now(),
+                  name: qDest,
+                  lat: qLat,
+                  lon: qLon,
+                  category: 'Residence & PG',
+                  badge: '🏠',
+                  address: 'Kengeri, Bengaluru'
+                });
+              } else if (qDest) {
+                const mainInput = document.getElementById('search-input');
+                if (mainInput) mainInput.value = qDest;
+                await SearchEngine.fetchSuggestions(qDest, true);
+              } else if (qCat) {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar) {
+                  sidebar.classList.remove('is-collapsed');
+                  document.body.classList.remove('sidebar-collapsed');
+                }
+                SearchEngine.quickSearch(qCat);
+              }
+            });
+          });
 
           // Unified "Parking Near Me" CTA (combines uploaded nearby lots + AI ground/mall/legal scan)
           const btnNearby = document.getElementById('btn-welcome-nearby');
@@ -8228,142 +8220,12 @@
           SearchEngine.selectResult(item);
         },
 
-        mountTechTextLogo() {
-          const host = document.getElementById('openpark-tech-hero');
-          if (!host) return;
-          const WORD = 'OPENPARK';
-          const NS = 'http://www.w3.org/2000/svg';
-          const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-          const svgEl = (tag, attrs) => {
-            const n = document.createElementNS(NS, tag);
-            Object.entries(attrs || {}).forEach(([k, v]) => n.setAttribute(k, String(v)));
-            return n;
-          };
-
-          host.innerHTML = `
-            <div class="rb-tech-topbar">
-              <span>SYS://OPENPARK.IN • INDIA_V2</span>
-              <span id="rb-tech-readout">CAD_METRICS • READY</span>
-            </div>
-            <div class="rb-tech-frame" id="rb-tech-frame">
-              <span class="rb-tech-handle tl" aria-hidden="true"></span>
-              <span class="rb-tech-handle tr" aria-hidden="true"></span>
-              <span class="rb-tech-handle bl" aria-hidden="true"></span>
-              <span class="rb-tech-handle br" aria-hidden="true"></span>
-              <svg class="rb-tech-svg" viewBox="0 0 600 120" role="img" aria-label="OPENPARK logo">
-                <g>
-                  <line x1="10" y1="18" x2="590" y2="18" class="rb-tech-rule" />
-                  <line x1="10" y1="48" x2="590" y2="48" class="rb-tech-rule" />
-                  <line x1="10" y1="98" x2="590" y2="98" class="rb-tech-rule" />
-                  <text x="12" y="14" class="rb-tech-axis">CAP_HEIGHT</text>
-                  <text x="12" y="112" class="rb-tech-axis">BASELINE • 1KM_SCAN</text>
-                </g>
-                <g id="rb-tech-glyphs"></g>
-                <g id="rb-tech-specks" aria-hidden="true"></g>
-                <line id="rb-tech-cursor" x1="-20" y1="8" x2="-20" y2="114" class="rb-tech-cursor" opacity="0" />
-              </svg>
-            </div>
-          `;
-
-          const svg = host.querySelector('.rb-tech-svg');
-          const frame = host.querySelector('#rb-tech-frame');
-          const glyphsLayer = host.querySelector('#rb-tech-glyphs');
-          const specksLayer = host.querySelector('#rb-tech-specks');
-          const cursorLine = host.querySelector('#rb-tech-cursor');
-          const readout = host.querySelector('#rb-tech-readout');
-
-          const glyphs = [];
-          const startX = 24;
-          const stepX = 70;
-
-          for (let i = 0; i < WORD.length; i++) {
-            const x = startX + i * stepX;
-            const accentCls = i >= 4 ? ' accent' : '';
-            const g = svgEl('g', { class: 'rb-tech-glyph' });
-
-            const bounds = svgEl('rect', { x: x - 4, y: 18, width: 64, height: 82, class: 'rb-tech-bounds' });
-            const wire = svgEl('text', { x, y: 96, class: 'rb-tech-wire' + accentCls });
-            wire.textContent = WORD[i];
-            const fill = svgEl('text', { x, y: 96, class: 'rb-tech-fill' + accentCls });
-            fill.textContent = WORD[i];
-
-            g.appendChild(bounds);
-            g.appendChild(wire);
-            g.appendChild(fill);
-            glyphsLayer.appendChild(g);
-            glyphs.push({ g, wire, fill, cx: x + 28 });
-          }
-
-          const specks = [];
-          for (let i = 0; i < 24; i++) {
-            const sx = 28 + (i * 23) % 540;
-            const sy = 24 + (i * 17) % 68;
-            const sq = svgEl('rect', { x: sx, y: sy, width: 4.5, height: 4.5, class: 'rb-tech-speck' });
-            specksLayer.appendChild(sq);
-            specks.push(sq);
-          }
-
-          if (window.gsap && !reduced) {
-            const tl = window.gsap.timeline();
-            tl.fromTo(
-              host.querySelectorAll('.rb-tech-rule'),
-              { scaleX: 0, transformOrigin: 'left center' },
-              { scaleX: 1, duration: 0.45, stagger: 0.07, ease: 'power2.out' }
-            );
-            specks.forEach((sq, idx) => {
-              const dx = (idx % 2 === 0 ? -1 : 1) * (40 + (idx * 11) % 60);
-              const dy = (idx % 3 === 0 ? -1 : 1) * (24 + (idx * 9) % 40);
-              tl.fromTo(
-                sq,
-                { x: dx, y: dy, opacity: 0, scale: 1.8 },
-                { x: 0, y: 0, opacity: 1, scale: 1, duration: 0.35, ease: 'power2.out' },
-                0.1 + idx * 0.015
-              ).to(sq, { opacity: 0, duration: 0.2 }, 0.65 + idx * 0.01);
-            });
-            glyphs.forEach((item, idx) => {
-              tl.fromTo(
-                item.wire,
-                { opacity: 0, strokeDashoffset: 36 },
-                { opacity: 0.95, strokeDashoffset: 0, duration: 0.35, ease: 'power2.out' },
-                0.24 + idx * 0.04
-              ).fromTo(
-                item.fill,
-                { opacity: 0, y: 6 },
-                { opacity: 1, y: 0, duration: 0.32, ease: 'power2.out' },
-                0.48 + idx * 0.045
-              );
-            });
-          } else {
-            specksLayer.style.display = 'none';
-            glyphs.forEach(it => { it.fill.style.opacity = '1'; it.wire.style.opacity = '0.35'; });
-          }
-
-          frame.addEventListener('pointermove', (ev) => {
-            if (ev.pointerType !== 'mouse' || reduced) return;
-            const rect = svg.getBoundingClientRect();
-            if (!rect.width) return;
-            const svgX = ((ev.clientX - rect.left) / rect.width) * 600;
-            cursorLine.setAttribute('x1', svgX.toFixed(1));
-            cursorLine.setAttribute('x2', svgX.toFixed(1));
-            cursorLine.setAttribute('opacity', '0.85');
-            if (readout) readout.textContent = `X:${Math.round(svgX)} • VECTOR_PATH`;
-            glyphs.forEach(it => it.g.classList.toggle('is-wireframe', Math.abs(svgX - it.cx) < 62));
-          });
-
-          frame.addEventListener('pointerleave', () => {
-            cursorLine.setAttribute('opacity', '0');
-            if (readout) readout.textContent = 'CAD_METRICS • READY';
-            glyphs.forEach(it => it.g.classList.remove('is-wireframe'));
-          });
-        },
-
         updateGpsLabel() {},
 
         show() {
           const overlay = document.getElementById('welcome-overlay');
           if (!overlay) return;
           overlay.classList.remove('is-hidden');
-          this.mountTechTextLogo();
           const wInput = document.getElementById('welcome-search-input');
           if (wInput) setTimeout(() => wInput.focus(), 180);
         },

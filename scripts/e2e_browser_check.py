@@ -37,8 +37,6 @@ def run_check(url: str) -> int:
 
     required_markers = [
         'id="welcome-overlay"',
-        'id="openpark-tech-hero"',
-        'class="rb-tech-glyph"',
         'id="map-style-switcher"',
         'id="explore-sort-bar"',
         'id="ai-filter-row"',
@@ -46,9 +44,6 @@ def run_check(url: str) -> int:
         'Find Parking &amp; AI Scan',
     ]
     missing = [m for m in required_markers if m not in dom]
-    if "Popular Head-Outs" in dom:
-        print("STALE SECTION STILL PRESENT: Popular Head-Outs")
-        return 1
     js_errors = [
         line for line in logs.splitlines()
         if any(tok in line for tok in ("UIPolish", "SyntaxError", "ReferenceError", "TypeError"))
