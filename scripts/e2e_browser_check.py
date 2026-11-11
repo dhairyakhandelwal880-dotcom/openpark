@@ -39,6 +39,7 @@ def run_check(url: str) -> int:
         'id="welcome-overlay"',
         'id="rb-target-cursor"',
         'class="al-frame"',
+        'jelly-bar',
         'id="map-style-switcher"',
         'id="explore-sort-bar"',
         'id="ai-filter-row"',
