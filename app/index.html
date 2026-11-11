@@ -2748,9 +2748,6 @@
     <button class="cluster-btn pressable" id="btn-my-location" aria-label="Center on my location" title="Toggle Real GPS Device Tracking">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
     </button>
-    <button class="cluster-btn pressable" id="btn-snap-debrecan" aria-label="Snap to Debrecan House" title="Calibrate / Snap to Stanza Living Debrecan House (12.90310, 77.49750) [Shortcut: C]">
-      <svg class="svg-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-    </button>
     <button class="cluster-btn pressable" id="btn-variable-motion" aria-label="Toggle live variable GPS motion" title="Toggle Live Variable Walking Motion / Drift [Shortcut: V]">
       <svg class="svg-icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
     </button>
@@ -5577,9 +5574,6 @@
             } else if (e.key === 'l' || e.key === 'L') {
               const btn = document.getElementById('btn-my-location');
               if (btn) btn.click();
-            } else if (e.key === 'c' || e.key === 'C') {
-              if (e.shiftKey) ParkingApp.calibrateDebrecanHouse();
-              else ParkingApp.snapToDebrecan();
             } else if (e.key === 'v' || e.key === 'V') {
               ParkingApp.toggleVariableMotion();
             }
@@ -5588,22 +5582,6 @@
           document.getElementById('btn-my-location').onclick = () => {
             ParkingApp.toggleLiveLocation();
           };
-
-          const snapBtn = document.getElementById('btn-snap-debrecan');
-          if (snapBtn) {
-            snapBtn.title = "Snap to Stanza Living Debrecan House [Click: Snap • Shift+Click: Calibrate • Shortcut: C]";
-            snapBtn.onclick = (e) => {
-              if (e.shiftKey || e.altKey) {
-                ParkingApp.calibrateDebrecanHouse();
-              } else {
-                ParkingApp.snapToDebrecan();
-              }
-            };
-            snapBtn.oncontextmenu = (e) => {
-              e.preventDefault();
-              ParkingApp.calibrateDebrecanHouse();
-            };
-          }
 
           const varBtn = document.getElementById('btn-variable-motion');
           if (varBtn) {
