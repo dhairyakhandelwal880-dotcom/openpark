@@ -37,6 +37,7 @@ def run_check(url: str) -> int:
 
     required_markers = [
         'id="welcome-overlay"',
+        'id="rb-target-cursor"',
         'id="map-style-switcher"',
         'id="explore-sort-bar"',
         'id="ai-filter-row"',
