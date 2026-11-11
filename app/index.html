@@ -2646,7 +2646,7 @@
               <div style="font-size: 11px; color: var(--color-text-tertiary);">Display floating availability pills directly over map</div>
             </div>
             <label class="toggle-switch">
-              <input type="checkbox" id="toggle-lot-pins" />
+              <input type="checkbox" id="toggle-lot-pins" checked />
               <span class="slider"></span>
             </label>
           </div>
@@ -3228,7 +3228,7 @@
           simulateDrive: false,
           showHud: true,
           showBreadcrumbs: true,
-          showLotPins: false,
+          showLotPins: localStorage.getItem('openpark_show_lot_pins') !== '0',
           traccarDeviceId: localStorage.getItem('openpark_traccar_device_id') || 'OP-TRACKER-01',
           activeStyle: (() => {
             if (!localStorage.getItem('openpark_style_v2_hybrid_default')) {
@@ -5428,6 +5428,7 @@
             toggleLotPins.checked = !!STATE.config.showLotPins;
             toggleLotPins.addEventListener('change', (e) => {
               STATE.config.showLotPins = e.target.checked;
+              try { localStorage.setItem('openpark_show_lot_pins', STATE.config.showLotPins ? '1' : '0'); } catch {}
               MapEngine.renderLotMarkers(STATE.lots);
               if (!STATE.config.showLotPins) MapEngine.clearRouteLotMarkers();
               ParkingApp.showToast(STATE.config.showLotPins ? 'Showing parking pins on map' : 'Parking pins hidden on map', 'info', 2000);
@@ -8292,7 +8293,15 @@
             center = { lat: STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1], lng: STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0] };
           }
 
-          ParkingApp.showToast('🅿️ Finding parking & small grounds within 1 km of marker...', 'info', 2500);
+          // Ensure real parking pins stay enabled automatically during scan
+          if (!STATE.config.showLotPins) {
+            STATE.config.showLotPins = true;
+            try { localStorage.setItem('openpark_show_lot_pins', '1'); } catch {}
+            const tglPins = document.getElementById('toggle-lot-pins');
+            if (tglPins) tglPins.checked = true;
+          }
+
+          ParkingApp.showToast('🅿️ Finding 5 nearest parking spots within 1 km of marker...', 'info', 2500);
 
           try {
             const [, resp] = await Promise.all([
@@ -8302,40 +8311,53 @@
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const data = await resp.json();
 
-            // Merge live OpenPark lots strictly within 1 km of the target marker coordinate
-            const aiList = (data.results || []).filter(
-              r => Number(r.distance_km) <= 1.0 && calculateDistanceMeters(center.lat, center.lng, r.lat, r.lon) <= 1050
-            );
-            const nearbyLots = (STATE.lots || []).filter(
+            // Always include real parking lots within 1 km, replacing overlapping AI stubs
+            const realLots = (STATE.lots || []).filter(
               l => calculateDistanceMeters(center.lat, center.lng, l.lat, l.lon) <= 1000
             );
-            nearbyLots.forEach(lot => {
-              const dup = aiList.some(r => calculateDistanceMeters(lot.lat, lot.lon, r.lat, r.lon) < 80);
-              if (!dup) {
-                aiList.push({
-                  id: `lot-${lot.id}`,
-                  _lotId: lot.id,
-                  name: lot.name,
-                  category: 'legal_bay',
-                  category_label: 'OpenPark Live Lot',
-                  badge: '🅿️',
-                  color: '#34c759',
-                  lat: lot.lat,
-                  lon: lot.lon,
-                  distance_km: Number(parseFloat(lot.distance_km).toFixed(2)),
-                  eta_mins: lot.eta_mins || 2,
-                  area_m2: 0,
-                  estimated_spots: lot.free_spots || 15,
-                  ai_score: 94,
-                  legality_status: 'Verified OpenPark Partner',
-                  surface: 'paved',
-                  fee: lot.price_car ? `${lot.price_car}/hr` : 'Metered',
-                  reason: `Live bays: ${lot.free_spots} free within 1 km`,
-                  has_polygon: false
-                });
-              }
+            let combined = (data.results || [])
+              .filter(r => Number(r.distance_km) <= 1.0 && calculateDistanceMeters(center.lat, center.lng, r.lat, r.lon) <= 1050)
+              .filter(r => !realLots.some(lot => calculateDistanceMeters(lot.lat, lot.lon, r.lat, r.lon) < 80));
+
+            realLots.forEach(lot => {
+              const distM = calculateDistanceMeters(center.lat, center.lng, lot.lat, lot.lon);
+              combined.push({
+                id: `lot-${lot.id}`,
+                _lotId: lot.id,
+                name: lot.name,
+                category: 'legal_bay',
+                category_label: 'Real Parking Lot',
+                badge: '🅿️',
+                color: '#34c759',
+                lat: lot.lat,
+                lon: lot.lon,
+                distance_km: Number((distM / 1000).toFixed(2)),
+                eta_mins: lot.eta_mins || Math.max(1, Math.round(distM / 400)),
+                area_m2: 0,
+                estimated_spots: lot.free_spots || 15,
+                ai_score: 96,
+                legality_status: 'Verified Real Parking Lot',
+                surface: 'paved',
+                fee: lot.price_car ? `${lot.price_car}/hr` : 'Metered',
+                reason: `Real parking lot • ${lot.free_spots} free spots (${Math.round(distM)}m from marker)`,
+                has_polygon: false
+              });
             });
-            aiList.sort((a, b) => (a.distance_km - b.distance_km) || (b.ai_score - a.ai_score));
+
+            // Sort strictly nearest-first from marker and cap to at most 5 spots
+            combined.sort((a, b) => {
+              const da = calculateDistanceMeters(center.lat, center.lng, a.lat, a.lon);
+              const db = calculateDistanceMeters(center.lat, center.lng, b.lat, b.lon);
+              if (Math.abs(da - db) > 25) return da - db;
+              if (Boolean(a._lotId) !== Boolean(b._lotId)) return a._lotId ? -1 : 1;
+              return (b.ai_score || 0) - (a.ai_score || 0);
+            });
+
+            const aiList = combined.slice(0, 5);
+            const keepIds = new Set(aiList.map(r => r.id));
+            if (data.geojson && Array.isArray(data.geojson.features)) {
+              data.geojson.features = data.geojson.features.filter(f => keepIds.has(f.properties && f.properties.id));
+            }
 
             data.results = aiList;
             data.summary = {

@@ -1112,25 +1112,26 @@ async def scan_map_for_parking(
     except Exception:
         pass
 
-    # Sort primarily by high AI score, breaking ties by shortest distance
-    discovered.sort(key=lambda x: (-x["ai_score"], x["distance_km"]))
+    # Sort strictly nearest-first within 1 km (tie-break by AI score)
+    discovered.sort(key=lambda x: (x["distance_km"], -x["ai_score"]))
 
-    # Diversify top results across empty grounds, malls, and legal bays (prioritizing empty grounds cleanly)
+    # Cap strictly to the 5 nearest parking areas around the marked location
     top_results: List[Dict[str, Any]] = []
     chosen_ids = set()
-    for cat_name, quota in (("empty_ground", 10), ("mall_parking", 7), ("legal_bay", 8)):
-        for r in [item for item in discovered if item["category"] == cat_name][:quota]:
-            top_results.append(r)
-            chosen_ids.add(r["id"])
+    nearest_ground = next((item for item in discovered if item["category"] == "empty_ground"), None)
     for r in discovered:
-        if len(top_results) >= 25:
+        if len(top_results) >= 5:
             break
-        if r["id"] not in chosen_ids:
-            top_results.append(r)
-            chosen_ids.add(r["id"])
+        top_results.append(r)
+        chosen_ids.add(r["id"])
+    if nearest_ground and nearest_ground["id"] not in chosen_ids:
+        if len(top_results) >= 5:
+            removed = top_results.pop()
+            chosen_ids.discard(removed["id"])
+        top_results.append(nearest_ground)
+        chosen_ids.add(nearest_ground["id"])
 
-    # Final ordering: bring the closest high-confidence candidates right to the top
-    top_results.sort(key=lambda x: (x["distance_km"] > 0.7, -x["ai_score"], x["distance_km"]))
+    top_results.sort(key=lambda x: (x["distance_km"], -x["ai_score"]))
     filtered_geojson = [f for f in geojson_features if f["properties"].get("id") in chosen_ids]
 
     counts = {

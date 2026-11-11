@@ -622,6 +622,7 @@ def test_ai_parking_scanner_endpoint():
         data = res.json()
         assert data["status"] == "ok"
         assert data["radius_m"] <= 1000
+        assert len(data["results"]) <= 5
         assert "summary" in data and "results" in data and "geojson" in data
         assert data["geojson"]["type"] == "FeatureCollection"
         assert data["summary"]["empty_grounds"] >= 1
