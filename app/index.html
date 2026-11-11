@@ -4729,6 +4729,8 @@
             }
 
             // Immediately drop clean red destination pin without any loading text
+            STATE.selectedPlace = { lat: clickLat, lon: clickLng, name: 'Pinned Destination' };
+            if (typeof AIScannerEngine !== 'undefined' && AIScannerEngine.clear) AIScannerEngine.clear();
             this.setDestinationMarker({
               lat: clickLat,
               lon: clickLng
@@ -5275,6 +5277,7 @@
             this.destinationMarker.remove();
             this.destinationMarker = null;
           }
+          STATE.selectedPlace = null;
         },
 
         renderLotMarkers(lots) {
@@ -6469,6 +6472,9 @@
           const item = enrichPlaceDetails(rawItem);
           STATE.selectedPlace = item;
           STATE.selectedLot = null;
+          if (typeof AIScannerEngine !== 'undefined' && AIScannerEngine.clear) {
+            AIScannerEngine.clear();
+          }
 
           // Drop high-visibility destination pin
           MapEngine.setDestinationMarker(item);
@@ -7563,7 +7569,9 @@
               });
             }
 
+            if (!STATE.selectedPlace) {
             ParkingApp.loadNearbyLots(fix.lat, fix.lng);
+          }
             API.sendTraccarPing(fix);
             TelemetryController.update(fix);
 
@@ -8083,6 +8091,7 @@
             btnNearby.onclick = async () => {
               if (navigator.vibrate) navigator.vibrate(8);
               this.hide();
+              MapEngine.clearDestinationMarker();
               const lat = STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1];
               const lng = STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0];
 
@@ -8268,13 +8277,21 @@
           if (labelEl) labelEl.textContent = 'Finding Parking & 1km Grounds...';
           if (hudBtn) hudBtn.classList.add('active-blue', 'active-pulse');
 
-          const center = (Number.isFinite(overrideLat) && Number.isFinite(overrideLon))
-            ? { lat: overrideLat, lng: overrideLon }
-            : (MapEngine.map
-              ? MapEngine.map.getCenter()
-              : { lat: STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1], lng: STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0] });
+          let center = null;
+          if (Number.isFinite(overrideLat) && Number.isFinite(overrideLon)) {
+            center = { lat: Number(overrideLat), lng: Number(overrideLon) };
+          } else if (STATE.selectedPlace && Number.isFinite(Number(STATE.selectedPlace.lat)) && Number.isFinite(Number(STATE.selectedPlace.lon))) {
+            center = { lat: Number(STATE.selectedPlace.lat), lng: Number(STATE.selectedPlace.lon) };
+          } else if (MapEngine.destinationMarker && typeof MapEngine.destinationMarker.getLngLat === 'function') {
+            const ll = MapEngine.destinationMarker.getLngLat();
+            center = { lat: ll.lat, lng: ll.lng };
+          } else if (MapEngine.map) {
+            center = MapEngine.map.getCenter();
+          } else {
+            center = { lat: STATE.userLocation?.lat || CONFIG.DEFAULT_COORDS[1], lng: STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0] };
+          }
 
-          ParkingApp.showToast('🅿️ Finding parking & small grounds within 1 km...', 'info', 2500);
+          ParkingApp.showToast('🅿️ Finding parking & small grounds within 1 km of marker...', 'info', 2500);
 
           try {
             const [, resp] = await Promise.all([
@@ -8284,9 +8301,13 @@
             if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
             const data = await resp.json();
 
-            // Merge live OpenPark lots within 1 km into the unified discovery list
-            const aiList = (data.results || []).filter(r => Number(r.distance_km) <= 1.0);
-            const nearbyLots = (STATE.lots || []).filter(l => (parseFloat(l.distance_km) || 99) <= 1.0);
+            // Merge live OpenPark lots strictly within 1 km of the target marker coordinate
+            const aiList = (data.results || []).filter(
+              r => Number(r.distance_km) <= 1.0 && calculateDistanceMeters(center.lat, center.lng, r.lat, r.lon) <= 1050
+            );
+            const nearbyLots = (STATE.lots || []).filter(
+              l => calculateDistanceMeters(center.lat, center.lng, l.lat, l.lon) <= 1000
+            );
             nearbyLots.forEach(lot => {
               const dup = aiList.some(r => calculateDistanceMeters(lot.lat, lot.lon, r.lat, r.lon) < 80);
               if (!dup) {
@@ -8335,9 +8356,8 @@
                 'success',
                 4000
               );
-              const best = this.results[0];
-              if (best && MapEngine.map) {
-                MapEngine.map.flyTo({ center: [best.lon, best.lat], zoom: 16.2, duration: 700 });
+              if (MapEngine.map) {
+                MapEngine.map.flyTo({ center: [center.lng, center.lat], zoom: 15.8, duration: 700 });
               }
             } else {
               ParkingApp.showToast('No parking or small ground found within 1 km here — try panning.', 'warning', 3000);
