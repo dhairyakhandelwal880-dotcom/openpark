@@ -2199,8 +2199,10 @@
           <div class="banner-distance" id="nav-turn-dist">In 350 meters</div>
         </div>
       </div>
-      <button id="btn-nav-voice-toggle" class="cluster-btn" style="width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.7); flex-shrink: 0;" title="Toggle Voice Guidance">
-        <span id="nav-voice-icon" style="font-size: 15px;">🔊</span>
+      <button id="btn-nav-voice-toggle" class="cluster-btn" style="width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.15); background: rgba(15,23,42,0.7); flex-shrink: 0; display: flex; align-items: center; justify-content: center;" title="Toggle Voice Guidance">
+        <span id="nav-voice-icon" style="display: flex; align-items: center; justify-content: center;">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+        </span>
       </button>
     </div>
 
@@ -2218,7 +2220,7 @@
 
     <!-- Offline / Network Status Banner -->
     <div id="network-status-banner" class="banner glass-surface" style="display: none; border-left: 3px solid #f59e0b;">
-      <span style="font-size: 16px;">⚠️</span>
+      <svg class="svg-icon" style="color: #fbbf24; width: 20px; height: 20px; flex-shrink: 0;" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       <div>
         <div class="banner-instruction" id="network-status-title" style="color: #fbbf24;">Connection Lost</div>
         <div class="banner-distance" id="network-status-sub">Operating in Offline Cache Mode. Reconnecting...</div>
@@ -2244,14 +2246,15 @@
         </div>
         <div style="display: flex; align-items: center; gap: 6px;">
           <button id="btn-open-welcome" class="chip-btn pressable cursor-target" data-cursor-label="Where to?" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; color: var(--apple-blue); border-color: rgba(0, 113, 227, 0.28); background: rgba(0, 113, 227, 0.08);" title="Open Destination Welcome Screen">
-            ✨ Where to?
+            <svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            <span>Where to?</span>
           </button>
           <button id="btn-traccar-pill" class="chip-btn pressable" style="padding: 3px 9px; font-size: 11px; background: rgba(52, 199, 89, 0.14); border-color: rgba(52, 199, 89, 0.35); color: var(--apple-green); display: flex; align-items: center; gap: 5px; cursor: pointer;" title="Traccar GPS Tracking Engine (https://www.traccar.org/)">
             <span class="status-dot" style="background:var(--apple-green); width:6px; height:6px;"></span>
-            <span id="traccar-pill-text">Traccar</span>
+            <span id="traccar-pill-text">Live GPS</span>
           </button>
-          <button id="btn-refresh-top" class="chip-btn pressable" style="padding: 4px 8px;" title="Refresh Occupancy">
-            <span>🔄</span>
+          <button id="btn-refresh-top" class="chip-btn pressable" style="padding: 5px 8px;" title="Refresh Occupancy">
+            <svg class="svg-icon-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           </button>
         </div>
       </div>
@@ -2284,13 +2287,34 @@
 
       <!-- Quick Search Category Chips (Google Maps Style) -->
       <div class="filter-chip-row" role="toolbar" aria-label="Quick search categories">
-        <button class="chip-btn" data-category="Cafes">☕ Cafes</button>
-        <button class="chip-btn" data-category="Restaurants">🍔 Food</button>
-        <button class="chip-btn" data-category="Shopping">🛍️ Shopping</button>
-        <button class="chip-btn" data-category="Fuel">⛽ Fuel</button>
-        <button class="chip-btn" data-category="Hospitals">🏥 Hospitals</button>
-        <button class="chip-btn" data-category="Landmarks">🏛️ Landmarks</button>
-        <button class="chip-btn" data-category="Parking">🅿️ Parking</button>
+        <button class="chip-btn" data-category="Cafes">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          <span>Cafes</span>
+        </button>
+        <button class="chip-btn" data-category="Restaurants">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M18 2v20M2 2v20M6 2v7a3 3 0 0 0 6 0V2"/></svg>
+          <span>Food</span>
+        </button>
+        <button class="chip-btn" data-category="Shopping">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span>Shopping</span>
+        </button>
+        <button class="chip-btn" data-category="Fuel">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>
+          <span>Fuel</span>
+        </button>
+        <button class="chip-btn" data-category="Hospitals">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          <span>Hospitals</span>
+        </button>
+        <button class="chip-btn" data-category="Landmarks">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><line x1="2" y1="22" x2="22" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
+          <span>Landmarks</span>
+        </button>
+        <button class="chip-btn" data-category="Parking">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>
+          <span>Parking</span>
+        </button>
       </div>
     </div>
 
@@ -2307,16 +2331,28 @@
       <!-- 1. Explore View (List of nearby lots) -->
       <div id="explore-filter-chips" class="filter-chip-row" style="margin-bottom: 8px; flex-shrink: 0;" role="group" aria-label="Filter parking lots">
         <button class="chip-btn active" data-lot-filter="all">All Lots</button>
-        <button class="chip-btn" data-lot-filter="Available">🟢 Vacant</button>
-        <button class="chip-btn" data-lot-filter="ev">⚡ EV Ready</button>
-        <button class="chip-btn" data-lot-filter="budget">🏷️ Budget</button>
-        <button class="chip-btn" data-lot-filter="covered">🏢 Covered</button>
+        <button class="chip-btn" data-lot-filter="Available">
+          <span class="status-indicator-dot dot-vacant"></span>
+          <span>Vacant</span>
+        </button>
+        <button class="chip-btn" data-lot-filter="ev">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>EV Ready</span>
+        </button>
+        <button class="chip-btn" data-lot-filter="budget">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <span>Budget</span>
+        </button>
+        <button class="chip-btn" data-lot-filter="covered">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h6M9 14h6M9 18h6"/></svg>
+          <span>Covered</span>
+        </button>
       </div>
 
       <!-- AI Map Space & Legal Parking Scanner Bar -->
       <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 4px;">
-        <button id="btn-ai-scan" class="btn-primary pressable" style="padding: 10px 14px; font-size: 13px; border-radius: 14px; background: linear-gradient(135deg, #0071e3 0%, #5856d6 100%);">
-          <span>🅿️</span>
+        <button id="btn-ai-scan" class="btn-primary pressable">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
           <span id="btn-ai-scan-label">Find Parking &amp; AI Scan (≤1 km)</span>
         </button>
         <div id="ai-scan-banner" class="contrast-card" style="display: none; padding: 9px 12px; font-size: 12px; justify-content: space-between; align-items: center; gap: 8px; border-color: rgba(0, 113, 227, 0.35);">
@@ -2383,8 +2419,9 @@
         <!-- Parking Fee Estimator Calculator -->
         <div class="contrast-card" style="padding: 12px 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
-              <span>🧮 Fee Estimator</span>
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+              <svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01"/></svg>
+              <span>Fee Estimator</span>
             </span>
             <span id="calc-total-badge" style="font-size: 13px; font-weight: 700; color: #38bdf8;">Est: ₹80</span>
           </div>
@@ -2400,8 +2437,9 @@
         <!-- Hourly Occupancy Trends Sparkline -->
         <div class="contrast-card" style="padding: 12px 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <span style="font-size: 12px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 5px;">
-              <span>📊 Typical Occupancy Trend</span>
+            <span style="font-size: 12px; font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+              <svg class="svg-icon-sm" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+              <span>Typical Occupancy Trend</span>
             </span>
             <span id="dt-peak-time-badge" style="font-size: 11px; color: #f59e0b; background: rgba(245, 158, 11, 0.12); padding: 2px 7px; border-radius: 9999px; font-weight: 600;">Peak: 12 PM - 3 PM</span>
           </div>
@@ -2427,10 +2465,12 @@
           </button>
           <div style="display: flex; gap: 8px;">
             <button class="btn-pill-secondary" id="btn-hold-spot" style="flex: 1; border-color: rgba(16, 185, 129, 0.4); color: #34d399; font-weight: 600;">
-              <span id="btn-hold-spot-text">⏳ Hold Spot (15m)</span>
+              <svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="btn-hold-spot-text">Hold Spot (15m)</span>
             </button>
             <button class="btn-pill-secondary" id="btn-digital-pass" style="flex: 1; border-color: rgba(59, 130, 246, 0.4); color: #60a5fa; font-weight: 600;">
-              <span>🎫 Entry Pass</span>
+              <svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="8.01"/><line x1="10" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12.01"/><line x1="10" y1="12" x2="18" y2="12"/><line x1="6" y1="16" x2="6" y2="16.01"/><line x1="10" y1="16" x2="18" y2="16"/></svg>
+              <span>Digital Pass</span>
             </button>
             <button class="btn-pill-secondary" id="btn-report-status" style="width: 44px; padding: 0; display: flex; align-items: center; justify-content: center;" title="Report Lot Status">
               <svg class="svg-icon" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2468,8 +2508,9 @@
             <!-- Elevation / Gradient Profile -->
             <div id="trip-elevation-card" style="margin-top: 10px; padding: 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.08);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 11px;">
-                <span style="font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 4px;">
-                  <span>🏔 Road Elevation Profile</span>
+                <span style="font-weight: 600; color: #cbd5e1; display: flex; align-items: center; gap: 5px;">
+                  <svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="3 20 9 8 13 14 17 8 21 20 3 20"/></svg>
+                  <span>Road Elevation Profile</span>
                 </span>
                 <span id="trip-elev-stats" style="color: #94a3b8; font-family: ui-monospace, monospace;">918m – 935m (+17m)</span>
               </div>
@@ -2510,7 +2551,9 @@
           <img id="pv-banner-img" class="pv-banner-img" src="https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=800&q=80" alt="Place cover" />
           <div class="pv-banner-overlay"></div>
           <div class="pv-banner-badge">
-            <span id="pv-badge" style="font-size: 22px;">📍</span>
+            <span id="pv-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: rgba(0, 113, 227, 0.25);">
+              <svg class="svg-icon" style="width: 16px; height: 16px; color: #fff;" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
             <span class="pv-cat-pill" id="pv-category">DESTINATION</span>
           </div>
         </div>
@@ -2773,8 +2816,8 @@
       </svg>
     </button>
     <div class="hud-divider"></div>
-    <button class="cluster-btn pressable" id="btn-hud-ai-scan" aria-label="AI Scan Map for Empty Grounds and Mall Lots" title="🤖 AI Scan Visible Map for Empty Grounds, Malls & Legal Bays">
-      <span style="font-size: 15px;">🤖</span>
+    <button class="cluster-btn pressable" id="btn-hud-ai-scan" aria-label="AI Scan Map for Empty Grounds and Mall Lots" title="AI Scan Visible Map for Empty Grounds, Malls & Legal Bays">
+      <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
     </button>
     <div class="hud-divider"></div>
     <button class="cluster-btn pressable" id="btn-toggle-layers" aria-label="Switch between Satellite Hybrid and GMap Full Detail Retina" title="Switch Map: Google Satellite Hybrid ⇄ GMap Full Detail Retina">
@@ -2824,7 +2867,10 @@
   <div class="modal-backdrop" id="modal-receipt">
     <div class="modal-sheet glass-surface" style="max-width: 380px; text-align: center;">
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px;">
-        <span style="font-weight: 700; font-size: 15px; color: var(--text-primary);">🅿️ Digital Parking Pass</span>
+        <span style="font-weight: 700; font-size: 15px; color: var(--text-primary); display: flex; align-items: center; gap: 7px;">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>
+          <span>Digital Parking Pass</span>
+        </span>
         <button id="modal-receipt-close" aria-label="Close digital parking pass" style="background:none; border:none; color:var(--color-text-secondary); cursor:pointer;">
           <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
@@ -2874,8 +2920,9 @@
       </div>
 
       <div style="display: flex; gap: 8px; margin-top: 6px;">
-        <button class="btn-pill-primary" id="btn-print-receipt" style="flex: 1; padding: 9px; font-size: 13px;">
-          🖨️ Print Pass / PDF
+        <button class="btn-pill-primary" id="btn-print-receipt" style="flex: 1; padding: 9px; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span>Print Pass / PDF</span>
         </button>
         <button class="btn-pill-secondary" id="btn-close-receipt-sheet" style="flex: 1; padding: 9px; font-size: 13px;">
           Done
@@ -2914,7 +2961,10 @@
     <div class="modal-sheet glass-surface" style="max-width: 440px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-weight: 700; font-size: 16px;">📡 Traccar GPS Integration</span>
+          <span style="font-weight: 700; font-size: 16px; display: flex; align-items: center; gap: 7px;">
+            <svg class="svg-icon" viewBox="0 0 24 24" style="color: var(--apple-blue);"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
+            <span>Traccar GPS Integration</span>
+          </span>
         </div>
         <button id="modal-traccar-close" aria-label="Close Traccar integration modal" style="background:none; border:none; color:var(--color-text-secondary); cursor:pointer;">
           <svg class="svg-icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -2943,7 +2993,7 @@
             <div style="font-size: 10px; color: var(--color-text-secondary);">Speed</div>
           </div>
           <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 6px 8px; text-align: center;">
-            <div style="font-size: 14px; font-weight: 700; font-family: var(--font-mono);" id="traccar-modal-battery">92% ⚡</div>
+            <div style="font-size: 14px; font-weight: 700; font-family: var(--font-mono);" id="traccar-modal-battery">92%</div>
             <div style="font-size: 10px; color: var(--color-text-secondary);">Battery</div>
           </div>
           <div style="background: rgba(255,255,255,0.04); border-radius: 6px; padding: 6px 8px; text-align: center;">
@@ -2955,7 +3005,10 @@
 
       <!-- Quick Setup Instructions for Phone App -->
       <div style="display: flex; flex-direction: column; gap: 8px;">
-        <div style="font-weight: 600; font-size: 12.5px;">📲 Track with Your Phone (Official Traccar Client)</div>
+        <div style="font-weight: 600; font-size: 12.5px; display: flex; align-items: center; gap: 6px;">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+          <span>Track with Your Phone (Official Traccar Client)</span>
+        </div>
         <div style="font-size: 11.5px; color: var(--color-text-secondary); line-height: 1.45;">
           1. Install free <strong>Traccar Client</strong> from <a href="https://apps.apple.com/app/traccar-client/id843156976" target="_blank" style="color:var(--accent-subtle);">iOS App Store</a> or <a href="https://play.google.com/store/apps/details?id=org.traccar.client" target="_blank" style="color:var(--accent-subtle);">Google Play</a>.<br>
           2. Set <strong>Server URL</strong> and <strong>Device Identifier</strong> below, then turn status <strong>ON</strong>.
@@ -3014,9 +3067,18 @@
     </div>
 
     <div class="badges-row" id="drawer-badges">
-      <span class="feature-tag">⚡ EV Ready</span>
-      <span class="feature-tag">🏢 Covered Bay</span>
-      <span class="feature-tag">🔒 24/7 Access</span>
+      <span class="feature-tag">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        <span>EV Ready</span>
+      </span>
+      <span class="feature-tag">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="9" y1="22" x2="9" y2="12"/><line x1="15" y1="22" x2="15" y2="12"/><line x1="4" y1="8" x2="20" y2="8"/></svg>
+        <span>Covered Bay</span>
+      </span>
+      <span class="feature-tag">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>24/7 Access</span>
+      </span>
     </div>
 
     <div class="action-grid">
@@ -3041,7 +3103,9 @@
           <span>OpenPark • India</span>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <button class="welcome-skip-btn pressable" id="btn-welcome-theme" title="Switch Light / Dark Liquid Glass">🌓</button>
+          <button class="welcome-skip-btn pressable" id="btn-welcome-theme" title="Switch Light / Dark Liquid Glass">
+            <svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          </button>
           <button class="welcome-skip-btn pressable" id="btn-welcome-skip">
             Explore Map
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -3079,45 +3143,72 @@
 
       <!-- Quick Travel Preference Pills -->
       <div class="welcome-mode-row" id="welcome-mode-row">
-        <button class="chip-btn pressable active" data-welcome-filter="all">🚗 Drive & Park</button>
-        <button class="chip-btn pressable" data-welcome-filter="Available">🟢 Vacant Now</button>
-        <button class="chip-btn pressable" data-welcome-filter="ev">⚡ EV Charging</button>
-        <button class="chip-btn pressable" data-welcome-filter="budget">🏷️ Budget (≤₹30/h)</button>
-        <button class="chip-btn pressable" data-welcome-filter="covered">🏢 Covered Garage</button>
+        <button class="chip-btn pressable active" data-welcome-filter="all">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="8" rx="2"/><path d="M5 11l2-6h10l2 6"/><circle cx="7" cy="16" r="1.5"/><circle cx="17" cy="16" r="1.5"/></svg>
+          <span>Drive &amp; Park</span>
+        </button>
+        <button class="chip-btn pressable" data-welcome-filter="Available">
+          <span class="status-indicator-dot" style="background:#10b981; width:7px; height:7px; border-radius:50%; display:inline-block; margin-right:4px;"></span>
+          <span>Vacant Now</span>
+        </button>
+        <button class="chip-btn pressable" data-welcome-filter="ev">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span>EV Charging</span>
+        </button>
+        <button class="chip-btn pressable" data-welcome-filter="budget">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <span>Budget (≤₹30/h)</span>
+        </button>
+        <button class="chip-btn pressable" data-welcome-filter="covered">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="9" y1="22" x2="9" y2="12"/><line x1="15" y1="22" x2="15" y2="12"/><line x1="4" y1="8" x2="20" y2="8"/></svg>
+          <span>Covered Garage</span>
+        </button>
       </div>
 
       <!-- Quick Popular Destinations -->
       <div class="welcome-section-label">Popular Head-Outs</div>
       <div class="welcome-quick-grid">
         <button class="welcome-dest-card pressable" data-quick-dest="Stanza Living Debrecan House" data-quick-lat="12.90310" data-quick-lon="77.49750">
-          <span class="welcome-dest-icon">🏠</span>
+          <span class="welcome-dest-icon">
+            <svg class="welcome-dest-svg" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </span>
           <span class="welcome-dest-name">Debrecan House</span>
           <span class="welcome-dest-sub">Kengeri • Home Base</span>
         </button>
         <button class="welcome-dest-card pressable" data-quick-dest="BGS Global Institute">
-          <span class="welcome-dest-icon">🏥</span>
+          <span class="welcome-dest-icon">
+            <svg class="welcome-dest-svg" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </span>
           <span class="welcome-dest-name">BGS Hospital</span>
-          <span class="welcome-dest-sub">Medical & Parking</span>
+          <span class="welcome-dest-sub">Medical &amp; Parking</span>
         </button>
         <button class="welcome-dest-card pressable" data-quick-category="Shopping">
-          <span class="welcome-dest-icon">🛍️</span>
-          <span class="welcome-dest-name">Malls & Shops</span>
+          <span class="welcome-dest-icon">
+            <svg class="welcome-dest-svg" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          </span>
+          <span class="welcome-dest-name">Malls &amp; Shops</span>
           <span class="welcome-dest-sub">UB City, Orion, Vega</span>
         </button>
         <button class="welcome-dest-card pressable" data-quick-dest="Metro Station">
-          <span class="welcome-dest-icon">🚇</span>
+          <span class="welcome-dest-icon">
+            <svg class="welcome-dest-svg" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="2"/><line x1="4" y1="11" x2="20" y2="11"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><path d="m8 19-2 3"/><path d="m16 19 2 3"/></svg>
+          </span>
           <span class="welcome-dest-name">Metro Stations</span>
-          <span class="welcome-dest-sub">Park & Ride Namma Metro</span>
+          <span class="welcome-dest-sub">Park &amp; Ride Namma Metro</span>
         </button>
         <button class="welcome-dest-card pressable" data-quick-category="Cafes">
-          <span class="welcome-dest-icon">☕</span>
-          <span class="welcome-dest-name">Cafes & Hangouts</span>
+          <span class="welcome-dest-icon">
+            <svg class="welcome-dest-svg" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          </span>
+          <span class="welcome-dest-name">Cafes &amp; Hangouts</span>
           <span class="welcome-dest-sub">Indiranagar, Koramangala</span>
         </button>
         <button class="welcome-dest-card pressable" data-quick-dest="Kempegowda International Airport">
-          <span class="welcome-dest-icon">✈️</span>
+          <span class="welcome-dest-icon">
+            <svg class="welcome-dest-svg" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3.5c-.5-.5-2.5 0-4 1.5L13.5 8.5 5.3 6.7c-.8-.2-1.6.2-2 1-.4.8-.2 1.8.5 2.3l4.7 3.5-3.5 3.5-2.4-.6c-.5-.1-1 .1-1.3.5-.4.4-.4 1 0 1.4l2.4 2.4c.4.4 1 .4 1.4 0l.5-1.3 3.5-3.5 3.5 4.7c.5.7 1.5.9 2.3.5.8-.4 1.2-1.2 1-2z"/></svg>
+          </span>
           <span class="welcome-dest-name">BLR Airport</span>
-          <span class="welcome-dest-sub">Terminal Route & Parking</span>
+          <span class="welcome-dest-sub">Terminal Route &amp; Parking</span>
         </button>
       </div>
 
@@ -3155,6 +3246,48 @@
           .replace(/'/g, '&#039;');
       }
       window.escapeHtml = escapeHtml;
+
+      function renderCategorySvgIcon(cat) {
+        const c = String(cat || '').toLowerCase();
+        if (c.includes('cafe') || c.includes('coffee') || c.includes('☕')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`;
+        }
+        if (c.includes('restaurant') || c.includes('food') || c.includes('burger') || c.includes('biryani') || c.includes('🍔')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M18 2v20M2 2v20M6 2v7a3 3 0 0 0 6 0V2"/></svg>`;
+        }
+        if (c.includes('hospital') || c.includes('clinic') || c.includes('medical') || c.includes('doctor') || c.includes('🏥')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
+        }
+        if (c.includes('fuel') || c.includes('gas') || c.includes('petrol') || c.includes('diesel') || c.includes('⛽')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>`;
+        }
+        if (c.includes('mall') || c.includes('shop') || c.includes('supermarket') || c.includes('store') || c.includes('🛍')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>`;
+        }
+        if (c.includes('airport') || c.includes('flight') || c.includes('aerodrome') || c.includes('✈')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3.5c-.5-.5-2.5 0-4 1.5L13.5 8.5 5.3 6.7c-.8-.2-1.6.2-2 1-.4.8-.2 1.8.5 2.3l4.7 3.5-3.5 3.5-2.4-.6c-.5-.1-1 .1-1.3.5-.4.4-.4 1 0 1.4l2.4 2.4c.4.4 1 .4 1.4 0l.5-1.3 3.5-3.5 3.5 4.7c.5.7 1.5.9 2.3.5.8-.4 1.2-1.2 1-2z"/></svg>`;
+        }
+        if (c.includes('metro') || c.includes('station') || c.includes('transit') || c.includes('train') || c.includes('subway') || c.includes('tram') || c.includes('🚇') || c.includes('🚆')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="2"/><line x1="4" y1="11" x2="20" y2="11"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><path d="m8 19-2 3"/><path d="m16 19 2 3"/></svg>`;
+        }
+        if (c.includes('hotel') || c.includes('stay') || c.includes('motel') || c.includes('resort') || c.includes('🏨')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M3 7v14M21 7v14M3 11h18M7 7h10a2 2 0 0 1 2 2v2H5V9a2 2 0 0 1 2-2z"/></svg>`;
+        }
+        if (c.includes('park') || c.includes('garden') || c.includes('nature') || c.includes('🌳')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M12 2 7 9h4v5H8l-3 4h7v4h2v-4h7l-3-4h-3v-5h4z"/></svg>`;
+        }
+        if (c.includes('parking') || c.includes('garage') || c.includes('bay') || c.includes('lot') || c.includes('🅿')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>`;
+        }
+        if (c.includes('home') || c.includes('residence') || c.includes('pg') || c.includes('base') || c.includes('🏠')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
+        }
+        if (c.includes('landmark') || c.includes('monument') || c.includes('museum') || c.includes('palace') || c.includes('temple') || c.includes('church') || c.includes('mosque') || c.includes('🏛')) {
+          return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><line x1="2" y1="22" x2="22" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>`;
+        }
+        return `<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+      }
+      window.renderCategorySvgIcon = renderCategorySvgIcon;
 
       // --------------------------------------------------------------------------
       // 5.1 Config & Constants
@@ -3719,7 +3852,7 @@
           if (devEl && id) devEl.innerText = id;
           const batt = pos.batt ?? (pos.attributes && (pos.attributes.batteryLevel ?? pos.attributes.battery)) ?? null;
           const battEl = document.getElementById('traccar-modal-battery');
-          if (battEl && batt !== null) battEl.innerText = `${Math.round(batt)}% ⚡`;
+          if (battEl && batt !== null) battEl.innerText = `${Math.round(batt)}%`;
 
           this.feedFix({
             lat: toNum(pos.lat ?? pos.latitude),
@@ -4076,7 +4209,7 @@
         let hours_today = "8:00 AM – 10:00 PM";
         let phone = `+91 80 ${2500 + (h % 3000)} ${1000 + (h % 8999)}`;
         let website = `https://www.google.com/search?q=${encodeURIComponent(name + ' bangalore')}`;
-        let amenities = ["📍 Popular Location", "🚗 Roadside Access", "🅿️ Nearby Parking", "💳 UPI & Cards Accepted"];
+        let amenities = ["Popular Location", "Roadside Access", "Nearby Parking", "UPI & Cards Accepted"];
         let busy_level = "Normal crowd right now";
         let banner_url = "https://images.unsplash.com/photo-1477959858617-67f30bc75b82?auto=format&fit=crop&w=800&q=80";
         let reviews = [
@@ -4084,7 +4217,7 @@
           { author: "Urban Commuter", rating: 4, text: "Smooth approach road and well connected." }
         ];
 
-        if (badge === "🏥" || /hospital|clinic|medical|doctor|apollo|manipal|fortis|narayana/.test(cat)) {
+        if (badge === "hospital" || badge === "🏥" || /hospital|clinic|medical|doctor|apollo|manipal|fortis|narayana/.test(cat)) {
           archetype = "hospital";
           price_tier = "Insurance / Cashless TPA Accepted";
           open_status = "Open 24 hours";
@@ -4092,12 +4225,12 @@
           phone = `+91 80 ${2600 + (h % 2000)} ${1000 + (h % 8999)}`;
           website = name.toLowerCase().includes('apollo') ? "https://www.apollohospitals.com" : name.toLowerCase().includes('manipal') ? "https://www.manipalhospitals.com" : website;
           amenities = [
-            "🚑 24/7 Emergency Care",
-            "💊 24h In-House Pharmacy",
-            "🩺 Multi-Specialty ICU",
-            "🩸 Blood Bank & Labs",
-            "♿ Wheelchair Accessible",
-            "💳 Cashless Insurance TPA"
+            "24/7 Emergency Care",
+            "24h In-House Pharmacy",
+            "Multi-Specialty ICU",
+            "Blood Bank & Labs",
+            "Wheelchair Accessible",
+            "Cashless Insurance TPA"
           ];
           busy_level = "Usually busy (ICU & Emergency Active)";
           banner_url = "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?auto=format&fit=crop&w=800&q=80";
@@ -4105,7 +4238,7 @@
             { author: "Dr. Ramesh K.", rating: 5, text: "Outstanding emergency team and very clean inpatient facilities. Attentive nursing staff." },
             { author: "Priya Sundaram", rating: 5, text: "Smooth admission process and transparent billing. Highly recommended for multi-specialty care." }
           ];
-        } else if (badge === "☕" || /cafe|coffee|starbucks|roasters|espresso|tea/.test(cat)) {
+        } else if (badge === "cafe" || badge === "☕" || /cafe|coffee|starbucks|roasters|espresso|tea/.test(cat)) {
           archetype = "cafe";
           price_tier = ["₹₹ (₹350 for two)", "₹ (₹200 for two)", "₹₹₹ (₹600 for two)"][h % 3];
           open_status = "Open now • Closes 11:00 PM";
@@ -4113,12 +4246,12 @@
           phone = `+91 80 ${4100 + (h % 2000)} ${2000 + (h % 7999)}`;
           website = name.toLowerCase().includes('starbucks') ? "https://www.starbucks.in" : website;
           amenities = [
-            "☕ Artisan Single-Origin Coffee",
-            "📶 High-Speed Free Wi-Fi",
-            "🥐 Fresh Pastries & Bakery",
-            "💻 Work & Study Friendly",
-            "🚗 Takeaway Available",
-            "💳 UPI & Cards Accepted"
+            "Artisan Single-Origin Coffee",
+            "High-Speed Free Wi-Fi",
+            "Fresh Pastries & Bakery",
+            "Work & Study Friendly",
+            "Takeaway Available",
+            "UPI & Cards Accepted"
           ];
           busy_level = ["Usually a little busy", "Usually not too busy", "Peak evening crowd"][h % 3];
           banner_url = "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80";
@@ -4126,7 +4259,7 @@
             { author: "Aditi Sharma", rating: 5, text: "Best place to get work done with excellent cold brew and cozy corner tables with charging ports." },
             { author: "Rohan Mehta", rating: 4, text: "Great atmosphere, soothing background music, and super friendly baristas." }
           ];
-        } else if (badge === "🍔" || /restaurant|food|burger|pizza|biryani|bistro|bakery|fast_food|hotel/.test(cat)) {
+        } else if (badge === "restaurant" || badge === "🍔" || /restaurant|food|burger|pizza|biryani|bistro|bakery|fast_food|hotel/.test(cat)) {
           archetype = "restaurant";
           price_tier = ["₹₹ (₹600 for two)", "₹₹₹ (₹1,200 for two)", "₹ (₹300 for two)"][h % 3];
           open_status = "Open now • Closes 11:30 PM";
@@ -4134,12 +4267,12 @@
           phone = `+91 80 ${4200 + (h % 2000)} ${3000 + (h % 6999)}`;
           website = name.toLowerCase().includes('truffles') ? "https://truffles.co.in" : website;
           amenities = [
-            "🍽️ Dine-in Seating Available",
-            "🛵 Fast Online Delivery",
-            "🌿 Pure Veg & Jain Options",
-            "👨‍👩‍👧 Great for Families",
-            "🍹 Cocktails & Beverages",
-            "🅿️ Valet Parking"
+            "Dine-in Seating Available",
+            "Fast Online Delivery",
+            "Pure Veg & Jain Options",
+            "Great for Families",
+            "Cocktails & Beverages",
+            "Valet Parking"
           ];
           busy_level = ["Usually busy around dinner", "Slight wait during peak hours", "Usually not too busy"][h % 3];
           banner_url = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80";
@@ -4147,7 +4280,7 @@
             { author: "Siddharth Rao", rating: 5, text: "Loved the gourmet burgers and pasta. Huge portion sizes and very reasonable prices!" },
             { author: "Kavita Nair", rating: 4, text: "Prompt table service and vibrant ambiance. Perfect for weekend dinner with friends." }
           ];
-        } else if (badge === "⛽" || /fuel|petrol|gas|shell|indian oil|hp|bpcl|cng/.test(cat)) {
+        } else if (badge === "fuel" || badge === "⛽" || /fuel|petrol|gas|shell|indian oil|hp|bpcl|cng/.test(cat)) {
           archetype = "fuel";
           price_tier = "Regulated City Rates";
           open_status = "Open 24 hours";
@@ -4155,11 +4288,11 @@
           phone = `+91 80 ${2800 + (h % 1000)} ${4000 + (h % 5999)}`;
           website = name.toLowerCase().includes('shell') ? "https://www.shell.in" : "https://www.iocl.com";
           amenities = [
-            "⛽ Speed Petrol & Hi-Speed Diesel",
-            "⚡ 60kW DC Fast EV Charging",
-            "💨 Free Digital Air & Nitrogen",
-            "🏪 24/7 Convenience Mart",
-            "💳 Fleet & Contactless Cards"
+            "Speed Petrol & Hi-Speed Diesel",
+            "60kW DC Fast EV Charging",
+            "Free Digital Air & Nitrogen",
+            "24/7 Convenience Mart",
+            "Fleet & Contactless Cards"
           ];
           busy_level = "Usually short queue of 2-3 vehicles";
           banner_url = "https://images.unsplash.com/photo-1545459720-aac8509eb02c?auto=format&fit=crop&w=800&q=80";
@@ -4167,18 +4300,18 @@
             { author: "Gaurav Sen", rating: 5, text: "Quick fuel turnaround, clean forecourt, and the free nitrogen air dispenser was functioning well." },
             { author: "Deepak M.", rating: 4, text: "Helpful staff, verified meter dispensing and clean rest area." }
           ];
-        } else if (badge === "🛍️" || /mall|supermarket|shopping|store|commercial/.test(cat)) {
+        } else if (badge === "shopping" || badge === "🛍️" || /mall|supermarket|shopping|store|commercial/.test(cat)) {
           archetype = "shopping";
           price_tier = "Multi-Brand Shopping";
           open_status = "Open now • Closes 10:00 PM";
           hours_today = "10:00 AM – 10:00 PM";
           phone = `+91 80 ${4000 + (h % 2000)} ${1000 + (h % 8999)}`;
           amenities = [
-            "🛍️ 120+ International Stores",
-            "🎬 Multiplex IMAX Screens",
-            "🍕 Food Court & Fine Dining",
-            "🅿️ Multi-Level Covered Parking",
-            "♿ Elevators & Wheelchair Friendly"
+            "120+ International Stores",
+            "Multiplex IMAX Screens",
+            "Food Court & Fine Dining",
+            "Multi-Level Covered Parking",
+            "Elevators & Wheelchair Friendly"
           ];
           busy_level = "Moderately busy right now";
           banner_url = "https://images.unsplash.com/photo-1567449303078-57ad995bd302?auto=format&fit=crop&w=800&q=80";
@@ -4186,7 +4319,7 @@
             { author: "Sneha Gupta", rating: 5, text: "All top clothing brands under one roof, huge clean food court, and organized basement parking." },
             { author: "Varun Joshi", rating: 4, text: "Great shopping destination with comfortable seating zones and clean amenities." }
           ];
-        } else if (badge === "🏛️" || /landmark|palace|museum|temple|garden|park|vidhana/.test(cat)) {
+        } else if (badge === "landmark" || badge === "🏛️" || /landmark|palace|museum|temple|garden|park|vidhana/.test(cat)) {
           archetype = "landmark";
           price_tier = "Public Landmark";
           open_status = "Open • Closes 6:00 PM";
@@ -4194,11 +4327,11 @@
           phone = `+91 80 2235 ${1000 + (h % 8999)}`;
           website = "https://karnatakatourism.org";
           amenities = [
-            "🏛️ Historical Architecture",
-            "📸 Photography Allowed",
-            "🌳 Landscaped Gardens",
-            "♿ Wheelchair Ramps",
-            "🅿️ Dedicated Visitor Parking"
+            "Historical Architecture",
+            "Photography Allowed",
+            "Landscaped Gardens",
+            "Wheelchair Ramps",
+            "Dedicated Visitor Parking"
           ];
           busy_level = "Popular with tourists and evening walkers";
           banner_url = "https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=800&q=80";
@@ -4347,20 +4480,20 @@
               if (indiaFeatures.length > 0) {
                 const getBadge = (val, type) => {
                   const s = `${val || ''} ${type || ''}`.toLowerCase();
-                  if (s.includes('cafe') || s.includes('coffee')) return '☕';
-                  if (s.includes('restaurant') || s.includes('fast_food') || s.includes('food')) return '🍔';
-                  if (s.includes('bar') || s.includes('pub')) return '🍺';
-                  if (s.includes('hospital') || s.includes('clinic')) return '🏥';
-                  if (s.includes('pharmacy')) return '💊';
-                  if (s.includes('fuel') || s.includes('gas')) return '⛽';
-                  if (s.includes('hotel') || s.includes('motel')) return '🏨';
-                  if (s.includes('mall') || s.includes('shop') || s.includes('supermarket')) return '🛍️';
-                  if (s.includes('airport') || s.includes('aerodrome')) return '✈️';
-                  if (s.includes('station') || s.includes('subway') || s.includes('tram')) return '🚆';
-                  if (s.includes('bank') || s.includes('atm')) return '🏦';
-                  if (s.includes('park') || s.includes('garden')) return '🌳';
-                  if (s.includes('parking')) return '🅿️';
-                  return '📍';
+                  if (s.includes('cafe') || s.includes('coffee')) return 'cafe';
+                  if (s.includes('restaurant') || s.includes('fast_food') || s.includes('food')) return 'restaurant';
+                  if (s.includes('bar') || s.includes('pub')) return 'restaurant';
+                  if (s.includes('hospital') || s.includes('clinic')) return 'hospital';
+                  if (s.includes('pharmacy')) return 'hospital';
+                  if (s.includes('fuel') || s.includes('gas')) return 'fuel';
+                  if (s.includes('hotel') || s.includes('motel')) return 'hotel';
+                  if (s.includes('mall') || s.includes('shop') || s.includes('supermarket')) return 'shopping';
+                  if (s.includes('airport') || s.includes('aerodrome')) return 'airport';
+                  if (s.includes('station') || s.includes('subway') || s.includes('tram')) return 'metro';
+                  if (s.includes('bank') || s.includes('atm')) return 'place';
+                  if (s.includes('park') || s.includes('garden')) return 'park';
+                  if (s.includes('parking')) return 'parking';
+                  return 'place';
                 };
 
                 return indiaFeatures.map(f => {
@@ -4411,7 +4544,7 @@
               if (nomData && nomData.length > 0) {
                 return nomData.map(item => enrichPlaceDetails({
                   name: item.display_name.split(',')[0],
-                  badge: "📍",
+                  badge: "place",
                   category: (item.type || "Place").toUpperCase(),
                   address: item.display_name,
                   lat: parseFloat(item.lat),
@@ -4430,7 +4563,7 @@
               .filter(l => l.name.toLowerCase().includes(q) || (l.address && l.address.toLowerCase().includes(q)))
               .map(l => enrichPlaceDetails({
                 name: l.name,
-                badge: "🅿️",
+                badge: "parking",
                 category: "PARKING",
                 address: l.address,
                 lat: l.lat,
@@ -4783,7 +4916,7 @@
               lat: clickLat,
               lon: clickLng,
               category: 'Location',
-              badge: '📍',
+              badge: 'place',
               rating: 4.8,
               reviews_count: 50,
               price_tier: 'Public Area',
@@ -5075,7 +5208,7 @@
 
             // Determine category & visual style
             let colorClass = 'gmap-poi-default';
-            let badgeContent = badge;      // inner HTML of the circle
+            let badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
             let badgeExtra = '';           // extra CSS class on the badge
 
             if (/metro|🚇/.test(badge + cat)) {
@@ -5088,37 +5221,37 @@
               badgeExtra = 'gmap-poi-hospital-badge';
             } else if (/cafe|coffee|☕/.test(badge + cat)) {
               colorClass = 'gmap-poi-cafe';
-              badgeContent = badge;
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>';
             } else if (/restaurant|food|biryani|🍔/.test(badge + cat)) {
               colorClass = 'gmap-poi-restaurant';
-              badgeContent = badge;
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><path d="M18 2v20M2 2v20M6 2v7a3 3 0 0 0 6 0V2"/></svg>';
             } else if (/fuel|petrol|gas|⛽/.test(badge + cat)) {
               colorClass = 'gmap-poi-fuel';
-              badgeContent = '⛽';
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>';
             } else if (/mall|shopping|🛍/.test(badge + cat)) {
               colorClass = 'gmap-poi-mall';
-              badgeContent = badge;
-            } else if (/temple|mosque|church|shrine|🛕|🕌/.test(badge + cat)) {
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+            } else if (/temple|mosque|church|shrine|landmark|monument|museum|palace|🏛|🏰|🛕|🕌/.test(badge + cat)) {
               colorClass = 'gmap-poi-landmark';
-              badgeContent = badge;
-            } else if (/landmark|monument|museum|palace|🏛|🏰/.test(badge + cat)) {
-              colorClass = 'gmap-poi-landmark';
-              badgeContent = badge;
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><line x1="2" y1="22" x2="22" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>';
             } else if (/transit|railway|station|airport|🚆|✈|🚌/.test(badge + cat)) {
               colorClass = 'gmap-poi-transit';
-              badgeContent = badge;
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="16" rx="2"/><line x1="4" y1="11" x2="20" y2="11"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/><path d="m8 19-2 3"/><path d="m16 19 2 3"/></svg>';
             } else if (/park|garden|🌳/.test(badge + cat)) {
               colorClass = 'gmap-poi-park';
-              badgeContent = '🌳';
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><path d="M12 2 7 9h4v5H8l-3 4h7v4h2v-4h7l-3-4h-3v-5h4z"/></svg>';
             } else if (/tech park|it park|💻/.test(badge + cat)) {
               colorClass = 'gmap-poi-tech';
-              badgeContent = '💻';
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>';
             } else if (/hotel|four seasons|marriott|🏨/.test(badge + cat)) {
               colorClass = 'gmap-poi-hotel';
-              badgeContent = badge;
-            } else if (/stadium|🏏|⚽/.test(badge + cat)) {
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><path d="M3 7v14M21 7v14M3 11h18M7 7h10a2 2 0 0 1 2 2v2H5V9a2 2 0 0 1 2-2z"/></svg>';
+            } else if (/stadium|sports|ground|🏏|⚽/.test(badge + cat)) {
               colorClass = 'gmap-poi-stadium';
-              badgeContent = badge;
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20M12 2a14.5 14.5 0 0 1 0 20M2 12h20"/></svg>';
+            } else if (/parking|🅿/.test(badge + cat)) {
+              colorClass = 'gmap-poi-transit';
+              badgeContent = '<svg class="poi-svg-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>';
             }
 
             const shortName = (place.name || '').split(' (')[0].split(',')[0];
@@ -5580,8 +5713,8 @@
 
           // Direct 1-Tap Switcher between Google Maps Satellite Hybrid & GMap Full Detail Retina
           const styleLabels = {
-            'google-hybrid': '🛰️ Google Maps Satellite Hybrid',
-            'google-roadmap': '🗺️ GMap Full Detail Retina',
+            'google-hybrid': 'Google Maps Satellite Hybrid',
+            'google-roadmap': 'GMap Full Detail Retina',
             'google-traffic': 'Google Maps Live Traffic & Congestion Flow',
             'ola-maps': 'Ola Maps India Vector (api.olamaps.io)',
             'openfreemap-vector': 'OpenFreeMap Ultra-Detail Vector',
@@ -6372,14 +6505,14 @@
 
           let html = `
             <div style="padding: 8px 12px; font-size: 11px; font-weight: 600; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06);">
-              <span>🕒 Recent Searches</span>
+              <span style="display:flex; align-items:center; gap:5px;"><svg class="svg-icon-xs" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>Recent Searches</span></span>
               <button id="btn-clear-recents" style="background: none; border: none; color: #64748b; font-size: 11px; cursor: pointer;">Clear</button>
             </div>
           `;
           recents.forEach(r => {
             html += `
               <div class="autocomplete-item recent-item" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <span style="color: #64748b; font-size: 12px;">🕒</span>
+                <svg class="recent-clock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 <span style="flex: 1; font-weight: 500;">${r}</span>
               </div>
             `;
@@ -6481,7 +6614,7 @@
             row.className = 'autocomplete-item';
             row.setAttribute('role', 'option');
 
-            const badge = item.badge || '📍';
+            const badgeIcon = renderCategorySvgIcon(item.badge || item.category);
             const highlightedTitle = this.highlightMatch(item.name, this.lastQuery);
             const distBadge = item.distance_km !== undefined && item.distance_km !== null
               ? `<span class="autocomplete-dist-badge">${item.distance_km} km</span>`
@@ -6491,7 +6624,7 @@
               : '';
 
             row.innerHTML = `
-              <div class="autocomplete-badge-box">${badge}</div>
+              <div class="autocomplete-badge-box">${badgeIcon}</div>
               <div class="autocomplete-item-text">
                 <div class="autocomplete-item-row">
                   <span class="autocomplete-item-title">${highlightedTitle}</span>
@@ -6557,7 +6690,7 @@
           if (catEl) catEl.innerText = (item.archetype || item.category || 'DESTINATION').toUpperCase();
 
           const badgeEl = document.getElementById('pv-badge');
-          if (badgeEl) badgeEl.innerText = item.badge || '📍';
+          if (badgeEl) badgeEl.innerHTML = renderCategorySvgIcon(item.badge || item.category);
 
           const openBadgeEl = document.getElementById('pv-open-badge');
           if (openBadgeEl) {
@@ -6814,7 +6947,11 @@
               e.stopPropagation();
               STATE.config.voiceAlerts = !STATE.config.voiceAlerts;
               const icon = document.getElementById('nav-voice-icon');
-              if (icon) icon.innerText = STATE.config.voiceAlerts ? '🔊' : '🔇';
+              if (icon) {
+                icon.innerHTML = STATE.config.voiceAlerts
+                  ? '<svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>'
+                  : '<svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+              }
               const chk = document.getElementById('toggle-voice-alerts');
               if (chk) chk.checked = STATE.config.voiceAlerts;
               ParkingApp.showToast(STATE.config.voiceAlerts ? "Voice guidance ON" : "Voice guidance MUTED", "info");
@@ -7096,21 +7233,23 @@
             item.className = `trip-turn-item ${idx < this.currentStepIndex ? 'passed' : ''} ${isCurrent ? 'is-current' : ''}`;
 
             const instructionLower = (st.instruction || '').toLowerCase();
-            let iconText = '↑';
-            if (instructionLower.includes('left')) iconText = '↰';
-            else if (instructionLower.includes('right')) iconText = '↱';
-            else if (instructionLower.includes('arrive') || instructionLower.includes('destination')) iconText = '🏁';
-            else if (instructionLower.includes('roundabout') || instructionLower.includes('rotary')) iconText = '🔄';
+            let stepSvg = '<svg class="svg-icon-xs" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>';
+            if (instructionLower.includes('left')) stepSvg = '<svg class="svg-icon-xs" viewBox="0 0 24 24"><polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/></svg>';
+            else if (instructionLower.includes('right')) stepSvg = '<svg class="svg-icon-xs" viewBox="0 0 24 24"><polyline points="15 10 20 15 15 20"/><path d="M4 4v7a4 4 0 0 0 4 4h12"/></svg>';
+            else if (instructionLower.includes('arrive') || instructionLower.includes('destination')) stepSvg = '<svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>';
+            else if (instructionLower.includes('roundabout') || instructionLower.includes('rotary')) stepSvg = '<svg class="svg-icon-xs" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>';
 
             item.innerHTML = `
               <div style="width: 28px; height: 28px; border-radius: 50%; background: ${isCurrent ? 'rgba(59,130,246,0.3)' : 'rgba(255,255,255,0.06)'}; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; color: ${isCurrent ? '#60a5fa' : '#cbd5e1'}; flex-shrink: 0;">
-                ${iconText}
+                ${stepSvg}
               </div>
               <div style="flex:1;">
                 <div style="font-weight:600; font-size:var(--font-size-sec); color: ${isCurrent ? '#f1f5f9' : '#cbd5e1'};">${st.instruction}</div>
                 <div style="font-size:12px; color:var(--color-text-secondary);">${st.dist}</div>
               </div>
-              <span style="font-size: 11px; color: #64748b;" title="Preview step location">🔍</span>
+              <span style="color: #64748b; display: flex; align-items: center;" title="Preview step location">
+                <svg class="svg-icon-xs" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </span>
             `;
 
             // Step click camera jump
@@ -7430,7 +7569,7 @@
           if ('getBattery' in navigator) {
             navigator.getBattery().then(batt => {
               const pct = Math.round(batt.level * 100);
-              const charging = batt.charging ? " ⚡" : "";
+              const charging = batt.charging ? " (Charging)" : "";
               document.getElementById('hud-battery').innerText = `Battery: ${pct}%${charging}`;
             });
           }
@@ -7637,7 +7776,7 @@
             }
 
             if (isFirstFix || (isHighAccSource && prevBest > 300 && accMeters <= 100)) {
-              const label = `📍 Tracking Device: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}]`;
+              const label = `Tracking Device: [${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}]`;
               ParkingApp.showToast(label, 'success', 2800);
             }
           };
@@ -7722,7 +7861,7 @@
                 if (typeof WelcomeController !== 'undefined' && WelcomeController.updateGpsLabel) {
                   WelcomeController.updateGpsLabel({ lat: loc.lat, lng: loc.lon, accuracy: 2000, city: loc.city });
                 }
-                this.showToast(`📍 Network Location: ${loc.city} (Enable GPS or drag pin for exact spot)`, 'info', 4000);
+                this.showToast(`Network Location: ${loc.city} (Enable GPS or drag pin for exact spot)`, 'info', 4000);
                 return;
               }
             } catch (e) {
@@ -7795,9 +7934,9 @@
             if (badgesEl) {
               const hasEv = lot.has_ev || (lot.id % 2 === 0);
               badgesEl.innerHTML = `
-                ${hasEv ? '<span class="feature-tag">⚡ Fast EV Charge</span>' : ''}
-                ${isCovered ? '<span class="feature-tag">🏢 Covered Space</span>' : '<span class="feature-tag">☀️ Open Sky Lot</span>'}
-                <span class="feature-tag">🔒 Telemetry Verified</span>
+                ${hasEv ? '<span class="feature-tag"><svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg><span>Fast EV Charge</span></span>' : ''}
+                ${isCovered ? '<span class="feature-tag"><svg class="svg-icon-xs" viewBox="0 0 24 24"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="9" y1="22" x2="9" y2="12"/><line x1="15" y1="22" x2="15" y2="12"/><line x1="4" y1="8" x2="20" y2="8"/></svg><span>Covered Space</span></span>' : '<span class="feature-tag"><svg class="svg-icon-xs" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg><span>Open Sky Lot</span></span>'}
+                <span class="feature-tag"><svg class="svg-icon-xs" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Telemetry Verified</span></span>
               `;
             }
 
@@ -7882,7 +8021,7 @@
               duration: 800
             });
           }
-          this.showToast(`📍 Centered at Stanza Living Debrecan House: [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 3000);
+          this.showToast(`Centered at Stanza Living Debrecan House: [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 3000);
         },
 
         calibrateDebrecanHouse() {
@@ -7890,7 +8029,7 @@
           const currentLng = STATE.userLocation?.lng || CONFIG.DEFAULT_COORDS[0];
 
           const input = prompt(
-            "📍 Calibrate Stanza Living Debrecan House\n\n" +
+            "Calibrate Stanza Living Debrecan House\n\n" +
             "Current position: " + currentLat.toFixed(5) + ", " + currentLng.toFixed(5) + "\n\n" +
             "Click OK to save current device GPS as Debrecan House, or enter exact Google Maps coordinates (lat, lon):",
             `${currentLat.toFixed(5)}, ${currentLng.toFixed(5)}`
@@ -7906,7 +8045,7 @@
             } catch {}
             this.setUserLocation(newLat, newLng, 'calibrated');
             fetch(`/api/places/calibrate?name=Debrecan&lat=${newLat}&lon=${newLng}`, { method: 'POST' }).catch(() => {});
-            this.showToast(`✓ Stanza Living Debrecan House updated to [${newLat.toFixed(5)}, ${newLng.toFixed(5)}]`, 'success', 3500);
+            this.showToast(`Stanza Living Debrecan House updated to [${newLat.toFixed(5)}, ${newLng.toFixed(5)}]`, 'success', 3500);
           } else {
             this.showToast("Invalid coordinates format. Please enter as: latitude, longitude", "error", 3000);
           }
@@ -7953,9 +8092,9 @@
           }
 
           if (source === 'drag') {
-            this.showToast(`📍 Location moved to [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 2000);
+            this.showToast(`Location moved to [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 2000);
           } else if (source === 'shift-click') {
-            this.showToast(`📍 Location placed at [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 2000);
+            this.showToast(`Location placed at [${lat.toFixed(5)}, ${lng.toFixed(5)}]`, "success", 2000);
           }
         },
 
@@ -8124,7 +8263,7 @@
                   lat: qLat,
                   lon: qLon,
                   category: 'Residence & PG',
-                  badge: '🏠',
+                  badge: 'home',
                   address: 'Kengeri, Bengaluru'
                 });
               } else if (qDest) {
@@ -8259,12 +8398,12 @@
           this.results.slice(0, 6).forEach(item => {
             const row = document.createElement('div');
             row.className = 'autocomplete-item';
-            const badge = escapeHtml(item.badge || '📍');
+            const badgeIcon = renderCategorySvgIcon(item.badge || item.category);
             const distBadge = (item.distance_km !== undefined && item.distance_km !== null)
               ? `<span class="autocomplete-dist-badge">${Number(item.distance_km).toFixed(1)} km</span>`
               : '';
             row.innerHTML = `
-              <div class="autocomplete-badge-box">${badge}</div>
+              <div class="autocomplete-badge-box">${badgeIcon}</div>
               <div class="autocomplete-item-text">
                 <div class="autocomplete-item-row">
                   <span class="autocomplete-item-title">${SearchEngine.highlightMatch(item.name, query)}</span>
@@ -8357,7 +8496,7 @@
             if (tglPins) tglPins.checked = true;
           }
 
-          ParkingApp.showToast('🅿️ Finding 5 nearest parking spots within 1 km of marker...', 'info', 2500);
+          ParkingApp.showToast('Finding 5 nearest parking spots within 1 km of marker...', 'info', 2500);
 
           try {
             const [, resp] = await Promise.all([
@@ -8383,7 +8522,7 @@
                 name: lot.name,
                 category: 'legal_bay',
                 category_label: 'Real Parking Lot',
-                badge: '🅿️',
+                badge: 'parking',
                 color: '#34c759',
                 lat: lot.lat,
                 lon: lot.lon,
@@ -8431,7 +8570,7 @@
             const timing = data.elapsed_ms ? ` in ${Math.round(data.elapsed_ms)}ms` : '';
             if (this.results.length > 0) {
               ParkingApp.showToast(
-                `🅿️ Found ${sum.total_found} within 1 km${timing} (${sum.empty_grounds || 0} Small Grounds, ${sum.mall_parkings || 0} Malls, ${sum.legal_bays || 0} Bays)`,
+                `Found ${sum.total_found} within 1 km${timing} (${sum.empty_grounds || 0} Small Grounds, ${sum.mall_parkings || 0} Malls, ${sum.legal_bays || 0} Bays)`,
                 'success',
                 4000
               );
@@ -8461,7 +8600,7 @@
 
           if (banner && sumText) {
             banner.style.display = 'flex';
-            sumText.textContent = `🅿️ ${sum.total_found || 0} Within 1 km • ${sum.empty_grounds || 0} Grounds • ${sum.mall_parkings || 0} Malls • ${sum.legal_bays || 0} Bays`;
+            sumText.textContent = `${sum.total_found || 0} Within 1 km • ${sum.empty_grounds || 0} Grounds • ${sum.mall_parkings || 0} Malls • ${sum.legal_bays || 0} Bays`;
           }
 
           if (MapEngine.map && MapEngine.map.getSource('ai-scan-polygons')) {
@@ -8481,7 +8620,7 @@
               card.style.borderLeft = `3px solid ${spot.color || '#34c759'}`;
               card.innerHTML = `
                 <div class="lot-card-header">
-                  <div class="lot-title">${spot.badge} ${spot.name}</div>
+                  <div class="lot-title">${escapeHtml(spot.name)}</div>
                   <div class="lot-dist">${spot.distance_km} km &bull; ${spot.eta_mins}m</div>
                 </div>
                 <div class="lot-meta-row">
@@ -8502,7 +8641,7 @@
                 const pulseCls = spot.category === 'empty_ground' ? 'status-orange' : 'status-green';
                 el.innerHTML = `
                   <div class="status-pulse ${pulseCls}"></div>
-                  <span>${spot.badge} ~${spot.estimated_spots} bays</span>
+                  <span>~${spot.estimated_spots} bays</span>
                 `;
                 el.title = `${spot.name} (${spot.category_label}) • AI Score ${spot.ai_score}%`;
                 el.addEventListener('click', (e) => {
@@ -8562,7 +8701,7 @@
 
           const drawer = document.getElementById('parking-drawer');
           if (drawer) {
-            document.getElementById('drawer-lot-name').textContent = `${spot.badge} ${spot.name}`;
+            document.getElementById('drawer-lot-name').textContent = spot.name;
             document.getElementById('drawer-lot-info').textContent = `${spot.eta_mins} mins away • ${spot.distance_km} km • ${spot.legality_status}`;
             document.getElementById('drawer-lot-rate').innerHTML = `${spot.fee}<small style="font-size:12px; font-weight:400; color:var(--text-secondary)"> est.</small>`;
             document.getElementById('drawer-lot-spots').textContent = `~${spot.estimated_spots} Est. Bays (${spot.category_label})`;
@@ -8582,11 +8721,22 @@
             const badgesEl = document.getElementById('drawer-badges');
             if (badgesEl) {
               badgesEl.innerHTML = `
-                <span class="feature-tag">🤖 AI Fit ${spot.ai_score}%</span>
-                <span class="feature-tag">🛣️ Surface: ${spot.surface}</span>
-                ${spot.area_m2 > 0 ? `<span class="feature-tag">📐 ${Math.round(spot.area_m2).toLocaleString()} m²</span>` : ''}
+                <span class="feature-tag">
+                  <svg class="svg-icon-xs" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                  <span>AI Fit ${spot.ai_score}%</span>
+                </span>
+                <span class="feature-tag">
+                  <svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M4 19L8 5M16 19l4-14M12 5v14"/></svg>
+                  <span>Surface: ${escapeHtml(spot.surface)}</span>
+                </span>
+                ${spot.area_m2 > 0 ? `<span class="feature-tag">
+                  <svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 4 4 6-6"/></svg>
+                  <span>${Math.round(spot.area_m2).toLocaleString()} m²</span>
+                </span>` : ''}
               `;
             }
+            drawer.classList.add('open');
+          }
             drawer.classList.add('open');
           }
           if (navigator.vibrate) navigator.vibrate(8);

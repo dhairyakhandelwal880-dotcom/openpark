@@ -18,7 +18,7 @@
     copyText(text, label = 'Copied') {
       if (!text) return;
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(String(text)).then(() => this.toast(`📋 ${label}`, 'success', 1800)).catch(() => {});
+        navigator.clipboard.writeText(String(text)).then(() => this.toast(label, 'success', 1800)).catch(() => {});
       }
     },
     escapeHtml(str) {
@@ -337,7 +337,7 @@
       row.innerHTML = '<span style="font-size:10.5px;color:var(--text-secondary);font-weight:600;">Recent:</span>' +
         items.map((q) => {
           const safeQ = UIPolish.escapeHtml(q);
-          return `<button type="button" class="recent-search-chip" data-rq="${safeQ}">🕒 ${safeQ}</button>`;
+          return `<button type="button" class="recent-search-chip" data-rq="${safeQ}"><svg class="recent-clock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>${safeQ}</span></button>`;
         }).join('') +
         '<button type="button" class="recent-search-chip" data-clear-recent="1" title="Clear search history">Clear</button>';
     };
@@ -379,7 +379,7 @@
       row.innerHTML = '<span style="font-size:11px;color:var(--text-secondary);font-weight:600;">Recent:</span>' +
         items.slice(0, 3).map((q) => {
           const safeQ = UIPolish.escapeHtml(q);
-          return `<button type="button" class="recent-search-chip" data-wq="${safeQ}">🕒 ${safeQ}</button>`;
+          return `<button type="button" class="recent-search-chip" data-wq="${safeQ}"><svg class="recent-clock-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>${safeQ}</span></button>`;
         }).join('');
     };
 
@@ -399,7 +399,7 @@
     const el = document.getElementById('welcome-greeting');
     if (!el) return;
     const hr = new Date().getHours();
-    const icon = hr < 12 ? '🌅 Good morning' : hr < 17 ? '☀️ Good afternoon' : hr < 21 ? '🌆 Good evening' : '🌙 Good night';
+    const icon = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : hr < 21 ? 'Good evening' : 'Good night';
     el.textContent = `${icon} • OpenPark Smart Mobility`;
   });
 
@@ -412,7 +412,9 @@
       const theme = document.documentElement.getAttribute('data-theme');
       const sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const isDark = theme === 'dark' || (!theme && sysDark);
-      wBtn.textContent = isDark ? '☀️' : '🌙';
+      wBtn.innerHTML = isDark
+        ? '<svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>'
+        : '<svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
       wBtn.title = isDark ? 'Switch to Light Liquid Glass' : 'Switch to Dark Liquid Glass';
     };
 
@@ -539,9 +541,18 @@
     filterRow.style.display = 'none';
     filterRow.innerHTML = `
       <button type="button" class="ai-filter-pill active" data-ai-cat="all">All</button>
-      <button type="button" class="ai-filter-pill" data-ai-cat="empty_ground">🟩 Empty Grounds</button>
-      <button type="button" class="ai-filter-pill" data-ai-cat="mall_parking">🛍️ Malls</button>
-      <button type="button" class="ai-filter-pill" data-ai-cat="legal_bay">🅿️ Legal Bays</button>
+      <button type="button" class="ai-filter-pill" data-ai-cat="empty_ground">
+        <span class="status-indicator-dot" style="background:#10b981; width:6px; height:6px; border-radius:50%; display:inline-block; margin-right:4px;"></span>
+        <span>Empty Grounds</span>
+      </button>
+      <button type="button" class="ai-filter-pill" data-ai-cat="mall_parking">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24" style="margin-right:4px;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span>Malls</span>
+      </button>
+      <button type="button" class="ai-filter-pill" data-ai-cat="legal_bay">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24" style="margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>
+        <span>Legal Bays</span>
+      </button>
     `;
     banner.insertAdjacentElement('afterend', filterRow);
   });
@@ -564,7 +575,7 @@
 
       filterRow.querySelectorAll('.ai-filter-pill').forEach((btn) => {
         const cat = btn.getAttribute('data-ai-cat');
-        const labelBase = cat === 'all' ? 'All' : cat === 'empty_ground' ? '🟩 Grounds' : cat === 'mall_parking' ? '🛍️ Malls' : '🅿️ Bays';
+        const labelBase = cat === 'all' ? 'All' : cat === 'empty_ground' ? 'Grounds' : cat === 'mall_parking' ? 'Malls' : 'Bays';
         btn.textContent = `${labelBase} (${counts[cat] || 0})`;
         btn.classList.toggle('active', cat === window.__aiActiveCat);
       });
@@ -819,20 +830,22 @@
         const lotId = lot ? lot.id : title;
         card.dataset.lotId = String(lotId);
 
+        const starSvg = (isSaved) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="${isSaved ? '#f59e0b' : 'none'}" stroke="${isSaved ? '#f59e0b' : 'currentColor'}" stroke-width="2" style="display:block;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'fav-toggle-btn';
         const saved = window.__openparkFavs ? window.__openparkFavs.has(lotId) : false;
         btn.classList.toggle('is-saved', saved);
-        btn.textContent = saved ? '★' : '☆';
+        btn.innerHTML = starSvg(saved);
         btn.title = saved ? 'Remove from Saved Lots' : 'Bookmark Parking Lot';
         btn.setAttribute('aria-label', btn.title);
         btn.addEventListener('click', (e) => {
           e.stopPropagation();
           const nowSaved = window.__openparkFavs.toggle(lotId);
           btn.classList.toggle('is-saved', nowSaved);
-          btn.textContent = nowSaved ? '★' : '☆';
-          up.toast(nowSaved ? `⭐ Saved ${title}` : `Removed ${title}`, 'info', 1600);
+          btn.innerHTML = starSvg(nowSaved);
+          up.toast(nowSaved ? `Saved ${title}` : `Removed ${title}`, 'info', 1600);
         });
         hdr.appendChild(btn);
       });
@@ -840,12 +853,13 @@
 
     new MutationObserver(decorateCards).observe(viewExplore, { childList: true });
     window.addEventListener('openpark:favs-updated', () => {
+      const starSvg = (isSaved) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="${isSaved ? '#f59e0b' : 'none'}" stroke="${isSaved ? '#f59e0b' : 'currentColor'}" stroke-width="2" style="display:block;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
       viewExplore.querySelectorAll('.lot-card').forEach((card) => {
         const btn = card.querySelector('.fav-toggle-btn');
         if (!btn || !card.dataset.lotId) return;
         const saved = window.__openparkFavs.has(card.dataset.lotId);
         btn.classList.toggle('is-saved', saved);
-        btn.textContent = saved ? '★' : '☆';
+        btn.innerHTML = starSvg(saved);
       });
     });
     decorateCards();
@@ -912,12 +926,24 @@
         bar.className = 'ai-card-actions';
         bar.style.cssText = 'display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;';
         const verifyHtml = spot.category === 'empty_ground' ? `
-          <button type="button" class="recent-search-chip" data-verify-verdict="open" title="Confirm ground is open & parkable">✅ Parkable</button>
-          <button type="button" class="recent-search-chip" data-verify-verdict="blocked" title="Report ground gated or blocked">🚫 Blocked</button>
+          <button type="button" class="recent-search-chip" data-verify-verdict="open" title="Confirm ground is open & parkable">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24" style="color:#10b981;"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Parkable</span>
+          </button>
+          <button type="button" class="recent-search-chip" data-verify-verdict="blocked" title="Report ground gated or blocked">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24" style="color:#ef4444;"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+            <span>Blocked</span>
+          </button>
         ` : '';
         bar.innerHTML = `
-          <a href="https://maps.google.com/?q=${spot.lat},${spot.lon}" target="_blank" rel="noopener" class="recent-search-chip" style="text-decoration:none;">🗺️ Maps</a>
-          <button type="button" class="recent-search-chip" data-copy-coord="${spot.lat.toFixed(5)}, ${spot.lon.toFixed(5)}">📋 Copy GPS</button>
+          <a href="https://maps.google.com/?q=${spot.lat},${spot.lon}" target="_blank" rel="noopener" class="recent-search-chip" style="text-decoration:none;">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            <span>Maps</span>
+          </a>
+          <button type="button" class="recent-search-chip" data-copy-coord="${spot.lat.toFixed(5)}, ${spot.lon.toFixed(5)}">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span>Copy GPS</span>
+          </button>
           ${verifyHtml}
         `;
         bar.addEventListener('click', (e) => {
@@ -936,7 +962,7 @@
               body: JSON.stringify({ pocket_id: spot.id, name: spot.name, lat: spot.lat, lon: spot.lon, verdict })
             }).then(() => {
               if (verdict === 'blocked') card.style.opacity = '0.45';
-              up.toast(verdict === 'open' ? `✅ Verified ${spot.name} as parkable` : `🚫 Reported ${spot.name} blocked — hidden in future scans`, 'success', 2400);
+              up.toast(verdict === 'open' ? `Verified ${spot.name} as parkable` : `Reported ${spot.name} blocked — hidden in future scans`, 'success', 2400);
             }).catch(() => {});
           }
         });
@@ -975,7 +1001,7 @@
     btnRescan.type = 'button';
     btnRescan.className = 'apple-glass pressable';
     btnRescan.style.cssText = 'position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:22;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:600;color:var(--apple-blue);display:none;align-items:center;gap:6px;cursor:pointer;';
-    btnRescan.innerHTML = '<span>🔄</span><span>Find Parking &amp; Grounds (1km)</span>';
+    btnRescan.innerHTML = '<svg class="svg-icon-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Find Parking &amp; Grounds (1km)</span>';
     document.body.appendChild(btnRescan);
 
     let lastScanCenter = null;
@@ -1084,7 +1110,9 @@
       const chip = document.querySelector('#explore-sort-bar [data-sort="saved"]');
       if (!chip || !window.__openparkFavs) return;
       const n = window.__openparkFavs.getSet().size;
-      chip.textContent = n > 0 ? `⭐ Saved (${n})` : '⭐ Saved';
+      chip.innerHTML = n > 0
+        ? `<svg class="svg-icon-xs" viewBox="0 0 24 24" fill="#f59e0b" stroke="#f59e0b" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Saved (${n})</span>`
+        : `<svg class="svg-icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="margin-right:4px;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>Saved</span>`;
     };
     window.addEventListener('openpark:favs-updated', update);
     update();
@@ -1099,8 +1127,14 @@
     wrap.id = 'vehicle-type-toggle';
     wrap.className = 'vehicle-type-toggle';
     wrap.innerHTML = `
-      <button type="button" class="vehicle-type-btn active" data-veh="car">🚗 Car</button>
-      <button type="button" class="vehicle-type-btn" data-veh="bike">🏍️ Bike</button>
+      <button type="button" class="vehicle-type-btn active" data-veh="car">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24" style="margin-right:4px;"><rect x="3" y="11" width="18" height="8" rx="2"/><path d="M5 11l2-6h10l2 6"/><circle cx="7" cy="16" r="1.5"/><circle cx="17" cy="16" r="1.5"/></svg>
+        <span>Car</span>
+      </button>
+      <button type="button" class="vehicle-type-btn" data-veh="bike">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24" style="margin-right:4px;"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h-3l-3 6.5h7.5L14 6z"/><path d="M12 17.5h2.5l2-6"/></svg>
+        <span>Bike</span>
+      </button>
     `;
     totalBadge.parentElement.insertBefore(wrap, totalBadge);
     window.__calcVehicle = 'car';
@@ -1174,6 +1208,8 @@
     const dtName = document.getElementById('dt-name');
     if (!statusPill || !dtName || document.getElementById('dt-fav-btn')) return;
 
+    const starSvg = (isSaved) => `<svg width="14" height="14" viewBox="0 0 24 24" fill="${isSaved ? '#f59e0b' : 'none'}" stroke="${isSaved ? '#f59e0b' : 'currentColor'}" stroke-width="2" style="display:block;"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+
     const btn = document.createElement('button');
     btn.id = 'dt-fav-btn';
     btn.type = 'button';
@@ -1186,7 +1222,7 @@
       const lotId = lot ? lot.id : dtName.textContent.trim();
       const saved = window.__openparkFavs && window.__openparkFavs.has(lotId);
       btn.classList.toggle('is-saved', !!saved);
-      btn.textContent = saved ? '★' : '☆';
+      btn.innerHTML = starSvg(saved);
       btn.title = saved ? 'Remove from Saved Lots' : 'Save this Lot';
     };
 
@@ -1196,7 +1232,7 @@
       const lotId = lot ? lot.id : dtName.textContent.trim();
       if (window.__openparkFavs) {
         const nowSaved = window.__openparkFavs.toggle(lotId);
-        up.toast(nowSaved ? `⭐ Saved ${dtName.textContent}` : `Removed ${dtName.textContent}`, 'info', 1600);
+        up.toast(nowSaved ? `Saved ${dtName.textContent}` : `Removed ${dtName.textContent}`, 'info', 1600);
         syncState();
       }
     });
@@ -1214,8 +1250,14 @@
     row.id = 'dt-quick-actions';
     row.style.cssText = 'display:flex;gap:6px;margin:4px 0 8px;flex-wrap:wrap;';
     row.innerHTML = `
-      <button type="button" class="recent-search-chip" id="dt-btn-copy-addr">📋 Copy Address</button>
-      <a href="#" target="_blank" rel="noopener" class="recent-search-chip" id="dt-btn-ext-maps" style="text-decoration:none;">🗺️ Open in Maps</a>
+      <button type="button" class="recent-search-chip" id="dt-btn-copy-addr">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24" style="margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span>Copy Address</span>
+      </button>
+      <a href="#" target="_blank" rel="noopener" class="recent-search-chip" id="dt-btn-ext-maps" style="text-decoration:none;">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24" style="margin-right:4px;"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        <span>Open in Maps</span>
+      </a>
     `;
     addrEl.insertAdjacentElement('afterend', row);
 
@@ -1249,12 +1291,12 @@
             remainingSec--;
             if (remainingSec <= 0) {
               clearInterval(timer);
-              holdText.textContent = '⏳ Hold Spot (15m)';
+              holdText.textContent = 'Hold Spot (15m)';
               return;
             }
             const mm = String(Math.floor(remainingSec / 60)).padStart(2, '0');
             const ss = String(remainingSec % 60).padStart(2, '0');
-            holdText.textContent = `✅ Held (${mm}:${ss})`;
+            holdText.textContent = `Held (${mm}:${ss})`;
           }, 1000);
         }
       }, 60);
@@ -1326,7 +1368,7 @@
     };
     window.addEventListener('online', () => {
       syncOnline();
-      up.toast('🌐 Connection restored', 'success', 2000);
+      up.toast('Connection restored', 'success', 2000);
     });
     window.addEventListener('offline', syncOnline);
     syncOnline();
@@ -1387,8 +1429,14 @@
     bar.setAttribute('role', 'group');
     bar.setAttribute('aria-label', 'Switch Map Style');
     bar.innerHTML = `
-      <button type="button" class="map-style-pill-btn pressable" data-map-style="google-hybrid" title="Google Maps Satellite Hybrid">🛰️ Satellite Hybrid</button>
-      <button type="button" class="map-style-pill-btn pressable" data-map-style="google-roadmap" title="Google Maps Full Detail Retina">🗺️ Full Detail Retina</button>
+      <button type="button" class="map-style-pill-btn pressable" data-map-style="google-hybrid" title="Google Maps Satellite Hybrid">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24" style="margin-right:4px;"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20M12 2a14.5 14.5 0 0 1 0 20M2 12h20"/></svg>
+        <span>Satellite</span>
+      </button>
+      <button type="button" class="map-style-pill-btn pressable" data-map-style="google-roadmap" title="Google Maps Full Detail Retina">
+        <svg class="svg-icon-xs" viewBox="0 0 24 24" style="margin-right:4px;"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        <span>Retina Map</span>
+      </button>
     `;
     document.body.appendChild(bar);
 
@@ -1415,7 +1463,7 @@
         try { localStorage.setItem('openpark_map_style', targetStyle); } catch {}
       }
       syncButtons();
-      up.toast(targetStyle === 'google-hybrid' ? '🛰️ Google Maps Satellite Hybrid' : '🗺️ GMap Full Detail Retina', 'info', 2000);
+      up.toast(targetStyle === 'google-hybrid' ? 'Satellite Hybrid active' : 'Retina Map active', 'info', 2000);
     });
 
     window.addEventListener('openpark:map-style-changed', syncButtons);

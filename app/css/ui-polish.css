@@ -836,4 +836,75 @@
   letter-spacing: 0.02em !important;
 }
 
+/* 11. Luxury Executive Iconography & Logos */
+.svg-icon-sm {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: inline-block;
+  vertical-align: -2px;
+  flex-shrink: 0;
+}
+
+.svg-icon-xs {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: inline-block;
+  vertical-align: -1.5px;
+  flex-shrink: 0;
+}
+
+.poi-svg-icon {
+  width: 15px;
+  height: 15px;
+  stroke: #ffffff;
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+}
+
+.welcome-dest-svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--apple-blue);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: block;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.2s ease;
+}
+
+.welcome-dest-card:hover .welcome-dest-svg {
+  transform: scale(1.12);
+  stroke: #38bdf8;
+}
+
+.recent-clock-icon {
+  width: 12px;
+  height: 12px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  display: inline-block;
+  vertical-align: -1px;
+  opacity: 0.7;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+
 
