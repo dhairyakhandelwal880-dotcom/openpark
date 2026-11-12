@@ -1001,7 +1001,7 @@
     btnRescan.type = 'button';
     btnRescan.className = 'apple-glass pressable';
     btnRescan.style.cssText = 'position:fixed;top:74px;left:50%;transform:translateX(-50%);z-index:22;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:600;color:var(--apple-blue);display:none;align-items:center;gap:6px;cursor:pointer;';
-    btnRescan.innerHTML = '<svg class="svg-icon-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Find Parking &amp; Grounds (1km)</span>';
+    btnRescan.innerHTML = '<svg class="svg-icon-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg><span>Find 5 AI Parking Spots (≤1 km)</span>';
     document.body.appendChild(btnRescan);
 
     let lastScanCenter = null;

@@ -2350,10 +2350,10 @@
       </div>
 
       <!-- AI Map Space & Legal Parking Scanner Bar -->
-      <div style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 4px;">
+      <div id="ai-scan-bar-container" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 4px;">
         <button id="btn-ai-scan" class="btn-primary pressable">
           <svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-          <span id="btn-ai-scan-label">Find Parking &amp; AI Scan (≤1 km)</span>
+          <span id="btn-ai-scan-label">Find 5 AI Parking Spots (≤1 km)</span>
         </button>
         <div id="ai-scan-banner" class="contrast-card" style="display: none; padding: 9px 12px; font-size: 12px; justify-content: space-between; align-items: center; gap: 8px; border-color: rgba(0, 113, 227, 0.35);">
           <span id="ai-scan-summary-text" style="font-weight: 600;">Scanning area...</span>
@@ -2643,6 +2643,11 @@
           </button>
         </div>
         <div id="pv-nearby-lots" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        <!-- 5 AI Parking Spots Button (Shown when no parking lot present in 400m of marker) -->
+        <button id="btn-pv-ai-scan" class="btn-primary pressable" style="width: 100%; margin-top: 8px; display: none; align-items: center; justify-content: center; gap: 7px;">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+          <span id="btn-pv-ai-scan-label">Find 5 AI Parking Spots (≤1 km)</span>
+        </button>
       </div>
 
       <!-- 5. Settings & Traccar GPS Configuration View -->
@@ -5468,6 +5473,10 @@
           })
             .setLngLat([lon, lat])
             .addTo(this.map);
+
+          if (typeof ParkingApp !== 'undefined' && ParkingApp.updateAiScanVisibility) {
+            ParkingApp.updateAiScanVisibility();
+          }
         },
 
         clearDestinationMarker() {
@@ -5476,6 +5485,9 @@
             this.destinationMarker = null;
           }
           STATE.selectedPlace = null;
+          if (typeof ParkingApp !== 'undefined' && ParkingApp.updateAiScanVisibility) {
+            ParkingApp.updateAiScanVisibility();
+          }
         },
 
         renderLotMarkers(lots) {
@@ -6847,13 +6859,20 @@
 
           ParkingApp.loadNearbyLots(item.lat, item.lon).then(() => {
             const nearbyContainer = document.getElementById('pv-nearby-lots');
+            const pvAiBtn = document.getElementById('btn-pv-ai-scan');
             if (nearbyContainer) {
               nearbyContainer.innerHTML = '';
-              const topLots = STATE.lots.slice(0, 4);
-              if (topLots.length === 0) {
-                nearbyContainer.innerHTML = '<div style="font-size:12px;color:var(--color-text-secondary);padding:6px 0;">No parking recorded within 1 km.</div>';
-              } else {
-                topLots.forEach(lot => {
+              const lotsWithin400m = (STATE.lots || []).filter(lot => {
+                const lotLat = Number(lot.lat);
+                const lotLon = Number(lot.lon !== undefined ? lot.lon : lot.lng);
+                return Number.isFinite(lotLat) && Number.isFinite(lotLon) && calculateDistanceMeters(item.lat, item.lon, lotLat, lotLon) <= 400;
+              });
+
+              if (lotsWithin400m.length > 0) {
+                // Parking lot is present within 400m -> do NOT show 5 AI parking spot button
+                if (pvAiBtn) pvAiBtn.style.display = 'none';
+
+                lotsWithin400m.slice(0, 4).forEach(lot => {
                   const row = document.createElement('div');
                   row.className = 'contrast-card';
                   row.style.padding = '10px 12px';
@@ -6863,21 +6882,49 @@
                   if (lot.status === 'Filling up') stColor = 'var(--status-filling)';
                   if (lot.status === 'Full') stColor = 'var(--status-full)';
 
+                  const distM = Math.round(calculateDistanceMeters(item.lat, item.lon, Number(lot.lat), Number(lot.lon !== undefined ? lot.lon : lot.lng)));
+
                   row.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <div style="font-weight:600; font-size:13px;">${lot.name}</div>
+                      <div style="font-weight:600; font-size:13px;">${escapeHtml(lot.name)}</div>
                       <div style="font-size:12px; font-weight:700; color:${stColor};">${lot.free_spots} free</div>
                     </div>
                     <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--color-text-secondary); margin-top:3px;">
                       <span>${lot.price_car}/hr</span>
-                      <span>${lot.distance_km} km away</span>
+                      <span>${distM}m from marker</span>
                     </div>
                   `;
                   row.onclick = () => ParkingApp.selectLot(lot.id);
                   nearbyContainer.appendChild(row);
                 });
+              } else {
+                // No parking lot within 400m radius -> SHOW button to find parking through AI
+                nearbyContainer.innerHTML = `
+                  <div class="contrast-card" style="padding: 11px 12px; border-left: 3px solid #f59e0b; background: rgba(245, 158, 11, 0.08);">
+                    <div style="font-size: 12px; font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 6px;">
+                      <svg class="svg-icon-xs" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      <span>No parking lot found within 400m</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--color-text-secondary); margin-top: 3px;">
+                      No official lot recorded within 400m of this marker. Tap below to find 5 empty grounds or mall bays with AI.
+                    </div>
+                  </div>
+                `;
+                if (pvAiBtn) pvAiBtn.style.display = 'flex';
               }
             }
+
+            if (pvAiBtn) {
+              pvAiBtn.onclick = () => {
+                const targetLat = item.lat;
+                const targetLon = item.lon;
+                document.getElementById('view-place').style.display = 'none';
+                document.getElementById('view-explore').style.display = 'flex';
+                AIScannerEngine.scanCurrentArea(targetLat, targetLon);
+              };
+            }
+
+            ParkingApp.updateAiScanVisibility();
           });
 
           UIController.showPlaceView();
@@ -7874,6 +7921,60 @@
           STATE.lots = await API.getNearbyLots(lat, lon);
           MapEngine.renderLotMarkers(STATE.lots);
           UIController.renderLotList(STATE.lots);
+          this.updateAiScanVisibility();
+        },
+
+        updateAiScanVisibility() {
+          let markerLat = null;
+          let markerLon = null;
+
+          if (STATE.selectedPlace && Number.isFinite(Number(STATE.selectedPlace.lat)) && Number.isFinite(Number(STATE.selectedPlace.lon))) {
+            markerLat = Number(STATE.selectedPlace.lat);
+            markerLon = Number(STATE.selectedPlace.lon);
+          } else if (MapEngine && MapEngine.destinationMarker && typeof MapEngine.destinationMarker.getLngLat === 'function') {
+            const ll = MapEngine.destinationMarker.getLngLat();
+            markerLat = ll.lat;
+            markerLon = ll.lng;
+          } else if (STATE.userLocation && Number.isFinite(Number(STATE.userLocation.lat)) && Number.isFinite(Number(STATE.userLocation.lng))) {
+            markerLat = Number(STATE.userLocation.lat);
+            markerLon = Number(STATE.userLocation.lng);
+          } else if (typeof CONFIG !== 'undefined' && CONFIG.DEFAULT_COORDS) {
+            markerLat = CONFIG.DEFAULT_COORDS[1];
+            markerLon = CONFIG.DEFAULT_COORDS[0];
+          }
+
+          if (!Number.isFinite(markerLat) || !Number.isFinite(markerLon)) return;
+
+          const lots = Array.isArray(STATE.lots) ? STATE.lots : [];
+          const hasLotWithin400m = lots.some(lot => {
+            const lotLat = Number(lot.lat);
+            const lotLon = Number(lot.lon !== undefined ? lot.lon : lot.lng);
+            if (!Number.isFinite(lotLat) || !Number.isFinite(lotLon)) return false;
+            return calculateDistanceMeters(markerLat, markerLon, lotLat, lotLon) <= 400;
+          });
+
+          // Rule:
+          // If parking lot present within 400m of marker -> DO NOT show 5 AI parking spot button.
+          // If parking lot NOT there or NOT in radius of 400m -> SHOW button to find parking through AI.
+          const showAiButton = !hasLotWithin400m;
+
+          const btnAiScan = document.getElementById('btn-ai-scan');
+          const btnPvAiScan = document.getElementById('btn-pv-ai-scan');
+          const btnHudAiScan = document.getElementById('btn-hud-ai-scan');
+          const btnRescanArea = document.getElementById('btn-ai-rescan-area');
+
+          if (btnAiScan) {
+            btnAiScan.style.display = showAiButton ? 'flex' : 'none';
+          }
+          if (btnPvAiScan) {
+            btnPvAiScan.style.display = showAiButton ? 'flex' : 'none';
+          }
+          if (btnHudAiScan) {
+            btnHudAiScan.style.display = showAiButton ? 'flex' : 'none';
+          }
+          if (btnRescanArea && !showAiButton) {
+            btnRescanArea.style.display = 'none';
+          }
         },
 
         selectLot(lotId) {
@@ -8759,6 +8860,9 @@
           if (hudBtn) hudBtn.classList.remove('active-blue', 'active-pulse');
           if (MapEngine.map && MapEngine.map.getSource('ai-scan-polygons')) {
             MapEngine.map.getSource('ai-scan-polygons').setData({ type: 'FeatureCollection', features: [] });
+          }
+          if (typeof ParkingApp !== 'undefined' && ParkingApp.updateAiScanVisibility) {
+            ParkingApp.updateAiScanVisibility();
           }
         }
       };
