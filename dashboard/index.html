@@ -568,6 +568,16 @@
   </div>
 
   <script>
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     const API_BASE = (window.location.port === "8000" || window.location.port === "")
       ? window.location.origin
       : "http://localhost:8000";
@@ -758,8 +768,8 @@
       if (currentLot.recent_reports && currentLot.recent_reports.length > 0) {
         reportsContainer.innerHTML = currentLot.recent_reports.map(r => `
           <div class="report-item">
-            <span class="report-badge badge-${r.kind}">${formatReportKind(r.kind)}</span>
-            <span style="color: #94a3b8; font-size: 12px;">${r.time}</span>
+            <span class="report-badge badge-${escapeHtml(r.kind)}">${formatReportKind(r.kind)}</span>
+            <span style="color: #94a3b8; font-size: 12px;">${escapeHtml(r.time)}</span>
           </div>
         `).join("");
       } else {
@@ -771,7 +781,7 @@
       if (kind === "got_spot") return "🅿️ Got a Spot";
       if (kind === "has_space") return "🟢 Has Space";
       if (kind === "lot_full") return "🔴 Lot was Full";
-      return kind;
+      return escapeHtml(kind);
     }
 
     const activityLog = [];
@@ -798,11 +808,11 @@
           <div style="display: flex; align-items: center; gap: 8px;">
             <span>${icons[item.type] || "•"}</span>
             <div>
-              <div style="font-weight: 700; color: #1e293b;">${item.action}</div>
-              <div style="font-size: 11px; color: #64748b;">${item.details}</div>
+              <div style="font-weight: 700; color: #1e293b;">${escapeHtml(item.action)}</div>
+              <div style="font-size: 11px; color: #64748b;">${escapeHtml(item.details)}</div>
             </div>
           </div>
-          <span style="font-size: 10px; font-family: monospace; color: #94a3b8;">${item.time}</span>
+          <span style="font-size: 10px; font-family: monospace; color: #94a3b8;">${escapeHtml(item.time)}</span>
         </div>
       `).join("");
     }

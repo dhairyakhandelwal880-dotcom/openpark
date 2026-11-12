@@ -3145,6 +3145,17 @@
     (() => {
       'use strict';
 
+      function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }
+      window.escapeHtml = escapeHtml;
+
       // --------------------------------------------------------------------------
       // 5.1 Config & Constants
       // --------------------------------------------------------------------------
@@ -6347,12 +6358,16 @@
         },
 
         highlightMatch(text, query) {
-          if (!query || !text) return text || '';
+          if (!query || !text) return escapeHtml(text || '');
+          const rawText = String(text);
           const q = query.trim().toLowerCase();
-          const t = text.toLowerCase();
+          const t = rawText.toLowerCase();
           const idx = t.indexOf(q);
-          if (idx === -1) return text;
-          return `${text.slice(0, idx)}<span class="highlight">${text.slice(idx, idx + q.length)}</span>${text.slice(idx + q.length)}`;
+          if (idx === -1) return escapeHtml(rawText);
+          const before = escapeHtml(rawText.slice(0, idx));
+          const match = escapeHtml(rawText.slice(idx, idx + q.length));
+          const after = escapeHtml(rawText.slice(idx + q.length));
+          return `${before}<span class="highlight">${match}</span>${after}`;
         },
 
         async fetchSuggestions(query, selectFirstOnFetch = false) {
@@ -6601,13 +6616,13 @@
             (item.reviews || []).forEach(rev => {
               const rCard = document.createElement('div');
               rCard.className = 'pv-review-card';
-              const stars = '★'.repeat(rev.rating || 5);
+              const stars = '★'.repeat(Math.max(1, Math.min(5, Number(rev.rating) || 5)));
               rCard.innerHTML = `
                 <div class="pv-review-header">
-                  <span class="pv-reviewer-name">${rev.author}</span>
+                  <span class="pv-reviewer-name">${escapeHtml(rev.author || 'Visitor')}</span>
                   <span class="pv-review-stars">${stars}</span>
                 </div>
-                <div class="pv-review-text">"${rev.text}"</div>
+                <div class="pv-review-text">"${escapeHtml(rev.text || '')}"</div>
               `;
               revList.appendChild(rCard);
             });
@@ -8173,7 +8188,8 @@
           wList.innerHTML = '';
 
           if (!this.results || this.results.length === 0) {
-            wList.innerHTML = `<div style="padding: 12px 14px; font-size: 13px; color: var(--text-secondary); text-align: center;">No matches for "${query}" — try MG Road, Koramangala, or Indiranagar</div>`;
+            const safeQuery = escapeHtml(query || '');
+            wList.innerHTML = `<div style="padding: 12px 14px; font-size: 13px; color: var(--text-secondary); text-align: center;">No matches for "${safeQuery}" — try MG Road, Koramangala, or Indiranagar</div>`;
             wList.classList.add('open');
             return;
           }
@@ -8181,9 +8197,9 @@
           this.results.slice(0, 6).forEach(item => {
             const row = document.createElement('div');
             row.className = 'autocomplete-item';
-            const badge = item.badge || '📍';
+            const badge = escapeHtml(item.badge || '📍');
             const distBadge = (item.distance_km !== undefined && item.distance_km !== null)
-              ? `<span class="autocomplete-dist-badge">${item.distance_km} km</span>`
+              ? `<span class="autocomplete-dist-badge">${Number(item.distance_km).toFixed(1)} km</span>`
               : '';
             row.innerHTML = `
               <div class="autocomplete-badge-box">${badge}</div>
@@ -8192,7 +8208,7 @@
                   <span class="autocomplete-item-title">${SearchEngine.highlightMatch(item.name, query)}</span>
                   ${distBadge}
                 </div>
-                <div class="autocomplete-item-sub">${item.address || 'Bengaluru'}</div>
+                <div class="autocomplete-item-sub">${escapeHtml(item.address || 'Bengaluru')}</div>
               </div>
             `;
             row.onclick = () => this.pickDestination(item);

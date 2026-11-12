@@ -21,6 +21,16 @@
         navigator.clipboard.writeText(String(text)).then(() => this.toast(`📋 ${label}`, 'success', 1800)).catch(() => {});
       }
     },
+    escapeHtml(str) {
+      if (window.escapeHtml) return window.escapeHtml(str);
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    },
     modules: [],
     register(name, initFn) {
       this.modules.push({ name, initFn });
@@ -325,7 +335,10 @@
       }
       row.style.display = 'flex';
       row.innerHTML = '<span style="font-size:10.5px;color:var(--text-secondary);font-weight:600;">Recent:</span>' +
-        items.map((q) => `<button type="button" class="recent-search-chip" data-rq="${q.replace(/"/g, '&quot;')}">🕒 ${q}</button>`).join('') +
+        items.map((q) => {
+          const safeQ = UIPolish.escapeHtml(q);
+          return `<button type="button" class="recent-search-chip" data-rq="${safeQ}">🕒 ${safeQ}</button>`;
+        }).join('') +
         '<button type="button" class="recent-search-chip" data-clear-recent="1" title="Clear search history">Clear</button>';
     };
 
@@ -364,7 +377,10 @@
       }
       row.style.display = 'flex';
       row.innerHTML = '<span style="font-size:11px;color:var(--text-secondary);font-weight:600;">Recent:</span>' +
-        items.slice(0, 3).map((q) => `<button type="button" class="recent-search-chip" data-wq="${q.replace(/"/g, '&quot;')}">🕒 ${q}</button>`).join('');
+        items.slice(0, 3).map((q) => {
+          const safeQ = UIPolish.escapeHtml(q);
+          return `<button type="button" class="recent-search-chip" data-wq="${safeQ}">🕒 ${safeQ}</button>`;
+        }).join('');
     };
 
     row.addEventListener('click', (e) => {
