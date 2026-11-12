@@ -1640,19 +1640,19 @@ def get_nearby_lots(
             dist_val = round(dist, 1)
             results.append({
                 "id": lot["id"],
-                "osm_ref": lot["osm_ref"],
-                "name": lot["name"],
-                "city": lot["city"],
-                "capacity": lot["capacity"],
-                "price_note": lot["price_note"],
+                "osm_ref": lot.get("osm_ref", f"way/blr_{lot['id']}"),
+                "name": lot.get("name") or f"Parking Lot #{lot['id']}",
+                "city": lot.get("city", "Bengaluru"),
+                "capacity": lot.get("capacity") or 50,
+                "price_note": lot.get("price_note") or "Standard parking rates",
                 "lat": lot["lat"],
                 "lon": lot["lon"],
                 "distance_meters": dist_val,
                 "distance_m": dist_val,
-                "free_spots": lot["free_spots"],
-                "source": lot["source"],
-                "updated_at": lot["updated_at"].isoformat(),
-                "updated_human": human_time_ago(lot["updated_at"]),
+                "free_spots": lot.get("free_spots"),
+                "source": lot.get("source") or "unknown",
+                "updated_at": lot["updated_at"].isoformat() if lot.get("updated_at") else None,
+                "updated_human": human_time_ago(lot.get("updated_at")),
                 "status": st,
                 "confidence_score": conf_score,
                 "confidence": conf_level,
@@ -1669,18 +1669,18 @@ def get_lot_detail(lot_id: int):
             lot = next((item for item in FALLBACK_LOTS if item["id"] == lot_id), None)
             if not lot:
                 raise HTTPException(status_code=404, detail="Parking lot not found")
-            st = lot_status(lot["free_spots"], lot["capacity"], lot.get("updated_at"))
+            st = lot_status(lot.get("free_spots"), lot.get("capacity", 50), lot.get("updated_at"))
             score, level = get_confidence(lot.get("source"), lot.get("updated_at"))
-            cap = lot["capacity"] or 50
-            free = lot["free_spots"]
+            cap = lot.get("capacity") or 50
+            free = lot.get("free_spots")
             telemetry = get_lot_telemetry(lot["id"], total_capacity=cap, free_spots=free)
             return {
                 "id": lot["id"],
                 "osm_ref": lot.get("osm_ref", f"way/blr_{lot_id}"),
-                "name": lot["name"] or f"Parking #{lot['id']}",
+                "name": lot.get("name") or f"Parking #{lot['id']}",
                 "city": lot.get("city", "Bengaluru"),
                 "capacity": cap,
-                "price_note": lot["price_note"] or "Standard parking rates",
+                "price_note": lot.get("price_note") or "Standard parking rates",
                 "lat": lot["lat"],
                 "lon": lot["lon"],
                 "free_spots": free,

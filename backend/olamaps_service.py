@@ -37,7 +37,10 @@ class OlaMapsClient:
             async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
                 resp = await client.get(url, params=params)
                 if resp.status_code == 200:
-                    return resp.json()
+                    try:
+                        return resp.json()
+                    except Exception:
+                        return {"status": "error", "message": "Invalid JSON response from Ola Maps"}
                 return {
                     "status": "error",
                     "code": resp.status_code,
@@ -59,7 +62,10 @@ class OlaMapsClient:
             async with httpx.AsyncClient(timeout=4.0, verify=False) as client:
                 resp = await client.get(url, params=params)
                 if resp.status_code == 200:
-                    return resp.json()
+                    try:
+                        return resp.json()
+                    except Exception:
+                        return {"status": "error", "message": "Invalid JSON response from Ola Maps"}
                 return {
                     "status": "error",
                     "code": resp.status_code,
@@ -83,7 +89,10 @@ class OlaMapsClient:
             async with httpx.AsyncClient(timeout=5.0, verify=False) as client:
                 resp = await client.post(url, params=params)
                 if resp.status_code == 200:
-                    return resp.json()
+                    try:
+                        return resp.json()
+                    except Exception:
+                        return {"status": "error", "message": "Invalid JSON response from Ola Maps"}
                 return {
                     "status": "error",
                     "code": resp.status_code,
