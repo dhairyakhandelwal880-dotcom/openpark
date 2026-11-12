@@ -6051,13 +6051,19 @@
             card.className = 'lot-card contrast-card pressable';
             
             let statusClass = 'status-available';
-            if (lot.status === 'Filling up') statusClass = 'status-filling';
-            if (lot.status === 'Full') statusClass = 'status-full';
-            if (lot.status === 'Unknown') statusClass = 'status-unknown';
+            let accentColor = '#10b981';
+            if (lot.status === 'Filling up') { statusClass = 'status-filling'; accentColor = '#f59e0b'; }
+            if (lot.status === 'Full') { statusClass = 'status-full'; accentColor = '#ef4444'; }
+            if (lot.status === 'Unknown') { statusClass = 'status-unknown'; accentColor = '#94a3b8'; }
+            card.style.setProperty('--card-border-accent', accentColor);
+
+            const safeName = escapeHtml(lot.name || 'Parking Spot');
+            const safeAddr = escapeHtml(lot.address || 'Bengaluru');
+            const safePrice = escapeHtml(lot.price_car || '₹40');
 
             card.innerHTML = `
               <div class="lot-card-header">
-                <div class="lot-title">${lot.name}</div>
+                <div class="lot-title">${safeName}</div>
                 <div class="lot-dist">${lot.distance_km} km &bull; ${lot.eta_mins}m</div>
               </div>
               <div class="lot-meta-row">
@@ -6065,9 +6071,9 @@
                   <span class="status-dot"></span>
                   <span>${lot.status} &bull; <strong>${lot.free_spots}</strong> free</span>
                 </div>
-                <div class="lot-price">${lot.price_car}/hr</div>
+                <div class="lot-price">${safePrice}/hr</div>
               </div>
-              <div class="lot-footer-sub">Updated ${lot.updated_mins} min ago &bull; ${lot.address}</div>
+              <div class="lot-footer-sub">Updated ${lot.updated_mins}m ago &bull; ${safeAddr}</div>
             `;
 
             card.onclick = () => ParkingApp.selectLot(lot.id);
