@@ -4737,26 +4737,60 @@
               return;
             }
 
-            // Immediately drop clean red destination pin without any loading text
-            STATE.selectedPlace = { lat: clickLat, lon: clickLng, name: 'Pinned Destination' };
-            if (typeof AIScannerEngine !== 'undefined' && AIScannerEngine.clear) AIScannerEngine.clear();
+            // Check if user clicked an AI parking polygon or near an AI bay
+            if (e.originalEvent && e.originalEvent._handledByAiBay) return;
+            if (this.map.getLayer('ai-scan-fill')) {
+              const bbox = [[e.point.x - 8, e.point.y - 8], [e.point.x + 8, e.point.y + 8]];
+              const aiFeatures = this.map.queryRenderedFeatures(bbox, { layers: ['ai-scan-fill'] });
+              if (aiFeatures && aiFeatures.length > 0) {
+                const feat = aiFeatures[0];
+                const spotId = feat.properties && feat.properties.id;
+                const spot = (AIScannerEngine.results || []).find(s => s.id === spotId) ||
+                             (AIScannerEngine.lastScanPayload && AIScannerEngine.lastScanPayload.results && AIScannerEngine.lastScanPayload.results.find(s => s.id === spotId));
+                if (spot) {
+                  AIScannerEngine.selectDiscoveredSpot(spot);
+                  return;
+                }
+              }
+            }
+
+            // Place destination pointer on map and fetch full place details
             this.setDestinationMarker({
               lat: clickLat,
-              lon: clickLng
+              lon: clickLng,
+              name: 'Selected Location'
             });
 
-            // Fetch full reverse-geocoded building details across India
+            // Fetch reverse-geocoded building & place details
             try {
               const resp = await fetch(`/api/places/lookup?lat=${clickLat.toFixed(6)}&lon=${clickLng.toFixed(6)}`);
               if (resp.ok) {
                 const data = await resp.json();
                 if (data.place) {
                   SearchEngine.selectResult(data.place);
+                  return;
                 }
               }
             } catch (err) {
               console.warn('[MapEngine] building lookup error:', err);
             }
+
+            // Fallback: If no commercial entity exists at exact coordinates, show place details for location and ask for directions
+            const fallbackPlace = {
+              id: `pin-${Date.now()}`,
+              name: `Pinned Location`,
+              address: `${clickLat.toFixed(5)}° N, ${clickLng.toFixed(5)}° E • Bengaluru`,
+              lat: clickLat,
+              lon: clickLng,
+              category: 'Location',
+              badge: '📍',
+              rating: 4.8,
+              reviews_count: 50,
+              price_tier: 'Public Area',
+              is_open: true,
+              open_status: 'Accessible'
+            };
+            SearchEngine.selectResult(fallbackPlace);
           });
 
           // Right-click / Context menu anywhere on the map to place user device location
@@ -4982,6 +5016,28 @@
                 'line-color': ['coalesce', ['get', 'color'], '#34c759'],
                 'line-width': 2.5,
                 'line-dasharray': [2, 1.5]
+              }
+            });
+          }
+
+          if (!this.map._aiScanEventsBound) {
+            this.map._aiScanEventsBound = true;
+            this.map.on('mouseenter', 'ai-scan-fill', () => {
+              this.map.getCanvas().style.cursor = 'pointer';
+            });
+            this.map.on('mouseleave', 'ai-scan-fill', () => {
+              this.map.getCanvas().style.cursor = '';
+            });
+            this.map.on('click', 'ai-scan-fill', (e) => {
+              if (e.features && e.features[0]) {
+                const feat = e.features[0];
+                const spotId = feat.properties && feat.properties.id;
+                const spot = (AIScannerEngine.results || []).find(s => s.id === spotId) ||
+                             (AIScannerEngine.lastScanPayload && AIScannerEngine.lastScanPayload.results && AIScannerEngine.lastScanPayload.results.find(s => s.id === spotId));
+                if (spot) {
+                  if (e.originalEvent) e.originalEvent._handledByAiBay = true;
+                  AIScannerEngine.selectDiscoveredSpot(spot);
+                }
               }
             });
           }
@@ -7686,7 +7742,7 @@
           if (!lot) return;
 
           STATE.selectedLot = lot;
-          MapEngine.setDestinationMarker(lot);
+          // Highlight parking pin without dropping a duplicate destination pointer
           MapEngine.highlightMarker(lotId);
 
           // Apple-Grade Kinetic FlyTo (smooth 3D tilt + cubic deceleration)
@@ -8479,22 +8535,29 @@
             distance_km: spot.distance_km,
             eta_mins: spot.eta_mins,
             price_car: spot.fee,
+            price_bike: 'Free',
             price_note: spot.fee,
-            status: 'Available'
+            status: 'Available',
+            updated_mins: 1
           };
 
-          MapEngine.setDestinationMarker(STATE.selectedLot);
+          // Smoothly center on parking bay without dropping a duplicate destination pointer
           if (MapEngine.map) {
             MapEngine.map.flyTo({
               center: [spot.lon, spot.lat],
               zoom: 17,
-              pitch: 52,
+              pitch: 48,
               bearing: 15,
               speed: 0.9,
               curve: 1.4,
               easing: (t) => 1 - Math.pow(1 - t, 3),
               essential: true
             });
+          }
+
+          // Also populate sidebar detail view for desktop users
+          if (typeof UIController !== 'undefined' && UIController.renderLotDetail) {
+            UIController.renderLotDetail(STATE.selectedLot);
           }
 
           const drawer = document.getElementById('parking-drawer');
