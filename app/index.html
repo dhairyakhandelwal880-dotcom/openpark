@@ -2299,32 +2299,33 @@
   <aside id="sidebar" class="apple-glass" role="complementary" aria-label="OpenPark Sidebar Navigation">
     <div class="sidebar-drag-handle" id="sheet-drag-handle" aria-hidden="true"></div>
 
-    <!-- Sidebar Header: Brand, Search & Filters -->
+    <!-- Sidebar Header: Brand, Search & Navigation -->
     <div class="sidebar-header">
       <div class="brand-row">
         <div class="brand-title">
-          <span>OpenPark</span>
-          <span class="brand-badge"><span id="total-lots-count">148</span> Lots</span>
+          <span class="brand-logo-mark">
+            <svg class="brand-logo-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M9 17V7h4.5a3.5 3.5 0 0 1 0 7H9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="brand-logo-text">OpenPark</span>
+          <span class="brand-dot-pulse" title="Connected to Real-time Network"></span>
         </div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <button id="btn-open-welcome" class="chip-btn pressable cursor-target" data-cursor-label="Where to?" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; color: var(--apple-blue); border-color: rgba(0, 113, 227, 0.28); background: rgba(0, 113, 227, 0.08);" title="Open Destination Welcome Screen">
-            <svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-            <span>Where to?</span>
-          </button>
-          <button id="btn-traccar-pill" class="chip-btn pressable" style="padding: 3px 9px; font-size: 11px; background: rgba(52, 199, 89, 0.14); border-color: rgba(52, 199, 89, 0.35); color: var(--apple-green); display: flex; align-items: center; gap: 5px; cursor: pointer;" title="Traccar GPS Tracking Engine (https://www.traccar.org/)">
-            <span class="status-dot" style="background:var(--apple-green); width:6px; height:6px;"></span>
+        <div class="header-actions">
+          <button id="btn-traccar-pill" class="header-status-pill pressable" title="Live GPS Telemetry (Traccar Engine)">
+            <span class="gps-pulse-dot" id="header-gps-dot"></span>
             <span id="traccar-pill-text">Live GPS</span>
           </button>
-          <button id="btn-refresh-top" class="chip-btn pressable" style="padding: 5px 8px;" title="Refresh Occupancy">
-            <svg class="svg-icon-sm" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <button id="btn-refresh-top" class="header-icon-btn pressable" title="Refresh nearby parking lots">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
           </button>
+          <!-- Preserved count element for scripts -->
+          <span id="total-lots-count" style="display:none;">148</span>
         </div>
       </div>
 
       <!-- Search Box (Integrated with Traccar OSM Nominatim Search) -->
       <div class="search-wrapper">
-        <button id="btn-search-trigger" class="search-icon-left" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center;" aria-label="Search">
-          <svg class="svg-icon" viewBox="0 0 24 24">
+        <button id="btn-search-trigger" class="search-icon-left" aria-label="Search">
+          <svg class="svg-icon-sm" viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
         </button>
@@ -2332,59 +2333,69 @@
           type="text" 
           id="search-input" 
           class="search-input" 
-          placeholder="Search places across India (e.g. MG Road, Phoenix Mall, Kengeri)..." 
+          placeholder="Search destinations (e.g. MG Road, Indiranagar)..." 
           autocomplete="off" 
           spellcheck="false"
           aria-label="Search places, addresses, destinations"
         />
         <button id="search-clear" class="search-clear-btn" aria-label="Clear search input">
-          <svg class="svg-icon" style="width: 12px; height: 12px;" viewBox="0 0 24 24">
+          <svg class="svg-icon-xs" viewBox="0 0 24 24">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
+        </button>
+        <button id="btn-open-welcome" class="search-welcome-btn pressable cursor-target" data-cursor-label="Where to?" title="Open Quick Destination Picker">
+          <svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
         </button>
 
         <!-- Autocomplete Suggestions -->
         <div id="search-autocomplete-box" class="autocomplete-list" role="listbox"></div>
       </div>
 
-      <!-- Quick Search Category Chips (Google Maps Style) -->
-      <div class="filter-chip-row" role="toolbar" aria-label="Quick search categories">
-        <button class="chip-btn" data-category="Cafes">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
-          <span>Cafes</span>
+      <!-- Primary Segmented Switcher (Explore / Routes / Settings) -->
+      <div class="segmented-control" role="tablist">
+        <button class="segment-tab active" id="tab-explore" role="tab" aria-selected="true">
+          <svg class="svg-icon-xs" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          <span>Explore</span>
         </button>
-        <button class="chip-btn" data-category="Restaurants">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M18 2v20M2 2v20M6 2v7a3 3 0 0 0 6 0V2"/></svg>
-          <span>Food</span>
+        <button class="segment-tab" id="tab-trip" role="tab" aria-selected="false">
+          <svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          <span>Routes</span>
         </button>
-        <button class="chip-btn" data-category="Shopping">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          <span>Shopping</span>
-        </button>
-        <button class="chip-btn" data-category="Fuel">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>
-          <span>Fuel</span>
-        </button>
-        <button class="chip-btn" data-category="Hospitals">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-          <span>Hospitals</span>
-        </button>
-        <button class="chip-btn" data-category="Landmarks">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><line x1="2" y1="22" x2="22" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>
-          <span>Landmarks</span>
-        </button>
-        <button class="chip-btn" data-category="Parking">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>
-          <span>Parking</span>
+        <button class="segment-tab" id="tab-more" role="tab" aria-selected="false">
+          <svg class="svg-icon-xs" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Settings</span>
         </button>
       </div>
-    </div>
 
-    <!-- Segmented Navigation (Explore / Trip / More) -->
-    <div class="segmented-control" role="tablist">
-      <button class="segment-tab active" id="tab-explore" role="tab" aria-selected="true">Explore</button>
-      <button class="segment-tab" id="tab-trip" role="tab" aria-selected="false">Trip</button>
-      <button class="segment-tab" id="tab-more" role="tab" aria-selected="false">Settings</button>
+      <!-- Quick Search Category Carousel (Apple Maps Style) -->
+      <div class="category-carousel-wrapper">
+        <div class="filter-chip-row" role="toolbar" aria-label="Quick search categories">
+          <button class="chip-btn" data-category="Cafes">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            <span>Cafes</span>
+          </button>
+          <button class="chip-btn" data-category="Restaurants">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M18 2v20M2 2v20M6 2v7a3 3 0 0 0 6 0V2"/></svg>
+            <span>Food</span>
+          </button>
+          <button class="chip-btn" data-category="Shopping">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span>Shopping</span>
+          </button>
+          <button class="chip-btn" data-category="Fuel">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>
+            <span>Fuel</span>
+          </button>
+          <button class="chip-btn" data-category="Hospitals">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <span>Hospitals</span>
+          </button>
+          <button class="chip-btn" data-category="Parking">
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>
+            <span>Parking</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Scrollable View Host -->
@@ -2398,28 +2409,45 @@
           <span>Vacant</span>
         </button>
         <button class="chip-btn" data-lot-filter="ev">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           <span>EV Ready</span>
         </button>
         <button class="chip-btn" data-lot-filter="budget">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
           <span>Budget</span>
         </button>
         <button class="chip-btn" data-lot-filter="covered">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h6M9 14h6M9 18h6"/></svg>
+          <svg class="svg-icon-xs" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 10h6M9 14h6M9 18h6"/></svg>
           <span>Covered</span>
         </button>
       </div>
 
-      <!-- AI Map Space & Legal Parking Scanner Bar -->
-      <div id="ai-scan-bar-container" style="display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; margin-bottom: 4px;">
-        <button id="btn-ai-scan" class="btn-primary pressable">
-          <svg class="svg-icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
-          <span id="btn-ai-scan-label">Find 5 AI Parking Spots (≤1 km)</span>
-        </button>
-        <div id="ai-scan-banner" class="contrast-card" style="display: none; padding: 9px 12px; font-size: 12px; justify-content: space-between; align-items: center; gap: 8px; border-color: rgba(0, 113, 227, 0.35);">
-          <span id="ai-scan-summary-text" style="font-weight: 600;">Scanning area...</span>
-          <button id="btn-ai-clear" class="chip-btn pressable" style="padding: 3px 9px; font-size: 11px;">Clear</button>
+      <!-- Executive AI Spatial Radar Card (1 km Scanner) -->
+      <div id="ai-scan-bar-container" class="ai-spotlight-card">
+        <div class="ai-spotlight-inner pressable" id="btn-ai-scan" role="button" tabindex="0" aria-label="Find 5 AI Parking Spots within 1 kilometer">
+          <div class="ai-radar-graphic">
+            <div class="radar-sweep-cone"></div>
+            <div class="radar-pulse-ring ring-1"></div>
+            <div class="radar-pulse-ring ring-2"></div>
+            <div class="radar-center-dot"></div>
+          </div>
+          <div class="ai-spotlight-meta">
+            <div class="ai-spotlight-headline">
+              <span id="btn-ai-scan-label">Find 5 AI Parking Spots</span>
+              <span class="ai-dist-badge">≤1 km</span>
+            </div>
+            <div class="ai-spotlight-subtext">Spatial satellite scan • Empty grounds, plazas & bays</div>
+          </div>
+          <button class="ai-scan-action-pill" aria-hidden="true" tabindex="-1">
+            <span>Scan</span>
+            <svg class="svg-icon-xs" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
+
+        <div id="ai-scan-banner" class="ai-scan-progress-strip" style="display: none;">
+          <div class="ai-progress-pulse-line"></div>
+          <span id="ai-scan-summary-text">Analyzing satellite grid...</span>
+          <button id="btn-ai-clear" class="ai-strip-clear-btn">Dismiss</button>
         </div>
         <div id="ai-scan-results" style="display: none; flex-direction: column; gap: 8px;"></div>
       </div>
@@ -4224,24 +4252,26 @@
 
           if (lost) {
             if (pill) {
-              pill.style.background = 'rgba(239, 68, 68, 0.18)';
-              pill.style.borderColor = 'rgba(239, 68, 68, 0.5)';
-              pill.style.color = '#ef4444';
+              pill.classList.add('signal-lost');
+              pill.style.background = '';
+              pill.style.borderColor = '';
+              pill.style.color = '';
             }
-            if (pillText) pillText.innerText = "GPS Signal Lost";
+            if (pillText) pillText.innerText = "GPS Standby";
             if (vehicleEl) vehicleEl.classList.add('gps-signal-lost');
             if (trBadge) {
               trBadge.className = 'status-pill status-full';
-              trBadge.innerText = "SIGNAL LOST";
+              trBadge.innerText = "STANDBY";
             }
           } else {
             if (pill) {
-              pill.style.background = 'rgba(16, 185, 129, 0.12)';
-              pill.style.borderColor = 'rgba(16, 185, 129, 0.35)';
-              pill.style.color = '#34d399';
+              pill.classList.remove('signal-lost');
+              pill.style.background = '';
+              pill.style.borderColor = '';
+              pill.style.color = '';
             }
             if (pillText) {
-              pillText.innerText = (STATE.userLocation && STATE.userLocation.speed > 2) ? "Traccar: Moving" : "Traccar: Online";
+              pillText.innerText = (STATE.userLocation && STATE.userLocation.speed > 2) ? "Live GPS" : "Live GPS";
             }
             if (vehicleEl) vehicleEl.classList.remove('gps-signal-lost');
             if (trBadge) {

@@ -318,13 +318,13 @@
   UIPolish.register('sidebarRecentPills', () => {
     const header = document.querySelector('.sidebar-header');
     const searchInput = document.getElementById('search-input');
-    const chipRow = header ? header.querySelector('.filter-chip-row') : null;
-    if (!header || !searchInput || !chipRow) return;
+    const insertBeforeTarget = header ? (header.querySelector('.category-carousel-wrapper') || header.querySelector('.segmented-control') || header.querySelector('.filter-chip-row')) : null;
+    if (!header || !searchInput || !insertBeforeTarget) return;
 
     const row = document.createElement('div');
     row.className = 'recent-searches-row';
     row.id = 'sidebar-recent-row';
-    header.insertBefore(row, chipRow);
+    header.insertBefore(row, insertBeforeTarget);
 
     const render = () => {
       const items = (window.__openparkRecent && window.__openparkRecent.load()) || [];
@@ -905,7 +905,16 @@
       const ctx = up.getCtx();
       const aiCount = (ctx.AIScannerEngine && Array.isArray(ctx.AIScannerEngine.results)) ? ctx.AIScannerEngine.results.length : 0;
       const lotCount = lotsCountEl ? parseInt(lotsCountEl.textContent || '0', 10) : 0;
-      tabExplore.textContent = aiCount > 0 ? `Explore (${aiCount} • ≤1km)` : lotCount > 0 ? `Explore (${lotCount})` : 'Explore';
+      const label = aiCount > 0 ? `Explore (${aiCount})` : lotCount > 0 ? `Explore (${lotCount})` : 'Explore';
+      const span = tabExplore.querySelector('span');
+      if (span) {
+        span.textContent = label;
+      } else {
+        tabExplore.innerHTML = `
+          <svg class="svg-icon-xs" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          <span>${label}</span>
+        `;
+      }
     };
 
     if (aiList) new MutationObserver(updateTabLabel).observe(aiList, { childList: true });
