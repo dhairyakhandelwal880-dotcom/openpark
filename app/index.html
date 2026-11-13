@@ -428,20 +428,23 @@
       text-decoration: underline;
     }
 
-    /* Top Banners (Turn & Alert) */
+    /* Top Dynamic Island Container */
     .banner-container {
       position: absolute;
-      top: 16px;
+      top: 18px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 25;
+      z-index: 100 !important;
       display: flex;
       flex-direction: column;
       align-items: center;
       gap: 8px;
-      width: 90%;
-      max-width: 440px;
       pointer-events: none;
+    }
+    @media (min-width: 901px) {
+      body:not(.sidebar-collapsed) .banner-container {
+        left: calc(50% + 140px);
+      }
     }
 
     .banner {
@@ -2667,6 +2670,10 @@
           <div style="font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--color-text-tertiary);">Turn-by-turn guidance</div>
           <div id="trip-step-list" style="display: flex; flex-direction: column; gap: 6px;"></div>
 
+          <button class="btn-pill-primary" id="btn-simulate-trip-action" style="background: linear-gradient(135deg, #00f2fe 0%, #0072ff 100%); color: #050b14; font-weight: 800; border: none; box-shadow: 0 4px 16px rgba(0,242,254,0.35); display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <svg class="svg-icon-sm" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <span id="btn-simulate-trip-label">Start Simulated Drive</span>
+          </button>
           <button class="btn-pill-secondary" id="btn-end-trip" style="color: var(--status-full); border-color: rgba(239, 68, 68, 0.4);">
             End Navigation
           </button>
@@ -2963,16 +2970,12 @@
       </svg>
     </button>
     <div class="hud-divider"></div>
-    <button class="cluster-btn pressable" id="btn-toggle-heatmap" aria-label="Toggle live street parking heatmap" title="Toggle Real-Time Street Parking Probability Heatmap [Radar Vacancy]">
-      <svg class="svg-icon" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/>
-        <path d="M12 7a5 5 0 0 1 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        <circle cx="12" cy="12" r="2" fill="currentColor"/>
-      </svg>
-    </button>
-    <div class="hud-divider"></div>
     <button class="cluster-btn pressable" id="btn-hud-ai-scan" aria-label="AI Scan Map for Empty Grounds and Mall Lots" title="AI Scan Visible Map for Empty Grounds, Malls & Legal Bays">
       <svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+    </button>
+    <div class="hud-divider"></div>
+    <button class="cluster-btn pressable" id="btn-test-dynamic-island" aria-label="Test Apple Dynamic Island Driving Simulation" title="Test Dynamic Island Driving HUD [Live Simulation]">
+      <svg class="svg-icon" viewBox="0 0 24 24" style="color: #00f2fe;"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
     </button>
     <div class="hud-divider"></div>
     <button class="cluster-btn pressable" id="btn-toggle-layers" aria-label="Switch between Satellite Hybrid and GMap Full Detail Retina" title="Switch Map: Google Satellite Hybrid ⇄ GMap Full Detail Retina">
@@ -2983,19 +2986,6 @@
         <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
       </svg>
     </button>
-  </div>
-
-  <!-- Floating Street Parking Heatmap Legend -->
-  <div id="heatmap-legend" class="heatmap-legend-pill apple-glass" style="display: none;" role="status" aria-label="Street parking vacancy legend">
-    <div class="legend-header">
-      <span class="legend-radar-dot"></span>
-      <span class="legend-title">Live Street Vacancy</span>
-    </div>
-    <div class="legend-scale">
-      <div class="scale-item"><span class="scale-dot green"></span><span>&gt;65% High</span></div>
-      <div class="scale-item"><span class="scale-dot amber"></span><span>30-65% Tight</span></div>
-      <div class="scale-item"><span class="scale-dot red"></span><span>&lt;30% Full</span></div>
-    </div>
   </div>
 
   <!-- Bottom-Left Desktop Telemetry HUD -->
@@ -3524,7 +3514,6 @@
         isTrackingLocation: false,
         isCameraFollowing: true,
         is3D: false,
-        showHeatmap: false,
         activeFilter: 'all',
         activeTab: 'explore',
         lots: [],
@@ -5594,10 +5583,6 @@
               }
             });
           }
-
-          if (typeof ParkingHeatmapEngine !== 'undefined') {
-            ParkingHeatmapEngine.setupLayers();
-          }
         },
 
         async setupOverpassLayers() {
@@ -6151,6 +6136,31 @@
             ParkingApp.showToast(`Map Style: ${styleLabels[nextStyle]}`);
             MapEngine.switchMapStyle(nextStyle);
           };
+
+          // 1-Click Test Dynamic Island Navigation HUD & Drive Simulation
+          const testNavBtn = document.getElementById('btn-test-dynamic-island');
+          if (testNavBtn) {
+            testNavBtn.onclick = () => {
+              NavigationEngine.demoDynamicIsland();
+            };
+          }
+
+          const simTripBtn = document.getElementById('btn-simulate-trip-action');
+          if (simTripBtn) {
+            simTripBtn.onclick = () => {
+              if (NavigationEngine.isSimulating) {
+                NavigationEngine.isSimulating = false;
+                const lbl = document.getElementById('btn-simulate-trip-label');
+                if (lbl) lbl.innerText = 'Resume Simulated Drive';
+                ParkingApp.showToast("Drive Simulation Paused", "info");
+              } else {
+                NavigationEngine.startSimulation();
+                const lbl = document.getElementById('btn-simulate-trip-label');
+                if (lbl) lbl.innerText = 'Pause Simulated Drive';
+                ParkingApp.showToast("Driving Simulation Running • Dynamic Island Active", "success");
+              }
+            };
+          }
 
           // Native Fullscreen API handler
           const fsBtn = document.getElementById('btn-fullscreen');
@@ -7415,16 +7425,16 @@
           document.getElementById('trip-active-content').style.display = 'flex';
           document.getElementById('trip-dest-name').innerText = lot.name;
 
-          // Fetch route from Traccar OSRM Road Router
-          await this.loadRoute(STATE.userLocation, lot);
-
-          // Activate Apple Dynamic Island Navigation HUD top-center
+          // Activate Apple Dynamic Island Navigation HUD IMMEDIATELY for instant fluid response
           if (typeof DynamicIslandNav !== 'undefined') {
             DynamicIslandNav.activate(lot);
           } else {
             const banner = document.getElementById('nav-turn-banner');
             if (banner) banner.style.display = 'flex';
           }
+
+          // Fetch route from Traccar OSRM Road Router
+          await this.loadRoute(STATE.userLocation, lot);
           const voiceBtn = document.getElementById('btn-nav-voice-toggle');
           if (voiceBtn) {
             voiceBtn.onclick = (e) => {
@@ -7455,8 +7465,25 @@
             }
           });
 
-          // When clicking direction: ONLY show the route path, DO NOT start moving
-          this.isSimulating = false;
+          // Automatically engage live driving simulation with Dynamic Island
+          this.startSimulation();
+        },
+
+        demoDynamicIsland() {
+          let testLot = (STATE.lots && STATE.lots.length > 0) ? STATE.lots[0] : null;
+          if (!testLot) {
+            testLot = {
+              id: 'test-hub-01',
+              name: 'UB City Multi-Level Tech Garage',
+              lat: 12.9716,
+              lon: 77.5946,
+              total_spots: 160,
+              free_spots: 24,
+              price_car: '₹40'
+            };
+          }
+          this.startTrip(testLot);
+          ParkingApp.showToast("Dynamic Island Driving HUD Active • Live Simulation Running", "success", 3200);
         },
 
         updateEtaDisplay(durationMinutes) {
@@ -8021,6 +8048,10 @@
           document.getElementById('trip-active-content').style.display = 'none';
           document.getElementById('trip-idle-state').style.display = 'block';
           UIController.switchTab('explore');
+        },
+
+        handleCancelTrip() {
+          this.endTrip();
         }
       };
 
@@ -9323,241 +9354,7 @@
       };
 
       // --------------------------------------------------------------------------
-      // 5.11 Real-Time Street Parking Heatmap & Spot Probability Engine
-      // --------------------------------------------------------------------------
-      const ParkingHeatmapEngine = {
-        isVisible: false,
-        corridorsData: null,
-        popup: null,
-
-        init() {
-          const btn = document.getElementById('btn-toggle-heatmap');
-          if (btn) {
-            btn.onclick = () => this.toggle();
-          }
-        },
-
-        generateCorridors(centerLat, centerLon) {
-          const lat = Number.isFinite(Number(centerLat)) ? Number(centerLat) : CONFIG.DEFAULT_COORDS[1];
-          const lon = Number.isFinite(Number(centerLon)) ? Number(centerLon) : CONFIG.DEFAULT_COORDS[0];
-
-          const metersToDegLat = 1 / 111320;
-          const metersToDegLng = 1 / (111320 * Math.cos(lat * Math.PI / 180));
-
-          const features = [];
-          const now = new Date();
-          const hour = now.getHours();
-          const isRushHour = (hour >= 9 && hour <= 11) || (hour >= 17 && hour <= 20);
-
-          // Canonical street avenues around Bangalore / active coordinates
-          const streets = [
-            { name: "MG Road Main Corridor", baseProb: isRushHour ? 22 : 45, dLat: 0.0018, dLng: 0.0065 },
-            { name: "Brigade Road Commercial Strip", baseProb: isRushHour ? 15 : 32, dLat: 0.0055, dLng: -0.0015 },
-            { name: "Residency Road Avenue", baseProb: isRushHour ? 38 : 68, dLat: -0.0022, dLng: 0.0058 },
-            { name: "Church Street Pedestrian Lane", baseProb: 12, dLat: 0.0012, dLng: 0.0042 },
-            { name: "Lavelle Road High-Street", baseProb: isRushHour ? 58 : 82, dLat: -0.0042, dLng: 0.0035 },
-            { name: "St. Marks Road Corridor", baseProb: isRushHour ? 42 : 74, dLat: 0.0035, dLng: -0.0032 },
-            { name: "Richmond Road Crossway", baseProb: isRushHour ? 48 : 79, dLat: -0.0055, dLng: 0.0048 },
-            { name: "Vittal Mallya Road Parkside", baseProb: isRushHour ? 65 : 88, dLat: -0.0030, dLng: -0.0045 },
-            { name: "Cubbon Road Perimeter", baseProb: isRushHour ? 70 : 92, dLat: 0.0045, dLng: 0.0052 },
-            { name: "Museum Road Quiet Bays", baseProb: isRushHour ? 52 : 84, dLat: -0.0015, dLng: -0.0028 }
-          ];
-
-          streets.forEach((st, idx) => {
-            const startLng = lon + st.dLng * 0.2;
-            const startLat = lat + st.dLat * 0.2;
-            const endLng = lon + st.dLng;
-            const endLat = lat + st.dLat;
-
-            // Compute vacancy probability & color tier
-            const prob = Math.min(96, Math.max(8, st.baseProb + Math.floor(Math.sin(idx + hour) * 8)));
-            let color = '#00f5a0'; // High vacancy (>65%)
-            let tier = 'High Vacancy';
-            let tierClass = 'green';
-            let turnover = 'Fast (~3-5 min turnover)';
-            let estimatedSpots = Math.max(1, Math.round((prob / 100) * 24));
-
-            if (prob < 30) {
-              color = '#ef4444'; // Congested (<30%)
-              tier = 'Congested';
-              tierClass = 'red';
-              turnover = 'Saturated (Expect >15 min queue)';
-              estimatedSpots = Math.max(0, Math.round((prob / 100) * 8));
-            } else if (prob <= 65) {
-              color = '#f59e0b'; // Moderate (30-65%)
-              tier = 'Moderate';
-              tierClass = 'amber';
-              turnover = 'Active (~8-10 min turnover)';
-              estimatedSpots = Math.max(2, Math.round((prob / 100) * 16));
-            }
-
-            // Subdivide corridor into smooth polyline
-            const midLng = (startLng + endLng) / 2 + (Math.sin(idx * 2) * 0.0003);
-            const midLat = (startLat + endLat) / 2 + (Math.cos(idx * 2) * 0.0003);
-
-            features.push({
-              type: 'Feature',
-              properties: {
-                id: `heat-corridor-${idx}`,
-                streetName: st.name,
-                probability: prob,
-                tier: tier,
-                tierClass: tierClass,
-                color: color,
-                estimatedSpots: estimatedSpots,
-                turnover: turnover
-              },
-              geometry: {
-                type: 'LineString',
-                coordinates: [
-                  [startLng, startLat],
-                  [midLng, midLat],
-                  [endLng, endLat]
-                ]
-              }
-            });
-          });
-
-          return {
-            type: 'FeatureCollection',
-            features: features
-          };
-        },
-
-        setupLayers() {
-          if (!MapEngine.map) return;
-          const map = MapEngine.map;
-
-          if (!map.getSource('street-parking-heatmap')) {
-            const center = map.getCenter ? map.getCenter() : { lat: CONFIG.DEFAULT_COORDS[1], lng: CONFIG.DEFAULT_COORDS[0] };
-            this.corridorsData = this.generateCorridors(center.lat, center.lng);
-            map.addSource('street-parking-heatmap', {
-              type: 'geojson',
-              data: this.corridorsData
-            });
-          }
-
-          // Outer glowing ambient radar blur
-          if (!map.getLayer('heatmap-glow')) {
-            map.addLayer({
-              id: 'heatmap-glow',
-              type: 'line',
-              source: 'street-parking-heatmap',
-              layout: { 'line-join': 'round', 'line-cap': 'round' },
-              paint: {
-                'line-color': ['get', 'color'],
-                'line-width': 14,
-                'line-blur': 1.4,
-                'line-opacity': this.isVisible ? 0.45 : 0.0
-              }
-            });
-          }
-
-          // Core sharp illuminated street corridor
-          if (!map.getLayer('heatmap-core')) {
-            map.addLayer({
-              id: 'heatmap-core',
-              type: 'line',
-              source: 'street-parking-heatmap',
-              layout: { 'line-join': 'round', 'line-cap': 'round' },
-              paint: {
-                'line-color': ['get', 'color'],
-                'line-width': 4.5,
-                'line-opacity': this.isVisible ? 0.95 : 0.0
-              }
-            });
-          }
-
-          // Tooltip interactions
-          if (!map._heatmapEventsBound) {
-            map._heatmapEventsBound = true;
-            this.popup = new maplibregl.Popup({
-              closeButton: false,
-              closeOnClick: false,
-              className: 'heatmap-tooltip-popup',
-              offset: [0, -8]
-            });
-
-            map.on('mouseenter', 'heatmap-core', (e) => {
-              if (!this.isVisible) return;
-              map.getCanvas().style.cursor = 'pointer';
-              if (e.features && e.features[0]) {
-                const p = e.features[0].properties;
-                const coords = e.lngLat;
-                this.popup.setLngLat(coords)
-                  .setHTML(`
-                    <div class="heatmap-popup-content">
-                      <div class="heatmap-popup-title">${p.streetName}</div>
-                      <div class="heatmap-popup-prob">
-                        <span class="heatmap-prob-badge ${p.tierClass}">${p.probability}% Vacancy</span>
-                        <span class="heatmap-spots-badge">~${p.estimatedSpots} bays open</span>
-                      </div>
-                      <div class="heatmap-popup-turnover">${p.turnover}</div>
-                    </div>
-                  `)
-                  .addTo(map);
-              }
-            });
-
-            map.on('mouseleave', 'heatmap-core', () => {
-              map.getCanvas().style.cursor = '';
-              if (this.popup) this.popup.remove();
-            });
-
-            map.on('click', 'heatmap-core', (e) => {
-              if (!this.isVisible) return;
-              if (e.features && e.features[0]) {
-                const p = e.features[0].properties;
-                ParkingApp.showToast(`Selected ${p.streetName} (${p.probability}% parking chance)`, "info");
-              }
-            });
-          }
-        },
-
-        toggle(forceState) {
-          this.isVisible = (forceState !== undefined) ? !!forceState : !this.isVisible;
-          STATE.showHeatmap = this.isVisible;
-
-          const btn = document.getElementById('btn-toggle-heatmap');
-          const legend = document.getElementById('heatmap-legend');
-
-          if (btn) {
-            btn.classList.toggle('active-heatmap', this.isVisible);
-            btn.setAttribute('aria-pressed', String(this.isVisible));
-          }
-          if (legend) {
-            legend.style.display = this.isVisible ? 'flex' : 'none';
-          }
-
-          if (!MapEngine.map) return;
-          this.setupLayers();
-
-          const opacityGlow = this.isVisible ? 0.45 : 0.0;
-          const opacityCore = this.isVisible ? 0.95 : 0.0;
-
-          if (MapEngine.map.getLayer('heatmap-glow')) {
-            MapEngine.map.setPaintProperty('heatmap-glow', 'line-opacity', opacityGlow);
-          }
-          if (MapEngine.map.getLayer('heatmap-core')) {
-            MapEngine.map.setPaintProperty('heatmap-core', 'line-opacity', opacityCore);
-          }
-
-          if (this.isVisible) {
-            const center = MapEngine.map.getCenter ? MapEngine.map.getCenter() : { lat: CONFIG.DEFAULT_COORDS[1], lng: CONFIG.DEFAULT_COORDS[0] };
-            const src = MapEngine.map.getSource('street-parking-heatmap');
-            if (src) {
-              src.setData(this.generateCorridors(center.lat, center.lng));
-            }
-            ParkingApp.showToast("Live Street Parking Heatmap Active", "info", 2600);
-          } else {
-            if (this.popup) this.popup.remove();
-            ParkingApp.showToast("Street Parking Heatmap Hidden", "info", 1800);
-          }
-        }
-      };
-
-      // --------------------------------------------------------------------------
-      // 5.12 Apple Dynamic Island Driving Navigation Controller
+      // 5.11 Apple Dynamic Island Driving Navigation Controller
       // --------------------------------------------------------------------------
       const DynamicIslandNav = {
         isExpanded: false,
@@ -9567,6 +9364,7 @@
           const chevronBtn = document.getElementById('btn-island-expand-toggle');
           const cancelBtn = document.getElementById('btn-island-cancel-trip');
           const trigger = document.getElementById('island-compact-trigger');
+          const voiceBtn = document.getElementById('btn-nav-voice-toggle');
 
           if (chevronBtn) {
             chevronBtn.onclick = (e) => {
@@ -9575,12 +9373,31 @@
             };
           }
           if (trigger) {
-            trigger.onclick = () => this.toggleExpand();
+            trigger.onclick = (e) => {
+              if (e.target.closest('#btn-nav-voice-toggle') || e.target.closest('#btn-island-expand-toggle')) return;
+              this.toggleExpand();
+            };
           }
           if (cancelBtn) {
             cancelBtn.onclick = (e) => {
               e.stopPropagation();
-              NavigationEngine.handleCancelTrip();
+              NavigationEngine.endTrip();
+            };
+          }
+          if (voiceBtn) {
+            voiceBtn.onclick = (e) => {
+              e.stopPropagation();
+              STATE.config.voiceAlerts = !STATE.config.voiceAlerts;
+              const icon = document.getElementById('nav-voice-icon');
+              if (icon) {
+                icon.innerHTML = STATE.config.voiceAlerts
+                  ? '<svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>'
+                  : '<svg class="svg-icon-xs" viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+              }
+              const chk = document.getElementById('toggle-voice-alerts');
+              if (chk) chk.checked = STATE.config.voiceAlerts;
+              ParkingApp.showToast(STATE.config.voiceAlerts ? "Voice guidance ON" : "Voice guidance MUTED", "info");
+              if (STATE.config.voiceAlerts) NavigationEngine.speak("Voice guidance enabled.");
             };
           }
         },
@@ -9675,15 +9492,15 @@
 
       // Bootstrap on DOM ready
       window.addEventListener('DOMContentLoaded', () => {
-        window.__openpark = { STATE, MapEngine, UIController, ParkingApp, AIScannerEngine, WelcomeController, ParkingHeatmapEngine, DynamicIslandNav };
+        window.__openpark = { STATE, MapEngine, UIController, ParkingApp, AIScannerEngine, WelcomeController, DynamicIslandNav, NavigationEngine };
         window.MapEngine = MapEngine;
         window.STATE = STATE;
         window.ParkingApp = ParkingApp;
-        window.ParkingHeatmapEngine = ParkingHeatmapEngine;
+        window.NavigationEngine = NavigationEngine;
         window.DynamicIslandNav = DynamicIslandNav;
+        window.testDynamicIsland = () => NavigationEngine.demoDynamicIsland();
         ParkingApp.init();
         AIScannerEngine.init();
-        ParkingHeatmapEngine.init();
         DynamicIslandNav.init();
         window.dispatchEvent(new CustomEvent('openpark:ready', { detail: window.__openpark }));
       });
