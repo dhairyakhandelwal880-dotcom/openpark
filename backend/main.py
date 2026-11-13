@@ -454,6 +454,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.middleware("http")
+async def add_dev_no_cache_header(request: Request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith("/app") or path.startswith("/dashboard") or path.endswith(".html") or path.endswith(".css") or path.endswith(".js"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 APP_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "app"))
 DASHBOARD_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "dashboard"))
