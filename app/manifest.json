@@ -1,0 +1,19 @@
+{
+  "name": "OpenPark — Smart Mobility & Live GPS Telemetry",
+  "short_name": "OpenPark",
+  "description": "Next-Gen Urban Parking, AI Spatial Spot Scanner & Real-Time GPS Telemetry",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#06080F",
+  "theme_color": "#00F2FE",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='128' fill='%2306080F'/%3E%3Ccircle cx='256' cy='256' r='200' fill='none' stroke='%2300F2FE' stroke-width='24' stroke-opacity='0.4'/%3E%3Cpath d='M192 384V144h96a64 64 0 0 1 0 128h-96' fill='none' stroke='%2300F2FE' stroke-width='36' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='384' cy='128' r='24' fill='%2300F5A0'/%3E%3C/svg%3E",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

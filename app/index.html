@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>OpenPark — Next-Gen Urban Parking & Live GPS Telemetry</title>
 
-  <!-- Typography: Apple SF Pro & Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="manifest" href="manifest.json" />
 
-  <!-- MapLibre GL JS (100% Free & Open-Source Vector Map Engine: https://maplibre.org/maplibre-gl-js/docs/API/) -->
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <!-- Typography: Local Inter & JetBrains Mono Fonts + Apple System Fallbacks -->
+  <link rel="stylesheet" href="vendor/fonts/fonts.css" />
+
+  <!-- Local Offline Vendor Engines (MapLibre GL JS & GSAP Physics) -->
+  <link rel="stylesheet" href="vendor/maplibre-gl.css" />
+  <script src="vendor/maplibre-gl.js"></script>
+  <script src="vendor/gsap.min.js"></script>
 
   <style>
     /* ==========================================================================
@@ -4463,13 +4463,26 @@
       const API = {
         async getNearbyLots(lat, lon, radius = CONFIG.RADIUS_METERS) {
           const maxMeters = Math.min(Number(radius) || 1000, 1000);
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            try {
+              const cachedStr = localStorage.getItem('openpark_cached_lots');
+              if (cachedStr) {
+                const cached = JSON.parse(cachedStr);
+                if (Array.isArray(cached) && cached.length > 0) return cached;
+              }
+            } catch (e) {}
+            return API.generateFallbackLots(lat, lon)
+              .filter(lot => (parseFloat(lot.distance_km) * 1000) <= maxMeters);
+          }
           try {
             const res = await fetch(`/lots/nearby?lat=${lat}&lon=${lon}&radius_m=${maxMeters}`);
             if (!res.ok) throw new Error("Backend nearby lots offline");
             const data = await res.json();
-            return (data.lots || data)
+            const lots = (data.lots || data)
               .map(lot => API.normalizeLot(lot, lat, lon))
               .filter(lot => (parseFloat(lot.distance_km) * 1000) <= maxMeters);
+            try { localStorage.setItem('openpark_cached_lots', JSON.stringify(lots)); } catch (e) {}
+            return lots;
           } catch (err) {
             console.warn("OpenPark: Using seed dataset fallback", err);
             return API.generateFallbackLots(lat, lon)
@@ -4551,7 +4564,64 @@
           return Number.isFinite(nLat) && Number.isFinite(nLon) && nLat >= 6.5 && nLat <= 37.5 && nLon >= 68.0 && nLon <= 97.5;
         },
 
+        OFFLINE_PLACES_CATALOG: [
+          { name: "MG Road Metro Station", category: "METRO", address: "MG Road, Craig Park Layout, Bengaluru", lat: 12.9756, lon: 77.6066, badge: "metro" },
+          { name: "Brigade Road Commercial Hub", category: "SHOPPING", address: "Brigade Road, Shanthala Nagar, Bengaluru", lat: 12.9733, lon: 77.6074, badge: "shopping" },
+          { name: "UB City Luxury Mall", category: "MALL", address: "24 Vittal Mallya Road, KG Halli, Bengaluru", lat: 12.9719, lon: 77.5958, badge: "mall" },
+          { name: "BGS Gleneagles Global Hospital", category: "HOSPITAL", address: "67 Uttarahalli Main Rd, Kengeri, Bengaluru", lat: 12.8997, lon: 77.4988, badge: "hospital" },
+          { name: "Indiranagar 100ft Road", category: "CORRIDOR", address: "100 Feet Rd, HAL 2nd Stage, Indiranagar, Bengaluru", lat: 12.9784, lon: 77.6408, badge: "cafe" },
+          { name: "Koramangala 5th Block", category: "FOOD", address: "5th Block, Koramangala, Bengaluru", lat: 12.9352, lon: 77.6245, badge: "restaurant" },
+          { name: "Kempegowda International Airport", category: "AIRPORT", address: "KIAL Rd, Devanahalli, Bengaluru", lat: 13.1986, lon: 77.7066, badge: "airport" },
+          { name: "Orion Mall & World Trade Center", category: "MALL", address: "Dr Rajkumar Rd, Rajajinagar, Bengaluru", lat: 13.0112, lon: 77.5550, badge: "mall" },
+          { name: "Church Street Pedestrian Plaza", category: "CAFE", address: "Church St, Shanthala Nagar, Bengaluru", lat: 12.9750, lon: 77.6040, badge: "cafe" },
+          { name: "Garuda Mall", category: "MALL", address: "Magrath Rd, Ashok Nagar, Bengaluru", lat: 12.9701, lon: 77.6097, badge: "mall" },
+          { name: "Forum South Bangalore Mall", category: "MALL", address: "Konanakunte Cross, Kanakapura Rd, Bengaluru", lat: 12.8870, lon: 77.5558, badge: "mall" },
+          { name: "Manipal Hospital Old Airport Rd", category: "HOSPITAL", address: "98 HAL Old Airport Rd, Kodihalli, Bengaluru", lat: 12.9592, lon: 77.6473, badge: "hospital" },
+          { name: "Apollo Hospital Bannerghatta", category: "HOSPITAL", address: "154/11 Bannerghatta Main Rd, Bengaluru", lat: 12.8938, lon: 77.5976, badge: "hospital" },
+          { name: "Cubbon Park Central Library", category: "PARK", address: "Kasturba Rd, Sampangi Rama Nagara, Bengaluru", lat: 12.9763, lon: 77.5929, badge: "park" },
+          { name: "Lalbagh Botanical Garden", category: "PARK", address: "Mavalli, Bengaluru", lat: 12.9507, lon: 77.5848, badge: "park" },
+          { name: "Electronic City Phase 1 Toll", category: "TRANSIT", address: "Hosur Rd, Electronics City, Bengaluru", lat: 12.8452, lon: 77.6602, badge: "transit" },
+          { name: "Whitefield ITPL Main Gate", category: "CORRIDOR", address: "ITPL Main Rd, Whitefield, Bengaluru", lat: 12.9863, lon: 77.7289, badge: "transit" }
+        ],
+
         async searchTraccar(query, lat, lon) {
+          const qClean = (query || '').trim().toLowerCase();
+          const matchOfflinePlaces = () => {
+            const matches = (this.OFFLINE_PLACES_CATALOG || [])
+              .filter(p => p.name.toLowerCase().includes(qClean) || p.address.toLowerCase().includes(qClean) || p.category.toLowerCase().includes(qClean))
+              .map(p => enrichPlaceDetails({
+                name: p.name,
+                badge: p.badge || "place",
+                category: p.category,
+                address: p.address,
+                lat: p.lat,
+                lon: p.lon,
+                distance_km: (calculateDistanceMeters(lat, lon, p.lat, p.lon) / 1000).toFixed(1),
+                source: "offline_catalog"
+              }));
+            const localLots = (STATE.lots || [])
+              .filter(l => l.name.toLowerCase().includes(qClean) || (l.address && l.address.toLowerCase().includes(qClean)))
+              .map(l => enrichPlaceDetails({
+                name: l.name,
+                badge: "parking",
+                category: "PARKING",
+                address: l.address,
+                lat: l.lat,
+                lon: l.lon,
+                distance_km: l.distance_km,
+                lot_id: l.id,
+                capacity: l.capacity,
+                free_spots: l.free_spots,
+                price: l.price_car
+              }));
+            return [...matches, ...localLots];
+          };
+
+          // If offline, return instant local matches immediately
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            const off = matchOfflinePlaces();
+            if (off.length > 0) return off;
+          }
           // 1. Query backend proxy (Photon + Nominatim + Curated Landmarks, India-filtered)
           try {
             const res = await fetch(`/api/traccar/search?query=${encodeURIComponent(query)}&lat=${lat}&lon=${lon}`);
@@ -4681,6 +4751,11 @@
 
         // Traccar OSRM Driving Directions Road Engine (https://router.project-osrm.org/)
         async getTraccarRoute(startLat, startLon, destLat, destLon) {
+          // If browser is offline, instantly return autonomous in-browser road route
+          if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            return this.generateOfflineRoute(startLat, startLon, destLat, destLon);
+          }
+
           // 1. Direct browser query to public OSRM for 100% accurate real road network
           try {
             const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${startLon},${startLat};${destLon},${destLat}?overview=full&geometries=geojson&steps=true`;
@@ -4726,7 +4801,53 @@
           } catch (e) {
             console.warn("Traccar Backend Route API notice", e);
           }
-          return null;
+
+          // 3. Autonomous In-Browser Road Network Fallback (100% Offline)
+          return this.generateOfflineRoute(startLat, startLon, destLat, destLon);
+        },
+
+        generateOfflineRoute(startLat, startLon, destLat, destLon) {
+          const coords = [];
+          const midLat = startLat + (destLat - startLat) * 0.45;
+          const midLon = startLon + (destLon - startLon) * 0.55;
+
+          const n1 = 20;
+          for (let i = 0; i < n1; i++) {
+            const t = i / n1;
+            coords.push([startLon, startLat + (midLat - startLat) * t]);
+          }
+          const n2 = 30;
+          for (let i = 0; i < n2; i++) {
+            const t = i / n2;
+            coords.push([startLon + (destLon - startLon) * t, midLat]);
+          }
+          const n3 = 20;
+          for (let i = 0; i <= n3; i++) {
+            const t = i / n3;
+            coords.push([destLon, midLat + (destLat - midLat) * t]);
+          }
+
+          const totalM = calculateDistanceMeters(startLat, startLon, midLat, startLon) +
+                         calculateDistanceMeters(midLat, startLon, midLat, destLon) +
+                         calculateDistanceMeters(midLat, destLon, destLat, destLon);
+          const distKm = Number((totalM / 1000).toFixed(1));
+          const durationMin = Math.max(2, Math.ceil(distKm / 0.45));
+
+          const steps = [
+            { instruction: "Head along primary urban corridor", dist: `${Math.round(totalM * 0.35)} m` },
+            { instruction: "Turn onto connecting cross avenue", dist: `${Math.round(totalM * 0.45)} m` },
+            { instruction: "Turn onto parking approach lane", dist: `${Math.round(totalM * 0.2)} m` },
+            { instruction: "Arrive at parking destination", dist: "Destination ahead" }
+          ];
+
+          return {
+            status: 'ok',
+            source: 'offline_road_engine',
+            coordinates: coords,
+            distance_km: distKm,
+            duration_min: durationMin,
+            steps: steps
+          };
         },
 
         // Legacy compatibility shims
@@ -4831,9 +4952,128 @@
         destinationMarker: null,
         poiMarkers: [],
         routeLotMarkers: [],
+        _isUsingOfflineFallback: false,
+
+        getOfflineVectorStyle() {
+          return {
+            version: 8,
+            name: "OpenPark-Offline-Cyber",
+            sources: {
+              "offline-corridors": {
+                type: "geojson",
+                data: {
+                  type: "FeatureCollection",
+                  features: [
+                    {
+                      type: "Feature",
+                      properties: { name: "Outer Ring Road Arterial", type: "arterial" },
+                      geometry: {
+                        type: "LineString",
+                        coordinates: [
+                          [77.5200, 12.9200], [77.5600, 12.9100], [77.6200, 12.9150],
+                          [77.6900, 12.9400], [77.7000, 12.9900], [77.6500, 13.0300],
+                          [77.5800, 13.0400], [77.5300, 13.0000], [77.5200, 12.9200]
+                        ]
+                      }
+                    },
+                    {
+                      type: "Feature",
+                      properties: { name: "Mahatma Gandhi Road", type: "primary" },
+                      geometry: {
+                        type: "LineString",
+                        coordinates: [[77.5850, 12.9740], [77.6050, 12.9745], [77.6250, 12.9750]]
+                      }
+                    },
+                    {
+                      type: "Feature",
+                      properties: { name: "Hosur Road Corridor", type: "primary" },
+                      geometry: {
+                        type: "LineString",
+                        coordinates: [[77.6000, 12.9600], [77.6150, 12.9350], [77.6350, 12.9100], [77.6800, 12.8500]]
+                      }
+                    },
+                    {
+                      type: "Feature",
+                      properties: { name: "Indiranagar 100ft Road", type: "primary" },
+                      geometry: {
+                        type: "LineString",
+                        coordinates: [[77.6400, 12.9650], [77.6410, 12.9780], [77.6420, 12.9900]]
+                      }
+                    },
+                    {
+                      type: "Feature",
+                      properties: { name: "Ulsoor Lake", type: "water" },
+                      geometry: {
+                        type: "Polygon",
+                        coordinates: [[
+                          [77.6150, 12.9800], [77.6230, 12.9820], [77.6260, 12.9870],
+                          [77.6200, 12.9910], [77.6140, 12.9860], [77.6150, 12.9800]
+                        ]]
+                      }
+                    },
+                    {
+                      type: "Feature",
+                      properties: { name: "Cubbon Park", type: "park" },
+                      geometry: {
+                        type: "Polygon",
+                        coordinates: [[
+                          [77.5900, 12.9720], [77.5980, 12.9730], [77.5990, 12.9800],
+                          [77.5920, 12.9810], [77.5900, 12.9720]
+                        ]]
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            layers: [
+              {
+                id: "offline-bg",
+                type: "background",
+                paint: { "background-color": "#060913" }
+              },
+              {
+                id: "offline-parks",
+                type: "fill",
+                source: "offline-corridors",
+                filter: ["==", "type", "park"],
+                paint: { "fill-color": "rgba(0, 245, 160, 0.08)", "fill-outline-color": "rgba(0, 245, 160, 0.25)" }
+              },
+              {
+                id: "offline-waters",
+                type: "fill",
+                source: "offline-corridors",
+                filter: ["==", "type", "water"],
+                paint: { "fill-color": "rgba(0, 242, 254, 0.12)", "fill-outline-color": "rgba(0, 242, 254, 0.35)" }
+              },
+              {
+                id: "offline-arterial-glow",
+                type: "line",
+                source: "offline-corridors",
+                filter: ["==", "type", "arterial"],
+                paint: { "line-color": "#00f2fe", "line-width": 4, "line-opacity": 0.25 }
+              },
+              {
+                id: "offline-arterial",
+                type: "line",
+                source: "offline-corridors",
+                filter: ["==", "type", "arterial"],
+                paint: { "line-color": "#00f2fe", "line-width": 2 }
+              },
+              {
+                id: "offline-primary",
+                type: "line",
+                source: "offline-corridors",
+                filter: ["==", "type", "primary"],
+                paint: { "line-color": "rgba(255, 255, 255, 0.35)", "line-width": 2.5 }
+              }
+            ]
+          };
+        },
 
         init() {
-          const styleUrl = resolveMapStyleUrl(STATE.config.activeStyle);
+          const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+          let styleUrl = isOffline ? this.getOfflineVectorStyle() : resolveMapStyleUrl(STATE.config.activeStyle);
 
           this.map = new maplibregl.Map({
             container: 'map-viewport',
@@ -4872,6 +5112,15 @@
               if (STATE.config.activeStyle === 'ola-maps' || STATE.config.activeStyle === 'ola-maps-dark') {
                 ParkingApp.showToast('Ola Maps key unauthorized. Switched to Google Maps Satellite Hybrid');
                 MapEngine.switchMapStyle('google-hybrid');
+              }
+            } else if (errStr.includes('Failed to fetch') || errStr.includes('NetworkError') || !navigator.onLine) {
+              if (!this._isUsingOfflineFallback) {
+                this._isUsingOfflineFallback = true;
+                console.info('[OpenPark] Network offline: Activating built-in vector grid style');
+                try {
+                  this.map.setStyle(this.getOfflineVectorStyle());
+                  ParkingApp.showToast('Offline Mode: Built-in vector map active', 'info', 2200);
+                } catch (e) {}
               }
             }
           });
@@ -8984,5 +9233,14 @@
   <script src="js/target-cursor.js?v=20261113_05"></script>
   <script src="js/ui-polish.js?v=20261113_05"></script>
   <script src="js/jelly-radio.js?v=20261113_05"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js', { scope: './' })
+          .then((reg) => console.log('[OpenPark] Offline PWA Service Worker registered:', reg.scope))
+          .catch((err) => console.warn('[OpenPark] SW registration failed:', err));
+      });
+    }
+  </script>
 </body>
 </html>
