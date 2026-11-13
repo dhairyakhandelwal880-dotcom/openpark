@@ -44,7 +44,7 @@ def run_check(url: str) -> int:
         'id="explore-sort-bar"',
         'id="ai-filter-row"',
         'id="btn-hud-shortcuts"',
-        'Find Parking &amp; AI Scan',
+        'id="btn-ai-scan"',
     ]
     missing = [m for m in required_markers if m not in dom]
     js_errors = [
