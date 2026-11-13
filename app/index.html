@@ -5522,6 +5522,353 @@
               }
             });
           }
+
+          // Initialize 3D Building Extrusions & Aerial City Depth
+          this.setup3DBuildings();
+        },
+
+        generate3DBuildingMesh(centerLng, centerLat) {
+          const cLng = Number.isFinite(Number(centerLng)) ? Number(centerLng) : CONFIG.DEFAULT_COORDS[0];
+          const cLat = Number.isFinite(Number(centerLat)) ? Number(centerLat) : CONFIG.DEFAULT_COORDS[1];
+
+          const metersToDegLat = 1 / 111320;
+          const metersToDegLng = 1 / (111320 * Math.cos(cLat * Math.PI / 180));
+
+          const features = [];
+
+          // Helper to create a rectangular polygon given center, width(m), depth(m)
+          const createRectPolygon = (cx, cy, widthM, depthM) => {
+            const hw = (widthM / 2) * metersToDegLng;
+            const hd = (depthM / 2) * metersToDegLat;
+            return [
+              [
+                [cx - hw, cy - hd],
+                [cx + hw, cy - hd],
+                [cx + hw, cy + hd],
+                [cx - hw, cy + hd],
+                [cx - hw, cy - hd]
+              ]
+            ];
+          };
+
+          // 1. Procedural High-Rise Skyscraper & Tech Park Grid
+          const buildingArchetypes = [
+            { type: 'skyscraper', name: 'Cyber Zenith Tower', height: 135, facade: '#0b1626', roof: '#00f2fe' },
+            { type: 'skyscraper', name: 'Titanium Spire', height: 115, facade: '#09152b', roof: '#00f2fe' },
+            { type: 'skyscraper', name: 'Apex Horizon Center', height: 98, facade: '#0d1b32', roof: '#38bdf8' },
+            { type: 'commercial', name: 'Nexus Tech Plaza', height: 56, facade: '#15172b', roof: '#a855f7' },
+            { type: 'commercial', name: 'Grand Galleria Atrium', height: 42, facade: '#1a1932', roof: '#c084fc' },
+            { type: 'parking_deck', name: 'AeroPark Multi-Level Deck', height: 38, facade: '#06272e', roof: '#00f5a0' },
+            { type: 'parking_deck', name: 'Metro Central EV Garage', height: 32, facade: '#072e29', roof: '#00f5a0' },
+            { type: 'residential', name: 'Solaris Sky Suites', height: 68, facade: '#0e1d38', roof: '#38bdf8' },
+            { type: 'residential', name: 'Emerald Heights', height: 48, facade: '#112240', roof: '#34d399' },
+            { type: 'tech_office', name: 'Silicon Labs Block A', height: 45, facade: '#131e36', roof: '#60a5fa' },
+            { type: 'tech_office', name: 'Quantum Core Campus', height: 62, facade: '#0a192f', roof: '#00f2fe' }
+          ];
+
+          // Deterministic pseudorandom generator based on seed
+          let seed = Math.floor(Math.abs(cLng * 10000 + cLat * 10000));
+          const pseudoRand = () => {
+            seed = (seed * 9301 + 49297) % 233280;
+            return seed / 233280;
+          };
+
+          // Generate structured urban blocks in concentric grid
+          const gridRings = [-3, -2, -1, 0, 1, 2, 3];
+          const stepX = 140; // meters between blocks
+          const stepY = 130;
+
+          gridRings.forEach(gx => {
+            gridRings.forEach(gy => {
+              if (gx === 0 && gy === 0) return; // Keep user location clear for marker
+              
+              const offsetX = (gx * stepX + (pseudoRand() * 30 - 15)) * metersToDegLng;
+              const offsetY = (gy * stepY + (pseudoRand() * 30 - 15)) * metersToDegLat;
+              const bLng = cLng + offsetX;
+              const bLat = cLat + offsetY;
+
+              const archIndex = Math.floor(pseudoRand() * buildingArchetypes.length);
+              const arch = buildingArchetypes[archIndex];
+              const w = 35 + pseudoRand() * 30; // 35m to 65m wide
+              const d = 30 + pseudoRand() * 25; // 30m to 55m deep
+              const hVar = arch.height + (pseudoRand() * 20 - 10);
+
+              features.push({
+                type: 'Feature',
+                properties: {
+                  id: `bld-${gx}-${gy}`,
+                  name: arch.name,
+                  type: arch.type,
+                  height: Math.round(Math.max(18, hVar)),
+                  min_height: 0,
+                  facadeColor: arch.facade,
+                  roofColor: arch.roof,
+                  isParkingDeck: arch.type === 'parking_deck'
+                },
+                geometry: {
+                  type: 'Polygon',
+                  coordinates: createRectPolygon(bLng, bLat, w, d)
+                }
+              });
+            });
+          });
+
+          // 2. Multi-Level Parking Decks at Real Nearby Lots
+          const nearbyLots = (STATE.lots || []).slice(0, 12);
+          nearbyLots.forEach((lot, idx) => {
+            const lotLat = Number(lot.lat !== undefined ? lot.lat : lot.latitude);
+            const lotLon = Number(lot.lon !== undefined ? lot.lon : (lot.lng !== undefined ? lot.lng : lot.longitude));
+            if (!Number.isFinite(lotLat) || !Number.isFinite(lotLon)) return;
+
+            // Offset parking structure slightly so the ground pin is visible
+            const pLng = lotLon + (20 * metersToDegLng);
+            const pLat = lotLat + (15 * metersToDegLat);
+            const spots = lot.total_spots || lot.capacity || 120;
+            const free = lot.free_spots !== undefined ? lot.free_spots : (lot.available || 35);
+            const floors = Math.max(3, Math.min(8, Math.round(spots / 40)));
+            const deckHeight = floors * 4.2; // ~4.2m per deck floor
+
+            features.push({
+              type: 'Feature',
+              properties: {
+                id: `lot-deck-${lot.id || idx}`,
+                lotId: lot.id,
+                name: `${lot.name || 'Parking Facility'} Deck`,
+                type: 'parking_deck',
+                height: Math.round(deckHeight),
+                min_height: 0,
+                facadeColor: '#072e2f',
+                roofColor: '#00f5a0',
+                isParkingDeck: true,
+                spots: spots,
+                freeSpots: free,
+                floors: floors
+              },
+              geometry: {
+                type: 'Polygon',
+                coordinates: createRectPolygon(pLng, pLat, 44, 38)
+              }
+            });
+          });
+
+          return {
+            type: 'FeatureCollection',
+            features: features
+          };
+        },
+
+        setup3DBuildings() {
+          if (!this.map) return;
+
+          // 1. Setup GeoJSON Source
+          if (!this.map.getSource('3d-buildings-mesh')) {
+            const center = this.map.getCenter ? this.map.getCenter() : { lng: CONFIG.DEFAULT_COORDS[0], lat: CONFIG.DEFAULT_COORDS[1] };
+            const mesh = this.generate3DBuildingMesh(center.lng, center.lat);
+            this.map.addSource('3d-buildings-mesh', {
+              type: 'geojson',
+              data: mesh
+            });
+          }
+
+          // 2. 3D Body Extrusion Layer
+          if (!this.map.getLayer('3d-buildings-extrusion')) {
+            this.map.addLayer({
+              id: '3d-buildings-extrusion',
+              type: 'fill-extrusion',
+              source: '3d-buildings-mesh',
+              paint: {
+                'fill-extrusion-color': ['coalesce', ['get', 'facadeColor'], '#0a1628'],
+                'fill-extrusion-height': ['*', ['coalesce', ['get', 'height'], 28], STATE.is3D ? 1.0 : 0.001],
+                'fill-extrusion-base': ['coalesce', ['get', 'min_height'], 0],
+                'fill-extrusion-opacity': STATE.is3D ? 0.90 : 0.0,
+                'fill-extrusion-vertical-gradient': true
+              }
+            });
+          }
+
+          // 3. Illuminated Neon Roofline Cap Layer
+          if (!this.map.getLayer('3d-buildings-roof-neon')) {
+            this.map.addLayer({
+              id: '3d-buildings-roof-neon',
+              type: 'fill-extrusion',
+              source: '3d-buildings-mesh',
+              paint: {
+                'fill-extrusion-color': ['coalesce', ['get', 'roofColor'], '#00f2fe'],
+                'fill-extrusion-height': ['*', ['coalesce', ['get', 'height'], 28], STATE.is3D ? 1.0 : 0.001],
+                'fill-extrusion-base': ['max', 0, ['-', ['*', ['coalesce', ['get', 'height'], 28], STATE.is3D ? 1.0 : 0.001], 2.2]],
+                'fill-extrusion-opacity': STATE.is3D ? 0.96 : 0.0
+              }
+            });
+          }
+
+          // 4. Directional Ambient Light for realistic shadows
+          try {
+            if (this.map.setLight) {
+              this.map.setLight({
+                anchor: 'viewport',
+                color: '#b0d6ff',
+                intensity: 0.45,
+                position: [1.2, 215, 40]
+              });
+            }
+          } catch (e) {}
+
+          // 5. Interactive Building Cursor & Details Popup
+          if (!this.map._3dBuildingEventsBound) {
+            this.map._3dBuildingEventsBound = true;
+            const popup = new maplibregl.Popup({
+              closeButton: false,
+              closeOnClick: false,
+              className: 'building-3d-popup',
+              offset: [0, -10]
+            });
+
+            this.map.on('mouseenter', '3d-buildings-extrusion', (e) => {
+              if (!STATE.is3D) return;
+              this.map.getCanvas().style.cursor = 'pointer';
+              if (e.features && e.features[0]) {
+                const props = e.features[0].properties || {};
+                const coords = e.lngLat;
+                const isDeck = props.isParkingDeck;
+                const iconSvg = isDeck ? '🅿️' : '🏢';
+                const deckBadge = isDeck ? `<span style="background:rgba(0,245,160,0.2); color:#00f5a0; border:1px solid rgba(0,245,160,0.4); border-radius:4px; padding:1px 5px; font-size:9.5px; font-weight:700;">${props.floors || 4} FLOORS</span>` : '';
+                const spotsInfo = isDeck && props.freeSpots !== undefined ? `<div style="font-size:11px; color:#00f5a0; margin-top:2px;">${props.freeSpots} / ${props.spots} bays available</div>` : '';
+
+                popup.setLngLat(coords)
+                  .setHTML(`
+                    <div style="font-family: var(--font-primary, sans-serif); padding: 4px 6px; color: #fff; min-width: 140px;">
+                      <div style="font-weight: 700; font-size: 12.5px; color: ${props.roofColor || '#00f2fe'}; display: flex; align-items: center; gap: 5px;">
+                        <span>${iconSvg}</span>
+                        <span>${props.name || 'City High-Rise'}</span>
+                      </div>
+                      <div style="font-size: 11px; opacity: 0.8; margin-top: 3px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Height: ${Math.round(props.height || 28)}m</span>
+                        ${deckBadge}
+                      </div>
+                      ${spotsInfo}
+                    </div>
+                  `)
+                  .addTo(this.map);
+              }
+            });
+
+            this.map.on('mouseleave', '3d-buildings-extrusion', () => {
+              this.map.getCanvas().style.cursor = '';
+              popup.remove();
+            });
+
+            this.map.on('click', '3d-buildings-extrusion', (e) => {
+              if (e.features && e.features[0]) {
+                const props = e.features[0].properties || {};
+                if (props.isParkingDeck && props.lotId) {
+                  const lot = (STATE.lots || []).find(l => String(l.id) === String(props.lotId));
+                  if (lot) ParkingApp.selectLot(lot);
+                }
+              }
+            });
+
+            // Regenerate mesh when user pans significantly in 3D
+            this.map.on('moveend', () => {
+              if (!STATE.is3D) return;
+              const curCenter = this.map.getCenter();
+              if (!this._lastMeshCenter || calculateDistanceMeters(curCenter.lat, curCenter.lng, this._lastMeshCenter.lat, this._lastMeshCenter.lng) > 350) {
+                this._lastMeshCenter = { lat: curCenter.lat, lng: curCenter.lng };
+                const src = this.map.getSource('3d-buildings-mesh');
+                if (src) {
+                  src.setData(this.generate3DBuildingMesh(curCenter.lng, curCenter.lat));
+                }
+              }
+            });
+          }
+        },
+
+        set3DBuildingHeightScale(scale) {
+          if (!this.map) return;
+          const s = Math.max(0.001, Math.min(1.0, scale));
+          try {
+            if (this.map.getLayer('3d-buildings-extrusion')) {
+              this.map.setPaintProperty('3d-buildings-extrusion', 'fill-extrusion-height', ['*', ['coalesce', ['get', 'height'], 28], s]);
+              this.map.setPaintProperty('3d-buildings-extrusion', 'fill-extrusion-opacity', 0.90 * Math.min(1, s * 1.5));
+            }
+            if (this.map.getLayer('3d-buildings-roof-neon')) {
+              const scaledHeight = ['*', ['coalesce', ['get', 'height'], 28], s];
+              this.map.setPaintProperty('3d-buildings-roof-neon', 'fill-extrusion-height', scaledHeight);
+              this.map.setPaintProperty('3d-buildings-roof-neon', 'fill-extrusion-base', ['max', 0, ['-', scaledHeight, 2.2 * Math.min(1, s)]]);
+              this.map.setPaintProperty('3d-buildings-roof-neon', 'fill-extrusion-opacity', 0.96 * Math.min(1, s * 1.5));
+            }
+          } catch (e) {}
+        },
+
+        toggle3D(forceState) {
+          if (!this.map) return;
+          STATE.is3D = (forceState !== undefined) ? !!forceState : !STATE.is3D;
+          const btn = document.getElementById('btn-tilt-3d');
+
+          if (STATE.is3D) {
+            if (btn) {
+              btn.classList.add('active-3d', 'active-blue');
+              btn.setAttribute('aria-pressed', 'true');
+            }
+            const center = this.map.getCenter ? this.map.getCenter() : { lng: CONFIG.DEFAULT_COORDS[0], lat: CONFIG.DEFAULT_COORDS[1] };
+            const src = this.map.getSource('3d-buildings-mesh');
+            if (src) {
+              src.setData(this.generate3DBuildingMesh(center.lng, center.lat));
+            } else {
+              this.setup3DBuildings();
+            }
+
+            // Smooth ease camera to 62° pitch with slight cinematic -22° bearing
+            this.map.easeTo({
+              pitch: 62,
+              bearing: -22,
+              duration: 850,
+              easing: (t) => t * (2 - t)
+            });
+
+            // 60 FPS lift-off animation for extrusions
+            const start = performance.now();
+            const duration = 850;
+            const animateLift = (now) => {
+              const elapsed = now - start;
+              const progress = Math.min(1, elapsed / duration);
+              // Ease-out cubic
+              const ease = 1 - Math.pow(1 - progress, 3);
+              this.set3DBuildingHeightScale(ease);
+              if (progress < 1) {
+                requestAnimationFrame(animateLift);
+              }
+            };
+            requestAnimationFrame(animateLift);
+
+            ParkingApp.showToast("3D Aerial City View Engaged (62° Tilt)", "info", 2400);
+          } else {
+            if (btn) {
+              btn.classList.remove('active-3d', 'active-blue');
+              btn.setAttribute('aria-pressed', 'false');
+            }
+
+            this.map.easeTo({
+              pitch: 0,
+              bearing: 0,
+              duration: 650,
+              easing: (t) => t * (2 - t)
+            });
+
+            const start = performance.now();
+            const duration = 600;
+            const animateDrop = (now) => {
+              const elapsed = now - start;
+              const progress = Math.min(1, elapsed / duration);
+              const ease = 1 - progress;
+              this.set3DBuildingHeightScale(ease);
+              if (progress < 1) {
+                requestAnimationFrame(animateDrop);
+              }
+            };
+            requestAnimationFrame(animateDrop);
+
+            ParkingApp.showToast("Returned to 2D Top-Down View", "info", 1800);
+          }
         },
 
         async setupOverpassLayers() {
@@ -6051,13 +6398,7 @@
           };
 
           document.getElementById('btn-tilt-3d').onclick = () => {
-            STATE.is3D = !STATE.is3D;
-            MapEngine.map.easeTo({
-              pitch: STATE.is3D ? 60 : 0,
-              duration: 800,
-              easing: (t) => t * (2 - t)
-            });
-            document.getElementById('btn-tilt-3d').classList.toggle('active-blue', STATE.is3D);
+            MapEngine.toggle3D();
           };
 
           // Direct 1-Tap Switcher between Google Maps Satellite Hybrid & GMap Full Detail Retina
@@ -9223,6 +9564,9 @@
       // Bootstrap on DOM ready
       window.addEventListener('DOMContentLoaded', () => {
         window.__openpark = { STATE, MapEngine, UIController, ParkingApp, AIScannerEngine, WelcomeController };
+        window.MapEngine = MapEngine;
+        window.STATE = STATE;
+        window.ParkingApp = ParkingApp;
         ParkingApp.init();
         AIScannerEngine.init();
         window.dispatchEvent(new CustomEvent('openpark:ready', { detail: window.__openpark }));

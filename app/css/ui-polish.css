@@ -1387,5 +1387,52 @@
   flex-shrink: 0;
 }
 
+/* ==========================================================================
+   3D Building Extrusions & Aerial Depth Styling
+   ========================================================================== */
+#btn-tilt-3d.active-3d {
+  background: linear-gradient(135deg, rgba(0, 242, 254, 0.32) 0%, rgba(79, 70, 229, 0.45) 100%) !important;
+  border-color: rgba(0, 242, 254, 0.85) !important;
+  color: #00f2fe !important;
+  box-shadow: 0 0 16px rgba(0, 242, 254, 0.45), inset 0 0 8px rgba(0, 242, 254, 0.25) !important;
+  transform: scale(1.06);
+  animation: pulse-3d-glow 2.4s infinite ease-in-out;
+}
+[data-theme="light"] #btn-tilt-3d.active-3d {
+  background: linear-gradient(135deg, rgba(0, 102, 255, 0.2) 0%, rgba(99, 102, 241, 0.25) 100%) !important;
+  border-color: #0066ff !important;
+  color: #0066ff !important;
+  box-shadow: 0 2px 14px rgba(0, 102, 255, 0.35) !important;
+}
+
+@keyframes pulse-3d-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(0, 242, 254, 0.4); }
+  50% { box-shadow: 0 0 22px rgba(0, 242, 254, 0.75), 0 0 6px rgba(255, 255, 255, 0.5); }
+}
+
+.maplibregl-popup.building-3d-popup .maplibregl-popup-content {
+  background: rgba(10, 16, 28, 0.94) !important;
+  backdrop-filter: blur(16px) saturate(180%) !important;
+  border: 1px solid rgba(0, 242, 254, 0.35) !important;
+  border-radius: 10px !important;
+  padding: 6px 10px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 14px rgba(0, 242, 254, 0.25) !important;
+}
+[data-theme="light"] .maplibregl-popup.building-3d-popup .maplibregl-popup-content {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 102, 255, 0.3) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15), 0 2px 12px rgba(0, 102, 255, 0.2) !important;
+}
+[data-theme="light"] .maplibregl-popup.building-3d-popup .maplibregl-popup-content div {
+  color: #0f172a !important;
+}
+.maplibregl-popup.building-3d-popup .maplibregl-popup-tip {
+  border-top-color: rgba(10, 16, 28, 0.94) !important;
+}
+[data-theme="light"] .maplibregl-popup.building-3d-popup .maplibregl-popup-tip {
+  border-top-color: rgba(255, 255, 255, 0.95) !important;
+}
+
+
 
 
