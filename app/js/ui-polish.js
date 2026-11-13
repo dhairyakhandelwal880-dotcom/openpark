@@ -1394,8 +1394,17 @@
     const sync = () => {
       const collapsed = document.body.classList.contains('sidebar-collapsed') || sidebar.classList.contains('is-collapsed');
       btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      btn.classList.toggle('is-collapsed', collapsed);
     };
     btn.addEventListener('click', () => setTimeout(sync, 25));
+    window.addEventListener('openpark:sidebar-toggled', () => sync());
+    document.addEventListener('keydown', (e) => {
+      if ((e.key === '[' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) ||
+          (e.key === '\\' && (e.metaKey || e.ctrlKey))) {
+        e.preventDefault();
+        btn.click();
+      }
+    });
     sync();
   });
 

@@ -214,7 +214,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      transition: transform var(--transition-smooth), opacity var(--transition-smooth);
+      transition: transform 380ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease;
     }
 
     #sidebar.is-collapsed {
@@ -226,23 +226,90 @@
       position: absolute;
       top: 20px;
       left: 418px;
-      width: 38px;
-      height: 38px;
+      width: 40px;
+      height: 40px;
       border-radius: var(--radius-pill);
-      z-index: 21;
+      z-index: 25;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       color: var(--color-text-primary);
-      transition: left var(--transition-smooth), transform var(--transition-standard);
-      border: var(--glass-border);
+      background: rgba(18, 22, 34, 0.78);
+      backdrop-filter: blur(24px) saturate(190%);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+      transition: left 380ms cubic-bezier(0.16, 1, 0.3, 1),
+                  transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                  background-color 0.25s ease,
+                  border-color 0.25s ease,
+                  box-shadow 0.3s ease;
+      will-change: left, transform;
     }
-    #sidebar.is-collapsed + .sidebar-collapse-toggle {
-      left: 14px;
+
+    .sidebar-toggle-arrow {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2.4;
+      stroke: currentColor;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      transition: transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1);
+      transform-origin: center center;
+      display: block;
     }
+
+    /* Fluid glide to the left edge when sidebar collapses */
+    body.sidebar-collapsed .sidebar-collapse-toggle,
+    #sidebar.is-collapsed + .sidebar-collapse-toggle,
+    #sidebar.is-collapsed ~ .sidebar-collapse-toggle,
+    .sidebar-collapse-toggle.is-collapsed {
+      left: 16px;
+      background: rgba(14, 18, 30, 0.9);
+      border-color: rgba(0, 113, 227, 0.48);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.16), 0 0 24px rgba(0, 113, 227, 0.38);
+      animation: collapsePillPulse 1.6s cubic-bezier(0.16, 1, 0.3, 1) 1;
+    }
+
+    /* Chevron smoothly rotates 180° to point toward right */
+    body.sidebar-collapsed .sidebar-toggle-arrow,
+    #sidebar.is-collapsed + .sidebar-collapse-toggle .sidebar-toggle-arrow,
+    #sidebar.is-collapsed ~ .sidebar-collapse-toggle .sidebar-toggle-arrow,
+    .sidebar-collapse-toggle.is-collapsed .sidebar-toggle-arrow {
+      transform: rotate(180deg);
+    }
+
     .sidebar-collapse-toggle:hover {
-      background: var(--color-hover);
+      background: rgba(28, 36, 56, 0.94);
+      border-color: rgba(255, 255, 255, 0.28);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.38), 0 0 16px rgba(0, 113, 227, 0.28);
+      transform: scale(1.08);
+      color: #ffffff;
+    }
+
+    body.sidebar-collapsed .sidebar-collapse-toggle:hover,
+    .sidebar-collapse-toggle.is-collapsed:hover {
+      border-color: var(--apple-blue);
+      transform: scale(1.12);
+      box-shadow: 0 10px 34px rgba(0, 0, 0, 0.5), 0 0 28px rgba(0, 113, 227, 0.52);
+    }
+
+    .sidebar-collapse-toggle:active {
+      transform: scale(0.92) !important;
+    }
+
+    @keyframes collapsePillPulse {
+      0% {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(0, 113, 227, 0.7);
+      }
+      65% {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 0 0 12px rgba(0, 113, 227, 0);
+      }
+      100% {
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45), 0 0 0 0 rgba(0, 113, 227, 0);
+      }
     }
 
     /* Control Cluster (Apple Glass Map Controls HUD) */
@@ -2228,11 +2295,6 @@
     </div>
   </div>
 
-  <!-- Desktop Sidebar Collapse Toggle -->
-  <button class="sidebar-collapse-toggle apple-glass pressable" id="btn-toggle-sidebar" aria-label="Toggle Sidebar Navigation">
-    <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-  </button>
-
   <!-- Left Sidebar / Mobile Bottom Sheet -->
   <aside id="sidebar" class="apple-glass" role="complementary" aria-label="OpenPark Sidebar Navigation">
     <div class="sidebar-drag-handle" id="sheet-drag-handle" aria-hidden="true"></div>
@@ -2784,6 +2846,11 @@
 
     </div>
   </aside>
+
+  <!-- Desktop Sidebar Collapse / Expand Toggle Dock -->
+  <button class="sidebar-collapse-toggle apple-glass pressable cursor-target" id="btn-toggle-sidebar" aria-label="Toggle Sidebar Navigation" title="Collapse Sidebar" data-cursor-label="Sidebar">
+    <svg class="svg-icon sidebar-toggle-arrow" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
 
   <!-- Right Side Apple Glass Map Controls HUD -->
   <div class="control-cluster apple-glass" role="toolbar" aria-label="Map navigation controls">
@@ -5592,13 +5659,10 @@
             btnDrawerDetails.onclick = () => {
               const drawer = document.getElementById('parking-drawer');
               if (drawer) drawer.classList.remove('open');
-              const sidebarEl = document.getElementById('sidebar');
-              if (sidebarEl) {
-                sidebarEl.classList.remove('is-collapsed');
-                document.body.classList.remove('sidebar-collapsed');
-                if (window.innerWidth < 900) {
-                  sidebarEl.style.transform = 'translateY(0)';
-                }
+              this.setSidebarCollapsed(false);
+              if (window.innerWidth < 900) {
+                const sidebarEl = document.getElementById('sidebar');
+                if (sidebarEl) sidebarEl.style.transform = 'translateY(0)';
               }
               this.switchTab('explore');
             };
@@ -5667,15 +5731,12 @@
           // Sidebar Desktop Collapse
           const sidebar = document.getElementById('sidebar');
           const toggleBtn = document.getElementById('btn-toggle-sidebar');
-          toggleBtn.onclick = () => {
-            sidebar.classList.toggle('is-collapsed');
-            const isCollapsed = sidebar.classList.contains('is-collapsed');
-            document.body.classList.toggle('sidebar-collapsed', isCollapsed);
-            toggleBtn.innerHTML = isCollapsed 
-              ? '<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>'
-              : '<svg class="svg-icon" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>';
-            setTimeout(() => { if (MapEngine.map) MapEngine.map.resize(); }, 260);
-          };
+          if (toggleBtn) {
+            toggleBtn.onclick = () => {
+              const currentlyCollapsed = sidebar ? sidebar.classList.contains('is-collapsed') : document.body.classList.contains('sidebar-collapsed');
+              this.setSidebarCollapsed(!currentlyCollapsed);
+            };
+          }
 
           // Mobile Sheet Drag Handler
           const dragHandle = document.getElementById('sheet-drag-handle');
@@ -6170,6 +6231,22 @@
               ParkingApp.showToast(`Traccar Device ID set to: ${devId}`);
             };
           }
+        },
+
+        setSidebarCollapsed(isCollapsed) {
+          const sidebar = document.getElementById('sidebar');
+          const toggleBtn = document.getElementById('btn-toggle-sidebar');
+          if (sidebar) {
+            sidebar.classList.toggle('is-collapsed', isCollapsed);
+          }
+          document.body.classList.toggle('sidebar-collapsed', isCollapsed);
+          if (toggleBtn) {
+            toggleBtn.classList.toggle('is-collapsed', isCollapsed);
+            toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            toggleBtn.setAttribute('title', isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar');
+          }
+          window.dispatchEvent(new CustomEvent('openpark:sidebar-toggled', { detail: { collapsed: isCollapsed } }));
+          setTimeout(() => { if (MapEngine.map) MapEngine.map.resize(); }, 380);
         },
 
         switchTab(tabId) {
@@ -6928,12 +7005,10 @@
           });
 
           UIController.showPlaceView();
-          const sidebar = document.getElementById('sidebar');
-          if (sidebar) {
-            sidebar.classList.remove('is-collapsed');
-            if (window.innerWidth < 900) {
-              sidebar.style.transform = 'translateY(calc(100% - 380px))';
-            }
+          UIController.setSidebarCollapsed(false);
+          if (window.innerWidth < 900) {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) sidebar.style.transform = 'translateY(calc(100% - 380px))';
           }
           ParkingApp.showToast(`Selected ${item.name}`);
         }
@@ -7650,9 +7725,13 @@
         async init() {
           WakeLockManager.init();
           GPSMonitor.init();
-          MapEngine.init();
           UIController.init();
           SearchEngine.init();
+          try {
+            MapEngine.init();
+          } catch (e) {
+            console.warn("[MapEngine] Init notice:", e);
+          }
           API.loadTraccarServerConfig();
 
           // Network Offline/Online Status Monitor
@@ -8372,11 +8451,7 @@
                 if (mainInput) mainInput.value = qDest;
                 await SearchEngine.fetchSuggestions(qDest, true);
               } else if (qCat) {
-                const sidebar = document.getElementById('sidebar');
-                if (sidebar) {
-                  sidebar.classList.remove('is-collapsed');
-                  document.body.classList.remove('sidebar-collapsed');
-                }
+                UIController.setSidebarCollapsed(false);
                 SearchEngine.quickSearch(qCat);
               }
             });
