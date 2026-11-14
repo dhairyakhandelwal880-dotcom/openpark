@@ -562,12 +562,13 @@
 
 #sidebar.apple-glass {
   background: var(--glass-bg);
-  backdrop-filter: blur(48px) saturate(220%);
-  -webkit-backdrop-filter: blur(48px) saturate(220%);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
   border: var(--glass-border);
   box-shadow: var(--glass-shadow), var(--glass-highlight);
   border-radius: 22px;
   overflow: hidden;
+  transform: translateZ(0);
 }
 
 /* 2. Executive Brand Header */
@@ -1261,13 +1262,14 @@
 
 /* 9. Map Control Cluster (Aerospace Instrument Pill) */
 .control-cluster {
-  background: rgba(14, 18, 27, 0.85) !important;
-  backdrop-filter: blur(28px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(200%) !important;
+  background: rgba(14, 18, 27, 0.9) !important;
+  backdrop-filter: blur(12px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(160%) !important;
   border: 1px solid rgba(255, 255, 255, 0.11) !important;
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
   border-radius: 20px !important;
   padding: 6px !important;
+  transform: translateZ(0);
 }
 .cluster-btn {
   border-radius: 12px !important;
@@ -1287,12 +1289,13 @@
 
 /* 10. Sleek Telemetry Ribbon HUD */
 #telemetry-hud {
-  background: rgba(10, 14, 22, 0.88) !important;
-  backdrop-filter: blur(32px) saturate(200%) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
+  background: rgba(10, 14, 22, 0.92) !important;
+  backdrop-filter: blur(14px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(160%) !important;
   border: 1px solid rgba(56, 189, 248, 0.24) !important;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.14) !important;
   border-radius: 18px !important;
+  transform: translateZ(0);
 }
 .hud-title-bar {
   font-family: var(--font-mono);
@@ -1395,8 +1398,8 @@
   display: flex;
   flex-direction: column;
   background: rgba(9, 14, 26, 0.94);
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.25), 0 0 20px rgba(0, 242, 254, 0.12);
   border-radius: 9999px;
@@ -1408,6 +1411,7 @@
   pointer-events: auto;
   transition: all 0.38s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
+  transform: translateZ(0);
 }
 [data-theme="light"] .dynamic-island-nav {
   background: rgba(255, 255, 255, 0.94);
@@ -1745,6 +1749,36 @@
   color: #ffffff;
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
 }
+
+/* ==========================================================================
+   High-FPS GPU Acceleration & Marker Performance Tuning
+   ========================================================================== */
+#map-viewport {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Eliminate backdrop-filter overdraw on the 18+ moving map pins */
+.parking-pin.apple-glass {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(10, 16, 28, 0.94) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.42) !important;
+  transform: translateZ(0);
+}
+[data-theme="light"] .parking-pin.apple-glass {
+  background: rgba(255, 255, 255, 0.96) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Smooth out pulse rings on low-power devices */
+.status-pulse {
+  contain: strict;
+  will-change: transform, opacity;
+}
+
 
 
 

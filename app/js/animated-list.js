@@ -201,16 +201,27 @@
     }
 
     _bind() {
-      this.scrollEl.addEventListener("scroll", () => this._updateGradients(), { passive: true });
+      let gradRaf = 0;
+      this.scrollEl.addEventListener("scroll", () => {
+        if (!gradRaf) {
+          gradRaf = requestAnimationFrame(() => {
+            gradRaf = 0;
+            this._updateGradients();
+          });
+        }
+      }, { passive: true });
 
       if (this.cfg.selectOnHover) {
+        let hoverCard = null;
         this.scrollEl.addEventListener("pointerover", (ev) => {
           const card = ev.target && ev.target.closest ? ev.target.closest(".lot-card") : null;
-          if (!card || card.parentElement !== this.scrollEl) return;
+          if (!card || card.parentElement !== this.scrollEl || card === hoverCard) return;
+          hoverCard = card;
           const idx = this.getItems().indexOf(card);
           if (idx >= 0) this.setSelected(idx, false);
-        });
+        }, { passive: true });
         this.scrollEl.addEventListener("mouseleave", () => {
+          hoverCard = null;
           if (this.cfg.initialSelectedIndex === -1) this.setSelected(-1, false);
         });
       }

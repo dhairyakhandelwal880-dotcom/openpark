@@ -5354,8 +5354,9 @@
           this.map.once('idle', () => this.loadViewportPois());
           this.loadViewportPois();
 
-          // Live Zoom & Coordinates pill handler
+          // Live Zoom & Coordinates pill handler (RAF throttled for smooth 60fps panning)
           const updateCoordsDisplay = () => {
+            if (!this.map) return;
             const center = this.map.getCenter();
             const zoom = this.map.getZoom().toFixed(1);
             const el = document.getElementById('coords-text');
@@ -5363,8 +5364,16 @@
               el.innerText = `Zoom: ${zoom} • ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}`;
             }
           };
-          this.map.on('move', updateCoordsDisplay);
-          this.map.on('zoom', updateCoordsDisplay);
+          let coordsRaf = 0;
+          const throttledCoordsDisplay = () => {
+            if (coordsRaf) return;
+            coordsRaf = requestAnimationFrame(() => {
+              coordsRaf = 0;
+              updateCoordsDisplay();
+            });
+          };
+          this.map.on('move', throttledCoordsDisplay);
+          this.map.on('zoom', throttledCoordsDisplay);
           updateCoordsDisplay();
 
           const badgeEl = document.getElementById('map-coords-badge');
